@@ -275,7 +275,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                                           ),
                                         );
                                       }
-                                      if (_FilterData == "Company Leadssssss") {
+                                      if (_FilterData == "Company Lead") {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
