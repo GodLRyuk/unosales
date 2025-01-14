@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
 import 'package:unosfa/pages/salesModule/loancalculation.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
+import 'package:intl/intl.dart';
 
 class LeadGenerate extends StatefulWidget {
   @override
@@ -24,7 +25,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
   final _address1 = TextEditingController();
   final _address2 = TextEditingController();
   final _zip = TextEditingController();
-  //final _city = TextEditingController();
+  final _email = TextEditingController();
   final _location = TextEditingController();
   final _area = TextEditingController();
   final _income = TextEditingController();
@@ -386,7 +387,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
 
   String? _selectedCity; // To store the selected city
 
-// Map to hold the city value (key) and display text (value)
+  // Map to hold the city value (key) and display text (value)
   Future<void> _loadCityData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
@@ -527,9 +528,9 @@ class _LeadGenerateState extends State<LeadGenerate> {
                             'name',
                             isNumeric: false,
                             icon: FontAwesomeIcons.solidCircleUser,
-                            isAlphabetic: true,
+                            isBlankAlphabetic: true,
                             isRequired: false,
-                            allowSpaces: false,
+                            allowSpaces: true,
                           ),
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.03,
@@ -548,8 +549,21 @@ class _LeadGenerateState extends State<LeadGenerate> {
                             height: MediaQuery.of(context).size.height * 0.03,
                           ),
                           _buildTextField(
+                            _email,
+                            "Email Address",
+                            'Please Enter Your Email',
+                            'email',
+                            isNumeric: false,
+                            icon: FontAwesomeIcons.mailchimp,
+                            isRequired: true,
+                            isEmail: true,
+                          ),
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.03,
+                          ),
+                          _buildTextField(
                             _phoneNumber,
-                            "Phone Number",
+                            "(Please put country code e.g. 63XXXXXXXXXX)",
                             'Please Enter Your Phone Number',
                             'phone',
                             isPhoneNumber: true,
@@ -655,7 +669,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
                               height: MediaQuery.of(context).size.height * 0.03,
                             ),
                           ],
-                          if (_selectedCustType == 'self-employed') ...[
+                          if (_selectedCustType == 'self_employed') ...[
                             TextField(
                               controller: _businessNameController,
                               decoration: InputDecoration(
@@ -684,7 +698,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
                             "Address line 2",
                             'Please Enter Your Address line 2',
                             'address',
-                            isEmail: true,
+                            isEmail: false,
                             isNumeric: false,
                             icon: FontAwesomeIcons.mapLocationDot,
                             isRequired: false,
@@ -842,13 +856,14 @@ class _LeadGenerateState extends State<LeadGenerate> {
       String phone_number = _phoneNumber.text.trim();
       String address1 = _address1.text.trim();
       String address2 = _address2.text.trim();
+      String email = _email.text.trim();
       String zip = _zip.text.trim();
       String city = _selectedCity!;
       String location = _location.text.trim();
       String location_type = _selectedLocationType!;
       String area = _area.text.trim();
-      String income = _income.text.trim();
-      String loan_amount_requested = _loanamount.text.trim();
+      String income = _income.text.trim().replaceAll(',', '');
+      String loan_amount_requested = _loanamount.text.trim().replaceAll(',', '');
       bool submitted_on_uno_app = true;
       bool need_to_follow_up = false;
       String customer_type = _selectedCustType!;
@@ -876,6 +891,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
         'phone_number': phone_number,
         'address1': address1,
         'address2': address2,
+        'email': email,
         'zip': zip,
         'city': city,
         'location': location,
@@ -970,7 +986,8 @@ class _LeadGenerateState extends State<LeadGenerate> {
     bool isEmail = false,
     bool isPhoneNumber = false,
     bool isAlphabetic = false,
-    bool isNumeric = true,
+    bool isBlankAlphabetic = false,
+    bool isNumeric = false,
     bool isZipNumber = false,
     bool isRequired = true, // Add a flag to make the field optional
     bool allowSpaces = false, // New flag to allow spaces
@@ -982,63 +999,36 @@ class _LeadGenerateState extends State<LeadGenerate> {
           ? TextInputType.phone
           : isEmail
               ? TextInputType.emailAddress
-              : isNumeric
+              : isNumeric || isZipNumber
                   ? TextInputType.number
-                  : isZipNumber
-                      ? TextInputType.number
-                      : TextInputType.text,
+                  : TextInputType.text,
       inputFormatters: [
-        if (isPhoneNumber) ...[
-          FilteringTextInputFormatter.digitsOnly,
+        if (isNumeric) NumericCommaInputFormatter(),
+        if (isZipNumber) FilteringTextInputFormatter.digitsOnly,
+        if (isPhoneNumber)
           LengthLimitingTextInputFormatter(12), // Limit to 12 digits
-        ],
         if (isAlphabetic)
           FilteringTextInputFormatter.allow(
             allowSpaces
                 ? RegExp(r'^[a-zA-Z\s]+$') // Allow alphabets and spaces
                 : RegExp(r'^[a-zA-Z]+$'), // Allow alphabets only (no spaces)
           ),
-        if (isNumeric)
-          FilteringTextInputFormatter.digitsOnly, // Allow digits only
-        if (!isPhoneNumber && !isAlphabetic && !isNumeric)
-          FilteringTextInputFormatter.deny(
-            allowSpaces
-                ? RegExp(r'^\s+$') // Deny consecutive spaces only
-                : RegExp(r'\s'), // Deny spaces globally
-          ),
       ],
       validator: (value) {
-        if (isRequired && (value == null || value.isEmpty)) {
+        if (isRequired && (value == null || value.trim().isEmpty)) {
           return validationMessage;
         }
 
-        if (isAlphabetic) {
-          if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value!)) {
-            return allowSpaces
-                ? 'Only alphabets and spaces are allowed'
-                : 'Only alphabets are allowed';
+        if (isNumeric && value != null && value.isNotEmpty) {
+          final cleanedValue = value.replaceAll(',', '');
+          if (!RegExp(r'^\d+$').hasMatch(cleanedValue)) {
+            return 'Please enter a valid number';
           }
         }
 
-        if (isPhoneNumber) {
-          if (value == null || value.isEmpty) {
-            return validationMessage;
-          }
-          if (value.length != 12) {
-            return 'Phone number must be exactly 12 digits';
-          }
-          if (!RegExp(r'^\d+$').hasMatch(value)) {
-            return 'Phone number must contain only digits';
-          }
-          if (!value.startsWith('63')) {
-            return 'Phone number must start with "63"';
-          }
-        }
-        // Email validation
-        if (isEmail && value != null && value.isNotEmpty) {
-          final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-          if (!emailRegex.hasMatch(value.trim())) {
-            return 'Please enter a valid email address';
+        if (isBlankAlphabetic && value != null && value.isNotEmpty) {
+          if (!RegExp(r'^[a-zA-Z]*$').hasMatch(value)) {
+            return 'Only alphabets are allowed';
           }
         }
 
@@ -1337,10 +1327,39 @@ class _LeadGenerateState extends State<LeadGenerate> {
       },
     );
   }
-  void clearbusinessname()
-{
-  _businessNameController.clear();
-  _searchController.clear();
-  _selectedCompany=null;
+
+  void clearbusinessname() {
+    _businessNameController.clear();
+    _searchController.clear();
+    _selectedCompany = null;
+  }
 }
+
+class NumericCommaInputFormatter extends TextInputFormatter {
+  final NumberFormat _formatter = NumberFormat('#,##0', 'en_US');
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) {
+      return newValue;
+    }
+    // Remove existing commas
+    final cleanedValue = newValue.text.replaceAll(',', '');
+    if (cleanedValue.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    // Format number with commas
+    final number = int.tryParse(cleanedValue) ?? 0;
+    final formattedValue = _formatter.format(number);
+
+    // Update the selection to match the formatted value
+    return TextEditingValue(
+      text: formattedValue,
+      selection: TextSelection.collapsed(offset: formattedValue.length),
+    );
+  }
 }

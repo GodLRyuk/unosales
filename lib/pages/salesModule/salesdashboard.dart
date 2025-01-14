@@ -244,7 +244,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
     double containerHeight3 = isLandscape
         ? screenHeight * 0.40 // Adjusted height for landscape
         : screenHeight > 600
-            ? screenHeight * 0.25 // Portrait - tablet
+            ? screenHeight * 0.27 // Portrait - tablet
             : screenHeight * 0.26; // Portrait - mobile
 
     double containerWidth = isLandscape
@@ -1734,7 +1734,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                     bottom: 0,
                     left: 0,
                     child: Padding(
-                      padding: const EdgeInsets.all(8.0),
+                      padding: const EdgeInsets.all(5.0),
                       child: Row(
                         children: [
                           Container(
@@ -1762,7 +1762,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                                     ? MediaQuery.of(context).size.width *
                                         0.08 // Landscape for mobile
                                     : MediaQuery.of(context).size.width *
-                                        0.28, // Portrait for mobile
+                                        0.22, // Portrait for mobile
                           ),
                           Container(
                             width: 10.0, // Small green box width
