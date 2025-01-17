@@ -32,7 +32,7 @@ class _LoancalculationState extends State<Loancalculation> {
   final _minstallment = TextEditingController();
   final _intrest = TextEditingController();
   bool _isLoading = false;
-
+  bool isSubmittedPresent = false;
   late Map<String, String> dispositionCode = {}; // Initialize as an empty map
   late Map<String, String> _dependentData = {}; // List for second dropdown data
 
@@ -58,7 +58,6 @@ class _LoancalculationState extends State<Loancalculation> {
         Uri.parse('http://167.88.160.87/api/leads/disposition-codes/'),
         headers: {'Authorization': 'Bearer $token'},
       );
-
       if (response.statusCode == 200) {
         var decodedResponse = json.decode(response.body);
         if (decodedResponse is Map<String, dynamic> &&
@@ -115,6 +114,12 @@ class _LoancalculationState extends State<Loancalculation> {
       );
       if (response.statusCode == 200) {
         var decodedResponse = json.decode(response.body);
+        if (decodedResponse['description'] == 'Submitted') {
+          isSubmittedPresent = true;
+          _selectedDependentData = "";
+        } else {
+          isSubmittedPresent = false;
+        }
         if (decodedResponse is Map<String, dynamic> &&
             decodedResponse['sub_disposition_codes'] != null) {
           decodedResponse = decodedResponse['sub_disposition_codes'];
@@ -275,7 +280,8 @@ class _LoancalculationState extends State<Loancalculation> {
                               SizedBox(
                                   height: MediaQuery.of(context).size.height *
                                       0.03),
-                              _buildDependentDropdownField(),
+                              if (!isSubmittedPresent)
+                                _buildDependentDropdownField(),
                               SizedBox(
                                 height:
                                     MediaQuery.of(context).size.height * 0.04,
@@ -449,13 +455,17 @@ class _LoancalculationState extends State<Loancalculation> {
     });
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
+
     if (_formKey.currentState!.validate()) {
-      String disposition_code = _selectedDispositionCode!;
-      String sub_disposition_code = _selectedDependentData!;
+      // Directly assign disposition_code and sub_disposition_code
+      String? disposition_code = _selectedDispositionCode;
+      String? sub_disposition_code = _selectedDependentData?.isNotEmpty ?? false
+          ? _selectedDependentData
+          : null;
 
       Map<String, dynamic> mappedData = {
         'disposition_code': disposition_code,
-        'sub_disposition_code': sub_disposition_code
+        'sub_disposition_code': sub_disposition_code, // This can be null
       };
 
       try {
@@ -463,14 +473,15 @@ class _LoancalculationState extends State<Loancalculation> {
 
         http.Response response = await http.patch(
           url,
-          body: mappedData,
+          body: json.encode(mappedData), // Ensure the body is properly encoded
           headers: {
             'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json', // Make sure the request is JSON
           },
         );
+
         if (response.statusCode == 200) {
           json.decode(response.body);
-
           showDialog(
             context: context,
             builder: (BuildContext context) {

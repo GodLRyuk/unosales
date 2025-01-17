@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
 import 'package:unosfa/pages/salesModule/loancalculation.dart';
@@ -31,6 +33,9 @@ class _LeadGenerateState extends State<LeadGenerate> {
   final _income = TextEditingController();
   final _loanamount = TextEditingController();
   final _businessNameController = TextEditingController();
+  final _imageController = TextEditingController();
+  final _externalId = TextEditingController();
+
   bool _isLoading = false;
   late Map<String, String> _ComIdOptions; // Store the fetched companies
   late List<Map<String, String>> _LocationType =
@@ -44,6 +49,36 @@ class _LeadGenerateState extends State<LeadGenerate> {
   TextEditingController _searchController = TextEditingController();
   String? _selectedCompany;
   bool _isFieldFocused = false; // Track if TextField is clicked
+  String? _selectedGId;
+  bool _selectedKycId = false;
+
+  final Map<String, String> _gIdOptions = {
+    'passport': 'Philippines Passport',
+    'national_id': 'Philippine National ID (PhilSys ID)',
+    'drivers_license': 'Driver\'s License',
+    'umid': 'Unified Multi-Purpose ID (UMID)',
+    'sss_id': 'Social Security System (SSS) ID',
+    'prc_id': 'Professional Regulation Commission (PRC) ID'
+  };
+
+  String _getIdHintText() {
+    switch (_selectedGId) {
+      case 'passport':
+        return 'Enter your Philippines Passport Number';
+      case 'national_id':
+        return 'Enter your PhilSys ID';
+      case 'drivers_license':
+        return 'Enter your Driver’s License Number';
+      case 'umid':
+        return 'Enter your Unified Multi-Purpose ID';
+      case 'sss_id':
+        return 'Enter your Social Security System (SSS) ID';
+      case 'prc_id':
+        return 'Enter your Professional Regulation Commission (PRC) ID';
+      default:
+        return 'Enter ID Number';
+    }
+  }
 
   @override
   void initState() {
@@ -79,7 +114,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
 
           Map<String, String> fetchedData = {};
           for (var item in companies) {
-            fetchedData[item['company_number'].toString()] =
+            fetchedData[item['id'].toString()] =
                 item['company_name'].toString();
           }
 
@@ -87,7 +122,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
             _ComIdOptions = fetchedData;
             // Initially, show all companies in the list
             _filteredCompanies = fetchedData.entries
-                .map((e) => {'company_number': e.key, 'company_name': e.value})
+                .map((e) => {'id': e.key, 'company_name': e.value})
                 .toList();
           });
         }
@@ -120,7 +155,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
     if (query.isEmpty) {
       setState(() {
         _filteredCompanies = _ComIdOptions.entries
-            .map((e) => {'company_number': e.key, 'company_name': e.value})
+            .map((e) => {'id': e.key, 'company_name': e.value})
             .toList();
       });
       return;
@@ -139,7 +174,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
           setState(() {
             _filteredCompanies = companies
                 .map((e) => {
-                      'company_number': e['company_number'].toString(),
+                      'id': e['id'].toString(),
                       'company_name': e['company_name'].toString(),
                     })
                 .toList();
@@ -611,7 +646,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
                                             _filteredCompanies = _ComIdOptions
                                                 .entries
                                                 .map((e) => {
-                                                      'company_number': e.key,
+                                                      'id': e.key,
                                                       'company_name': e.value
                                                     })
                                                 .toList();
@@ -649,7 +684,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
                                                 setState(() {
                                                   _selectedCompany =
                                                       _filteredCompanies[index]
-                                                          ['company_number'];
+                                                          ['id'];
                                                   _searchController.text =
                                                       _filteredCompanies[index]
                                                           ['company_name']!;
@@ -787,6 +822,26 @@ class _LeadGenerateState extends State<LeadGenerate> {
                           ),
                           _buildDocTypeDropdownField(),
                           SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.04,
+                          ),
+                          _buildDropdownField(),
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.04,
+                          ),
+                          _buildKydIdTextField(
+                            _externalId,
+                            _getIdHintText(),
+                            'Please Enter External ID',
+                            '',
+                            icon: FontAwesomeIcons.idCard,
+                            isRequired: false,
+                          ),
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.04,
+                          ),
+                          _buildImageUploadField(
+                              _imageController, "Select Image"),
+                          SizedBox(
                             height: MediaQuery.of(context).size.height * 0.02,
                           ),
                           Container(
@@ -847,6 +902,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
     setState(() {
       _isLoading = true;
     });
+
     // Check if the form is valid
     if (_formKey.currentState!.validate()) {
       // Collect form data
@@ -863,7 +919,8 @@ class _LeadGenerateState extends State<LeadGenerate> {
       String location_type = _selectedLocationType!;
       String area = _area.text.trim();
       String income = _income.text.trim().replaceAll(',', '');
-      String loan_amount_requested = _loanamount.text.trim().replaceAll(',', '');
+      String loan_amount_requested =
+          _loanamount.text.trim().replaceAll(',', '');
       bool submitted_on_uno_app = true;
       bool need_to_follow_up = false;
       String customer_type = _selectedCustType!;
@@ -879,11 +936,11 @@ class _LeadGenerateState extends State<LeadGenerate> {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('accessToken');
       String? refresh = prefs.getString('refreshToken');
-
-      // Define the API endpoint
+      String selectedGId = _selectedGId!;
+      String externalId = _externalId.text.trim();
 
       // Map the collected data to be sent in the request body
-      Map<String, dynamic> mappedData = {
+      Map<String, String> mappedData = {
         'company': company,
         'first_name': first_name,
         'middle_name': middle_name,
@@ -907,17 +964,25 @@ class _LeadGenerateState extends State<LeadGenerate> {
         'business_name': business_name,
         'tenor': tenor,
         'document_type': document_type,
+        'kyc_id_type': selectedGId,
+        'kyc_id_number': externalId,
       };
+
       try {
         var url = Uri.parse('http://167.88.160.87/api/leads/');
 
-        http.Response response = await http.post(
-          url,
-          body: mappedData,
-          headers: {
-            'Authorization': 'Bearer $token',
-          },
-        );
+        var request = http.MultipartRequest('POST', url)
+          ..headers['Authorization'] = 'Bearer $token'
+          ..fields.addAll(mappedData);
+
+        if (_image != null) {
+          request.files.add(await http.MultipartFile.fromPath(
+            'kyc_document',
+            _image!.path,
+          ));
+        }
+        http.Response response =
+            await http.Response.fromStream(await request.send());
         if (response.statusCode == 201) {
           final data = json.decode(response.body);
           Navigator.pushReplacement(
@@ -936,20 +1001,20 @@ class _LeadGenerateState extends State<LeadGenerate> {
           setState(() {
             _isLoading = false;
           });
-          Map<String, dynamic> mappedData = {
-            'refresh': refresh,
-          };
+
+          // Refresh token
+          Map<String, dynamic> refreshData = {'refresh': refresh};
           final response2 = await http.post(
-            Uri.parse(
-                'http://167.88.160.87/api/users/token-refresh/'), // Using leadId in the API URL
-            body: mappedData,
+            Uri.parse('http://167.88.160.87/api/users/token-refresh/'),
+            body: refreshData,
           );
+
           final data = json.decode(response2.body);
           SharedPreferences prefs = await SharedPreferences.getInstance();
           await prefs.setBool('isLoggedIn', true);
           await prefs.setString('accessToken', data['access']);
           await prefs.setString('refreshToken', data['refresh']);
-          leadSubmit();
+          leadSubmit(); // Retry the submission
         } else {
           // Handle API errors
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1030,6 +1095,69 @@ class _LeadGenerateState extends State<LeadGenerate> {
           if (!RegExp(r'^[a-zA-Z]*$').hasMatch(value)) {
             return 'Only alphabets are allowed';
           }
+        }
+
+        return null;
+      },
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: WidgetSupport.inputLabel(),
+        suffixIcon: Padding(
+          padding: const EdgeInsets.all(0),
+          child: Icon(
+            icon,
+            color: Colors.purple,
+            size: 15,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildKydIdTextField(
+    TextEditingController controller,
+    String hintText,
+    String validationMessage,
+    String validationKey, {
+    IconData icon = FontAwesomeIcons.solidCircleUser,
+    bool obscureText = false,
+    bool isEmail = false,
+    bool isPhoneNumber = false,
+    bool isAlphabetic = false,
+    bool isBlankAlphabetic = false,
+    bool isNumeric = false,
+    bool isZipNumber = false,
+    bool isRequired = true, // Add a flag to make the field optional
+    bool allowSpaces = false,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: isPhoneNumber
+          ? TextInputType.phone
+          : isEmail
+              ? TextInputType.emailAddress
+              : isNumeric || isZipNumber
+                  ? TextInputType.number
+                  : TextInputType.text,
+      inputFormatters: [
+        if (isNumeric) NumericCommaInputFormatter(),
+        if (isZipNumber) FilteringTextInputFormatter.digitsOnly,
+        if (isPhoneNumber)
+          LengthLimitingTextInputFormatter(12), // Limit to 12 digits
+        if (isAlphabetic)
+          FilteringTextInputFormatter.allow(
+            allowSpaces
+                ? RegExp(r'^[a-zA-Z\s]+$') // Allow alphabets and spaces
+                : RegExp(r'^[a-zA-Z]+$'), // Allow alphabets only (no spaces)
+          ),
+      ],
+      validator: (_selectedKycId) {
+        if (_selectedKycId == "" && _selectedGId != null) {
+          return 'Please Enter Id'; // Validation message if KYC ID is selected but no image uploaded
+        }
+        if (_externalId.text.length > 6) {
+          return 'Id must be 6 characters long';
         }
 
         return null;
@@ -1332,6 +1460,129 @@ class _LeadGenerateState extends State<LeadGenerate> {
     _businessNameController.clear();
     _searchController.clear();
     _selectedCompany = null;
+  }
+
+  Widget _buildDropdownField() {
+    return DropdownSearch<String>(
+      popupProps: PopupProps.menu(
+        showSearchBox: false, // Disable the search box
+        fit: FlexFit.loose,
+      ),
+      items: _gIdOptions.values.toList(),
+      dropdownDecoratorProps: DropDownDecoratorProps(
+        dropdownSearchDecoration: InputDecoration(
+          hintText: "Select a KYC ID",
+          hintStyle: WidgetSupport.inputLabel(),
+        ),
+      ),
+      selectedItem: _selectedGId != null ? _gIdOptions[_selectedGId] : null,
+      onChanged: (String? newValue) {
+        setState(() {
+          _selectedGId = _gIdOptions.entries
+              .firstWhere((entry) => entry.value == newValue)
+              .key;
+          _selectedKycId == true;
+        });
+      },
+      dropdownBuilder: (BuildContext context, String? _selectedGId) {
+        return Text(
+          _selectedGId ?? "Select KYC ID",
+          style: WidgetSupport.dropDownText(),
+        );
+      },
+    );
+  }
+
+  File? _image;
+
+  Widget _buildImageUploadField(
+      TextEditingController controller, String hintText) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: controller,
+          readOnly: true,
+          decoration: InputDecoration(
+            hintText: hintText,
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.upload_file),
+              onPressed: () async {
+                // Show dialog to choose between camera or gallery
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    return AlertDialog(
+                      title: const Text("Select Image Source"),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () async {
+                            final ImagePicker picker = ImagePicker();
+                            final XFile? image = await picker.pickImage(
+                                source: ImageSource.camera); // Open camera
+                            if (image != null) {
+                              setState(() {
+                                _image =
+                                    File(image.path); // Save the selected image
+                                controller.text = image
+                                    .path; // Update the controller with the image path
+                              });
+                            }
+                            Navigator.of(context).pop(); // Close dialog
+                          },
+                          child: const Text("Camera"),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            final ImagePicker picker = ImagePicker();
+                            final XFile? image = await picker.pickImage(
+                                source: ImageSource.gallery); // Open gallery
+                            if (image != null) {
+                              setState(() {
+                                _image =
+                                    File(image.path); // Save the selected image
+                                controller.text = image
+                                    .path; // Update the controller with the image path
+                              });
+                            }
+                            Navigator.of(context).pop(); // Close dialog
+                          },
+                          child: const Text("Gallery"),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                color: Colors.black45,
+              ),
+            ),
+          ),
+          validator: (_selectedKycId) {
+            if (_selectedGId != null && _image == null) {
+              return 'Please upload an image'; // Validation message if KYC ID is selected but no image uploaded
+            }
+            return null;
+          },
+        ),
+        if (_image != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 16.0),
+            child: ClipOval(
+              child: Image.file(
+                _image!, 
+                height: 110, 
+                width: 110, 
+                fit: BoxFit
+                    .cover, 
+              ),
+            ),
+          ),
+      ],
+    );
   }
 }
 

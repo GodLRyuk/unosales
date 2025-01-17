@@ -71,7 +71,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
 
           Map<String, String> fetchedData = {};
           for (var item in companies) {
-            fetchedData[item['company_number'].toString()] =
+            fetchedData[item['id'].toString()] =
                 item['company_name'].toString();
           }
 
@@ -79,7 +79,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
             _ComIdOptions = fetchedData;
             // Initially, show all companies in the list
             _filteredCompanies = fetchedData.entries
-                .map((e) => {'company_number': e.key, 'company_name': e.value})
+                .map((e) => {'id': e.key, 'company_name': e.value})
                 .toList();
           });
         }
@@ -112,7 +112,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
     if (query.isEmpty) {
       setState(() {
         _filteredCompanies = _ComIdOptions.entries
-            .map((e) => {'company_number': e.key, 'company_name': e.value})
+            .map((e) => {'id': e.key, 'company_name': e.value})
             .toList();
       });
       return;
@@ -131,7 +131,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
           setState(() {
             _filteredCompanies = companies
                 .map((e) => {
-                      'company_number': e['company_number'].toString(),
+                      'id': e['id'].toString(),
                       'company_name': e['company_name'].toString(),
                     })
                 .toList();
@@ -578,7 +578,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                                             _filteredCompanies = _ComIdOptions
                                                 .entries
                                                 .map((e) => {
-                                                      'company_number': e.key,
+                                                      'id': e.key,
                                                       'company_name': e.value
                                                     })
                                                 .toList();
@@ -616,12 +616,12 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                                                 setState(() {
                                                   _selectedCompany =
                                                       _filteredCompanies[index]
-                                                          ['company_number'];
+                                                          ['id'];
                                                   _searchController.text =
                                                       _filteredCompanies[index]
                                                           ['company_name']!;
                                                   _isFieldFocused =
-                                                      false; // Dismiss the suggestions after selection
+                                                      false; 
                                                 });
                                               },
                                             );
