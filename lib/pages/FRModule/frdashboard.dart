@@ -4,8 +4,8 @@ import 'package:circle_progress_bar/circle_progress_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/fsaModule/fsacompanyleaddashboard.dart';
-import 'package:unosfa/pages/fsaModule/fsaleaddashboard.dart';
+import 'package:unosfa/pages/FRModule/frcompanyleaddashboard.dart';
+import 'package:unosfa/pages/FRModule/frleaddashboard.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -43,9 +43,11 @@ class _FsadashboardState extends State<Fsadashboard> {
     String? token = prefs.getString('accessToken');
     String? refresh = prefs.getString('refreshToken');
     role = prefs.getString('role');
-    setState(() {
-      userInfo = prefs.getStringList('userInfo');
-    });
+    if (mounted) {
+      setState(() {
+        userInfo = prefs.getStringList('userInfo');
+      });
+    }
     try {
       final response = await http.get(
         Uri.parse(
@@ -284,7 +286,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                                                     searchQuery: searchData),
                                           ),
                                         );
-                                      } else if (_FilterData == "")  {
+                                      } else if (_FilterData == "") {
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(
                                           SnackBar(
@@ -1020,223 +1022,68 @@ class _FsadashboardState extends State<Fsadashboard> {
     );
   }
 
-  final GlobalKey<TooltipState> _tooltipKey = GlobalKey<TooltipState>();
-  final GlobalKey<TooltipState> _ToDotooltipKey = GlobalKey<TooltipState>();
-  final GlobalKey<TooltipState> _TrainingtooltipKey = GlobalKey<TooltipState>();
-  final GlobalKey<TooltipState> _CampaigntooltipKey = GlobalKey<TooltipState>();
-  Widget _smallBoxThirdContainer() {
-    double screenHeight = MediaQuery.of(context).size.height;
-    double screenWidth = MediaQuery.of(context).size.width;
-    bool isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-
-    double containerHeight = screenWidth > 600
-        ? (isLandscape ? screenHeight * 0.08 : screenHeight * 0.05)
-        : (isLandscape ? screenHeight * 0.07 : screenHeight * 0.05);
-
-    return Padding(
-      padding: const EdgeInsets.all(10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          GestureDetector(
-            onTap: () async {
-              _TrainingtooltipKey.currentState?.ensureTooltipVisible();
-            },
-            child: Tooltip(
-              key: _TrainingtooltipKey,
-              message: 'Coming Soon',
-              decoration: BoxDecoration(
-                color: Color(
-                    0xFFa604ad), // Set the background color of the tooltip
-                borderRadius:
-                    BorderRadius.circular(5), // Optional: rounded corners
-              ),
-              child: Column(
-                children: [
-                  SizedBox(
-                    child: Container(
-                      width: screenWidth * 0.43,
-                      height: containerHeight,
-                      decoration: BoxDecoration(
-                        color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(5),
-                        // boxShadow: [
-                        //   BoxShadow(
-                        //     color: Colors.grey[300]!,
-                        //     spreadRadius: 2,
-                        //     blurRadius: 2,
-                        //     offset: const Offset(0, 1),
-                        //   ),
-                        // ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          FaIcon(
-                            FontAwesomeIcons.laptopCode,
-                            size: MediaQuery.of(context).size.width > 600
-                                ? 40
-                                : 20,
-                            color: Colors.blue,
-                          ),
-                          const SizedBox(
-                            width: 5,
-                          ),
-                          Text(
-                            "Training",
-                            style: MediaQuery.of(context).size.width > 600
-                                ? WidgetSupport.normalblackTextTab()
-                                : WidgetSupport.normalblackText(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // My Leads Box - triggers Tooltip for Training
-          GestureDetector(
-            onTap: () async {
-              _CampaigntooltipKey.currentState?.ensureTooltipVisible();
-            },
-            child: Tooltip(
-              key: _CampaigntooltipKey,
-              message: 'Coming Soon',
-              decoration: BoxDecoration(
-                color: Color(
-                    0xFFa604ad), // Set the background color of the tooltip
-                borderRadius:
-                    BorderRadius.circular(5), // Optional: rounded corners
-              ),
-              child: Column(
-                children: [
-                  SizedBox(
-                    child: Container(
-                      width: screenWidth * 0.43,
-                      //height: screenHeight * 0.07,
-                      decoration: BoxDecoration(
-                        color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(5),
-                        // boxShadow: [
-                        //   BoxShadow(
-                        //     color: Colors.grey[300]!,
-                        //     spreadRadius: 2,
-                        //     blurRadius: 2,
-                        //     offset: const Offset(0, 1),
-                        //   ),
-                        // ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment.start, // Center horizontally
-                        crossAxisAlignment:
-                            CrossAxisAlignment.center, // Center vertically
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.only(top: 10),
-                          ),
-                          FaIcon(
-                            FontAwesomeIcons.bullhorn,
-                            size: MediaQuery.of(context).size.width > 600
-                                ? 40
-                                : 20,
-                            color: Colors.green,
-                          ),
-                          const SizedBox(
-                            width: 5,
-                          ),
-                          Text(
-                            "Campaign",
-                            style: MediaQuery.of(context).size.width > 600
-                                ? WidgetSupport.normalblackTextTab()
-                                : WidgetSupport.normalblackText(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _smallBoxLeadDetailsContainer() {
-    double screenHeight = MediaQuery.of(context).size.height;
     double screenWidth = MediaQuery.of(context).size.width;
-    bool isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
 
-    double containerHeight = screenWidth > 600
-        ? (isLandscape ? screenHeight * 0.08 : screenHeight * 0.05)
-        : (isLandscape ? screenHeight * 0.07 : screenHeight * 0.05);
 
     return Padding(
       padding: const EdgeInsets.all(10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          GestureDetector(
-            onTap: () async {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => FsaLeadDashBoard(
-                            searchQuery: '',
-                          )));
-            },
-            child: Column(
-              children: [
-                SizedBox(
-                  child: Container(
-                    width: screenWidth * 0.43,
-                    height: containerHeight,
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(5),
-                      // boxShadow: [
-                      //   BoxShadow(
-                      //     color: Colors.grey[300]!,
-                      //     spreadRadius: 2,
-                      //     blurRadius: 2,
-                      //     offset: const Offset(0, 1),
-                      //   ),
-                      // ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        FaIcon(
-                          Icons.handshake,
-                          size:
-                              MediaQuery.of(context).size.width > 600 ? 40 : 20,
-                          color: Colors.purple,
-                        ),
-                        const SizedBox(
-                          width: 5,
-                        ),
-                        Text(
-                          "Customer Lead",
-                          style: MediaQuery.of(context).size.width > 600
-                              ? WidgetSupport.normalblackTextTab()
-                              : WidgetSupport.normalblackText(),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // GestureDetector(
+          //   onTap: () async {
+          //     Navigator.push(
+          //         context,
+          //         MaterialPageRoute(
+          //             builder: (context) => FsaLeadDashBoard(
+          //                   searchQuery: '',
+          //                 )));
+          //   },
+          //   child: Column(
+          //     children: [
+          //       SizedBox(
+          //         child: Container(
+          //           width: screenWidth * 0.43,
+          //           height: containerHeight,
+          //           decoration: BoxDecoration(
+          //             color: Colors.transparent,
+          //             borderRadius: BorderRadius.circular(5),
+          //             // boxShadow: [
+          //             //   BoxShadow(
+          //             //     color: Colors.grey[300]!,
+          //             //     spreadRadius: 2,
+          //             //     blurRadius: 2,
+          //             //     offset: const Offset(0, 1),
+          //             //   ),
+          //             // ],
+          //           ),
+          //           child: Row(
+          //             mainAxisAlignment: MainAxisAlignment.start,
+          //             crossAxisAlignment: CrossAxisAlignment.center,
+          //             children: [
+          //               FaIcon(
+          //                 Icons.handshake,
+          //                 size:
+          //                     MediaQuery.of(context).size.width > 600 ? 40 : 20,
+          //                 color: Colors.purple,
+          //               ),
+          //               const SizedBox(
+          //                 width: 5,
+          //               ),
+          //               Text(
+          //                 "Customer Lead",
+          //                 style: MediaQuery.of(context).size.width > 600
+          //                     ? WidgetSupport.normalblackTextTab()
+          //                     : WidgetSupport.normalblackText(),
+          //               ),
+          //             ],
+          //           ),
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ),
 
           // My Leads Box - triggers Tooltip for Training
           GestureDetector(
@@ -1301,19 +1148,7 @@ class _FsadashboardState extends State<Fsadashboard> {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
 
-  Widget _smallBoxSecondContainer() {
-    double screenWidth = MediaQuery.of(context).size.width;
-
-    return Padding(
-      padding: const EdgeInsets.all(10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
           GestureDetector(
             onTap: () {
               // Trigger the tooltip on tap
@@ -1366,7 +1201,25 @@ class _FsadashboardState extends State<Fsadashboard> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
 
+  Widget _smallBoxSecondContainer() {
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
+    bool isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    double containerHeight = screenWidth > 600
+        ? (isLandscape ? screenHeight * 0.08 : screenHeight * 0.05)
+        : (isLandscape ? screenHeight * 0.07 : screenHeight * 0.05);
+
+    return Padding(
+      padding: const EdgeInsets.all(10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
           // My Leads Box - triggers Tooltip for Training
           GestureDetector(
             onTap: () {
@@ -1420,6 +1273,147 @@ class _FsadashboardState extends State<Fsadashboard> {
                           ),
                           Text(
                             "My To-Do List",
+                            style: MediaQuery.of(context).size.width > 600
+                                ? WidgetSupport.normalblackTextTab()
+                                : WidgetSupport.normalblackText(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          GestureDetector(
+            onTap: () async {
+              _TrainingtooltipKey.currentState?.ensureTooltipVisible();
+            },
+            child: Tooltip(
+              key: _TrainingtooltipKey,
+              message: 'Coming Soon',
+              decoration: BoxDecoration(
+                color: Color(
+                    0xFFa604ad), // Set the background color of the tooltip
+                borderRadius:
+                    BorderRadius.circular(5), // Optional: rounded corners
+              ),
+              child: Column(
+                children: [
+                  SizedBox(
+                    child: Container(
+                      width: screenWidth * 0.43,
+                      height: containerHeight,
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(5),
+                        // boxShadow: [
+                        //   BoxShadow(
+                        //     color: Colors.grey[300]!,
+                        //     spreadRadius: 2,
+                        //     blurRadius: 2,
+                        //     offset: const Offset(0, 1),
+                        //   ),
+                        // ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          FaIcon(
+                            FontAwesomeIcons.laptopCode,
+                            size: MediaQuery.of(context).size.width > 600
+                                ? 40
+                                : 20,
+                            color: Colors.blue,
+                          ),
+                          const SizedBox(
+                            width: 5,
+                          ),
+                          Text(
+                            "Training",
+                            style: MediaQuery.of(context).size.width > 600
+                                ? WidgetSupport.normalblackTextTab()
+                                : WidgetSupport.normalblackText(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  final GlobalKey<TooltipState> _tooltipKey = GlobalKey<TooltipState>();
+  final GlobalKey<TooltipState> _ToDotooltipKey = GlobalKey<TooltipState>();
+  final GlobalKey<TooltipState> _TrainingtooltipKey = GlobalKey<TooltipState>();
+  final GlobalKey<TooltipState> _CampaigntooltipKey = GlobalKey<TooltipState>();
+  Widget _smallBoxThirdContainer() {
+    double screenWidth = MediaQuery.of(context).size.width;
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          // My Leads Box - triggers Tooltip for Training
+          GestureDetector(
+            onTap: () async {
+              _CampaigntooltipKey.currentState?.ensureTooltipVisible();
+            },
+            child: Tooltip(
+              key: _CampaigntooltipKey,
+              message: 'Coming Soon',
+              decoration: BoxDecoration(
+                color: Color(
+                    0xFFa604ad), // Set the background color of the tooltip
+                borderRadius:
+                    BorderRadius.circular(5), // Optional: rounded corners
+              ),
+              child: Column(
+                children: [
+                  SizedBox(
+                    child: Container(
+                      width: screenWidth * 0.43,
+                      //height: screenHeight * 0.07,
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(5),
+                        // boxShadow: [
+                        //   BoxShadow(
+                        //     color: Colors.grey[300]!,
+                        //     spreadRadius: 2,
+                        //     blurRadius: 2,
+                        //     offset: const Offset(0, 1),
+                        //   ),
+                        // ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment:
+                            MainAxisAlignment.start, // Center horizontally
+                        crossAxisAlignment:
+                            CrossAxisAlignment.center, // Center vertically
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(top: 10),
+                          ),
+                          FaIcon(
+                            FontAwesomeIcons.bullhorn,
+                            size: MediaQuery.of(context).size.width > 600
+                                ? 40
+                                : 20,
+                            color: Colors.green,
+                          ),
+                          const SizedBox(
+                            width: 5,
+                          ),
+                          Text(
+                            "Campaign",
                             style: MediaQuery.of(context).size.width > 600
                                 ? WidgetSupport.normalblackTextTab()
                                 : WidgetSupport.normalblackText(),

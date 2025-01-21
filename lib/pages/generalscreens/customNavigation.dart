@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/fsaModule/fsadashboard.dart';
+import 'package:unosfa/pages/FRModule/frdashboard.dart';
 import 'package:unosfa/pages/generalscreens/profile.dart';
 import 'package:unosfa/pages/generalscreens/setting.dart';
-import 'package:unosfa/pages/salesModule/salesdashboard.dart';
+import 'package:unosfa/pages/FSAModule/salesdashboard.dart';
 
 class NavigationPage extends StatefulWidget {
   const NavigationPage({super.key});

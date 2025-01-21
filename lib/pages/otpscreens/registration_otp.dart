@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:unosfa/pages/generalscreens/login.dart';
 import 'package:unosfa/pages/generalscreens/registration.dart';
@@ -11,20 +12,22 @@ class RegistrationOtpPage extends StatefulWidget {
   final String firstName;
   final String lastName;
   final String emailId;
-  final String externalId;
   final String offic;
   final String phoneNumber;
-  final String government_id_type;
+  final dynamic kyc_id_number;
+  final dynamic kyc_id_type;
+  final File? kycDocument;
   const RegistrationOtpPage(
       {super.key,
       required this.loginWith,
       required this.firstName,
       required this.lastName,
       required this.emailId,
-      required this.externalId,
       required this.offic,
       required this.phoneNumber,
-      required this.government_id_type});
+      this.kyc_id_type,
+      this.kyc_id_number,
+      this.kycDocument});
 
   @override
   State<RegistrationOtpPage> createState() => RegistrationOtpPageState();
@@ -74,20 +77,28 @@ class RegistrationOtpPageState extends State<RegistrationOtpPage> {
     if (_formKey.currentState?.validate() ?? false) {
       try {
         var url = Uri.parse('http://167.88.160.87/api/agents/');
-        Map<String, String> mappedData = {
-          'first_name': widget.firstName,
-          'last_name': widget.lastName,
-          'email': widget.emailId,
-          'phone_number': widget.phoneNumber,
-          'government_id_type': widget.government_id_type,
-          'government_id_number': widget.externalId,
-          'office': widget.offic,
-          'date_of_birth': "1993-06-05",
-        };
-        http.Response response = await http.post(
-          url,
-          body: mappedData,
-        );
+        var request = http.MultipartRequest('POST', url);
+
+        // Add text fields
+        request.fields['first_name'] = widget.firstName;
+        request.fields['last_name'] = widget.lastName;
+        request.fields['email'] = widget.emailId;
+        request.fields['phone_number'] = widget.phoneNumber;
+        request.fields['kyc_id_type'] = widget.kyc_id_type.toString();
+        request.fields['kyc_id_number'] = widget.kyc_id_number.toString();
+        request.fields['office'] = widget.offic;
+
+        // Add file field
+        if (widget.kycDocument != null) {
+          request.files.add(await http.MultipartFile.fromPath(
+            'kyc_document',
+            widget.kycDocument!.path,
+          ));
+        }
+        print(request);
+        // Send the request
+        var response = await request.send();
+
         if (response.statusCode == 201) {
           showDialog(
             context: context,
@@ -124,24 +135,14 @@ class RegistrationOtpPageState extends State<RegistrationOtpPage> {
               );
             },
           );
-        } else if (response.statusCode == 400) {
-          final data = json.decode(response.body);
-          var errors = data['errors'];
+        } else {
+          var responseBody = await response.stream.bytesToString();
+          var data = json.decode(responseBody);
 
-          String errorMessage = "";
+          String errorMessage = data['errors'] is List
+              ? (data['errors'] as List).join('\n')
+              : data['errors'].values.join('\n');
 
-          // If errors is a list
-          if (errors is List) {
-            errorMessage = errors
-                .join('\n');
-          }
-          else if (errors is Map) {
-            errorMessage =
-                errors.values.join('\n');
-          }
-          if (data['success'] == false) {
-            errorMessage = errorMessage; 
-          }
           showDialog(
             context: context,
             builder: (BuildContext context) {
@@ -151,13 +152,14 @@ class RegistrationOtpPageState extends State<RegistrationOtpPage> {
                 actions: [
                   TextButton(
                     onPressed: () {
-                      Navigator.of(context).pop(); 
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const Registration(loginWith: 'Sal',)),
-                        );
-                      
+                      Navigator.of(context).pop(); // Close the dialog
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const Registration(
+                                  loginWith: 'Sal',
+                                )),
+                      );
                     },
                     child: Text("OK"),
                   ),
@@ -167,7 +169,6 @@ class RegistrationOtpPageState extends State<RegistrationOtpPage> {
           );
         }
       } catch (e) {
-        // Handle exceptions like network errors
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Error: ${e.toString()}"),

@@ -4,8 +4,8 @@ import 'package:circle_progress_bar/circle_progress_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/salesModule/createnewlead.dart';
-import 'package:unosfa/pages/salesModule/leaddashboard.dart';
+import 'package:unosfa/pages/FSAModule/createnewlead.dart';
+import 'package:unosfa/pages/FSAModule/leaddashboard.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -946,7 +946,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
           GestureDetector(
             onTap: () async {
               Navigator.pushReplacement(context,
-                  MaterialPageRoute(builder: (context) => LeadGenerate()));
+                  MaterialPageRoute(builder: (context) => LeadGenerate(edit: '',)));
             },
             child: Column(
               children: [

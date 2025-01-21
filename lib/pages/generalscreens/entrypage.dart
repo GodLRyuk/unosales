@@ -83,16 +83,9 @@ class _EntryPageState extends State<EntryPage> {
               value: _selectedOption,
               items: [
                 DropdownMenuItem(
-                  value: "Sal",
+                  value: "FSA",
                   child: Text(
-                    'Sales Finance Agent',
-                    style: WidgetSupport.dropDownText(),
-                  ),
-                ),
-                DropdownMenuItem(
-                  value: "DSA",
-                  child: Text(
-                    "Direct Sales Agent",
+                    "Field Sales Agent",
                     style: WidgetSupport.dropDownText(),
                   ),
                 ),

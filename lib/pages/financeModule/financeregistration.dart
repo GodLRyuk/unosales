@@ -348,15 +348,15 @@ class _FinanceregistrationState extends State<Financeregistration> {
       String firstName = _firstName.text.trim();
       String lastName = _lastName.text.trim();
       String emailId = _emailId.text.trim();
-      String externalId = _externalId.text.trim();
       String office = _office.text.trim();
       String phoneNumber = _phoneNumber.text.trim();
-      String government_id_type = _selectedGId!;
+      String kyc_id_number =_externalId.text.trim();
+      String kyc_id_type =_selectedGId!;
       // Show a success dialog without sending data to the API
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => RegistrationOtpPage(loginWith: 'Sal', firstName: firstName, lastName: lastName, emailId: emailId, externalId: externalId, offic: office, phoneNumber: phoneNumber, government_id_type: government_id_type,),
+          builder: (context) => RegistrationOtpPage(loginWith: 'Sal', firstName: firstName, lastName: lastName, emailId: emailId, offic: office, phoneNumber: phoneNumber, kyc_id_type: kyc_id_type, kyc_id_number: kyc_id_number,),
         ),
       );
     } else {

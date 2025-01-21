@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
+import 'package:unosfa/pages/FSAModule/createnewlead.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 
 class Loancalculation extends StatefulWidget {
@@ -188,6 +189,30 @@ class _LoancalculationState extends State<Loancalculation> {
     );
   }
 
+  Future<bool?> _showBackConfirmationDialog(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Form is not completed"),
+        content: Text("Are you sure you want to go back?"),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(false); // Stay on the page
+            },
+            child: Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(true); // Exit the page
+            },
+            child: Text("Leave"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // ignore: deprecated_member_use
@@ -291,8 +316,43 @@ class _LoancalculationState extends State<Loancalculation> {
                                       0.02),
                               Container(
                                 child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.pushReplacement(
+                                            context,
+                                            MaterialPageRoute(
+                                                builder: (context) =>
+                                                    LeadGenerate(
+                                                        edit: widget.id
+                                                            .toString())));
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        shadowColor: Colors.transparent,
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: MediaQuery.of(context)
+                                                  .size
+                                                  .width *
+                                              0.0,
+                                          vertical: MediaQuery.of(context)
+                                                  .size
+                                                  .height *
+                                              0.00,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(0.0),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        "BACK",
+                                        style: WidgetSupport
+                                            .LoginButtonTextColor(),
+                                      ),
+                                    ),
                                     ElevatedButton(
                                       onPressed: () {
                                         if (_formKey.currentState!.validate()) {
@@ -306,7 +366,7 @@ class _LoancalculationState extends State<Loancalculation> {
                                           horizontal: MediaQuery.of(context)
                                                   .size
                                                   .width *
-                                              0.1,
+                                              0.0,
                                           vertical: MediaQuery.of(context)
                                                   .size
                                                   .height *

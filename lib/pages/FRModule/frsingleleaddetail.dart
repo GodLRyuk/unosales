@@ -2,7 +2,7 @@ import 'dart:convert'; // for json.decode
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/fsaModule/fsacompanyleaddashboard.dart';
+import 'package:unosfa/pages/FRModule/frcompanyleaddashboard.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 
 class FsaSingleLead extends StatefulWidget {
@@ -464,6 +464,133 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                                 ],
                               ),
                               const SizedBox(height: 8),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: Color(0xFF640D78),
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.only(
+                                bottom:
+                                    8.0), // Add padding below the icon and text
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons
+                                      .business, // You can replace this with any other icon you prefer
+                                  color: Color(
+                                      0xFF640D78), // Match the color with your border
+                                  size: 24, // Set the icon size
+                                ),
+                                Text(
+                                  "KYC Information".toUpperCase(),
+                                  style: WidgetSupport.inputLabel().copyWith(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.all(0.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'KYC ID:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    leadDetails['kyc_id_type'].toUpperCase(),
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'ID Number:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['kyc_id_number'].toUpperCase() ?? ''}',
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'KYC Document:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  leadDetails['kyc_document'] != null &&
+                                          leadDetails['kyc_document'].isNotEmpty
+                                      ? Image.network(
+                                          leadDetails[
+                                              'kyc_document'], // If it's a URL
+                                          height:
+                                              50, // Adjust the height as needed
+                                          width:
+                                              50, // Adjust the width as needed
+                                          fit: BoxFit
+                                              .cover, // Adjust the fit as needed
+                                        )
+                                      : leadDetails['kyc_document'] is String &&
+                                              leadDetails['kyc_document']
+                                                  .startsWith('assets/')
+                                          ? Image.asset(
+                                              leadDetails[
+                                                  'kyc_document'], // If it's a local asset path
+                                              height:
+                                                  50, // Adjust the height as needed
+                                              width:
+                                                  50, // Adjust the width as needed
+                                              fit: BoxFit
+                                                  .cover, // Adjust the fit as needed
+                                            )
+                                          : Text(
+                                              '${leadDetails['kyc_document'].toUpperCase() ?? ''}',
+                                              style: WidgetSupport.inputLabel(),
+                                            ),
+                                ],
+                              ),
                             ],
                           ),
                         ),

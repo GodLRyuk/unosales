@@ -8,11 +8,13 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
-import 'package:unosfa/pages/salesModule/loancalculation.dart';
+import 'package:unosfa/pages/FSAModule/loancalculation.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:intl/intl.dart';
 
 class LeadGenerate extends StatefulWidget {
+  final String edit;
+  const LeadGenerate({Key? key, required this.edit}) : super(key: key);
   @override
   _LeadGenerateState createState() => _LeadGenerateState();
 }
@@ -95,6 +97,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
     _loadTenorData();
     _loadDocData();
     _loadCityData();
+    _loadEditLead();
   }
 
   // Load initial company data
@@ -460,6 +463,44 @@ class _LeadGenerateState extends State<LeadGenerate> {
         await prefs.setString('accessToken', data['access']);
         await prefs.setString('refreshToken', data['refresh']);
         _loadCityData();
+      } else {
+        throw Exception('Failed to load location types');
+      }
+    } catch (e) {
+      print('Error: $e');
+    }
+  }
+
+  Future<void> _loadEditLead() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('accessToken');
+    prefs.getString('refreshToken');
+    try {
+      final response = await http.get(
+        Uri.parse('http://167.88.160.87/api/leads/${widget.edit}'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          print(data);
+          _fname.text = data['first_name'];
+          _mname.text = data['middle_name'];
+          _lname.text = data['last_name'];
+          _phoneNumber.text = data['phone_number'];
+          _address1.text = data['address1'];
+          _address2.text = data['address2'];
+          _email.text = data['email'];
+          _zip.text = data['zip'];
+          _area.text = data['area'];
+          _income.text = data['income'];
+          _loanamount.text = data['loan_amount_requested'];
+          _businessNameController.text = data['business_name'];
+          _selectedCity = data['city'];
+          print(_selectedCity);
+          // _fname.text=data['customer_type'];
+          // _fname.text=data['first_name'];
+        });
       } else {
         throw Exception('Failed to load location types');
       }
@@ -899,10 +940,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
   }
 
   Future<void> leadSubmit() async {
-    setState(() {
-      _isLoading = true;
-    });
-
     // Check if the form is valid
     if (_formKey.currentState!.validate()) {
       // Collect form data
@@ -967,7 +1004,9 @@ class _LeadGenerateState extends State<LeadGenerate> {
         'kyc_id_type': selectedGId,
         'kyc_id_number': externalId,
       };
-
+      setState(() {
+        _isLoading = true;
+      });
       try {
         var url = Uri.parse('http://167.88.160.87/api/leads/');
 
@@ -1001,14 +1040,12 @@ class _LeadGenerateState extends State<LeadGenerate> {
           setState(() {
             _isLoading = false;
           });
-
           // Refresh token
           Map<String, dynamic> refreshData = {'refresh': refresh};
           final response2 = await http.post(
             Uri.parse('http://167.88.160.87/api/users/token-refresh/'),
             body: refreshData,
           );
-
           final data = json.decode(response2.body);
           SharedPreferences prefs = await SharedPreferences.getInstance();
           await prefs.setBool('isLoggedIn', true);
@@ -1039,6 +1076,9 @@ class _LeadGenerateState extends State<LeadGenerate> {
         ),
       );
     }
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   Widget _buildTextField(
@@ -1069,7 +1109,11 @@ class _LeadGenerateState extends State<LeadGenerate> {
                   : TextInputType.text,
       inputFormatters: [
         if (isNumeric) NumericCommaInputFormatter(),
-        if (isZipNumber) FilteringTextInputFormatter.digitsOnly,
+        if (isZipNumber)
+        ...[
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(4), // Limit to 4 digits
+        ],
         if (isPhoneNumber)
           LengthLimitingTextInputFormatter(12), // Limit to 12 digits
         if (isAlphabetic)
@@ -1124,7 +1168,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
     bool isEmail = false,
     bool isPhoneNumber = false,
     bool isAlphabetic = false,
-    bool isBlankAlphabetic = false,
     bool isNumeric = false,
     bool isZipNumber = false,
     bool isRequired = true, // Add a flag to make the field optional
@@ -1155,9 +1198,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
       validator: (_selectedKycId) {
         if (_selectedKycId == "" && _selectedGId != null) {
           return 'Please Enter Id'; // Validation message if KYC ID is selected but no image uploaded
-        }
-        if (_externalId.text.length > 6) {
-          return 'Id must be 6 characters long';
         }
 
         return null;
@@ -1573,11 +1613,10 @@ class _LeadGenerateState extends State<LeadGenerate> {
             padding: const EdgeInsets.only(top: 16.0),
             child: ClipOval(
               child: Image.file(
-                _image!, 
-                height: 110, 
-                width: 110, 
-                fit: BoxFit
-                    .cover, 
+                _image!,
+                height: 110,
+                width: 110,
+                fit: BoxFit.cover,
               ),
             ),
           ),

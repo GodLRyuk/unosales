@@ -1,12 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:unosfa/pages/FSAModule/createnewlead.dart';
 import 'package:unosfa/pages/generalscreens/entrypage.dart';
 import 'package:unosfa/pages/otpscreens/registration_otp.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-// import 'package:image_picker/image_picker.dart';
-// import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
-// import 'package:file_picker/file_picker.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 
 class Registration extends StatefulWidget {
   final String loginWith;
@@ -25,43 +27,33 @@ class _RegistrationState extends State<Registration> {
   final _office = TextEditingController();
   final _phoneNumber = TextEditingController();
   bool _isLoading = false;
+  bool _selectedKycId = false;
+  final _imageController = TextEditingController();
 
   String? _selectedGId;
   final Map<String, String> _gIdOptions = {
-    'passport': 'Passport',
+    'passport': 'Philippines Passport',
     'national_id': 'Philippine National ID (PhilSys ID)',
     'drivers_license': 'Driver\'s License',
-    'barangay_id': 'Barangay ID',
-    'voter_id': 'Voter\'s ID',
-    'school_id': 'School ID',
-    'senior_citizen_id': 'Senior Citizen ID',
-    'pwd_id': 'Persons with Disability (PWD) ID',
-    'postal_id': 'Postal ID',
-    'government_id': 'Other Government Issued ID'
+    'umid': 'Unified Multi-Purpose ID (UMID)',
+    'sss_id': 'Social Security System (SSS) ID',
+    'prc_id': 'Professional Regulation Commission (PRC) ID'
   };
 
   String _getIdHintText() {
     switch (_selectedGId) {
       case 'passport':
-        return 'Enter your Passport Number';
+        return 'Enter your Philippines Passport Number';
       case 'national_id':
         return 'Enter your PhilSys ID';
       case 'drivers_license':
         return 'Enter your Driver’s License Number';
-      case 'barangay_id':
-        return 'Enter your Barangay ID';
-      case 'voter_id':
-        return 'Enter your Voter\'s ID';
-      case 'school_id':
-        return 'Enter your School ID';
-      case 'senior_citizen_id':
-        return 'Enter your Senior Citizen ID';
-      case 'pwd_id':
-        return 'Enter your (PWD) ID';
-      case 'postal_id':
-        return 'Enter your Postal ID';
-      case 'government_id':
-        return 'Enter your Other Government Issued ID';
+      case 'umid':
+        return 'Enter your Unified Multi-Purpose ID';
+      case 'sss_id':
+        return 'Enter your Social Security System (SSS) ID';
+      case 'prc_id':
+        return 'Enter your Professional Regulation Commission (PRC) ID';
       default:
         return 'Enter ID Number';
     }
@@ -157,23 +149,28 @@ class _RegistrationState extends State<Registration> {
                                   height:
                                       MediaQuery.of(context).size.height * 0.04,
                                 ),
-                                _buildTextField(
+                                _buildKydIdTextField(
                                   _externalId,
                                   _getIdHintText(),
                                   'Please Enter External ID',
                                   '',
                                   icon: FontAwesomeIcons.idCard,
-                                  obscureText: false,
-                                  allowSpaces: true,
+                                  isRequired: false,
                                 ),
+                                SizedBox(
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.04,
+                                ),
+                                _buildImageUploadField(
+                                    _imageController, "Select Image"),
                                 SizedBox(
                                   height:
                                       MediaQuery.of(context).size.height * 0.04,
                                 ),
                                 _buildTextField(
                                   _office,
-                                  "Office",
-                                  'Please Enter Office ',
+                                  "Company Name",
+                                  'Please Enter Company Name',
                                   'office',
                                   icon: FontAwesomeIcons.locationDot,
                                   allowSpaces: true,
@@ -423,30 +420,183 @@ class _RegistrationState extends State<Registration> {
     );
   }
 
-  Widget _buildDropdownField() {
-    return DropdownButtonFormField<String>(
-      decoration: InputDecoration(
-        hintText: "Select a valid ID",
-        hintStyle: WidgetSupport.inputLabel(),
-      ),
-      value: _selectedGId,
-      items: _gIdOptions.entries.map((entry) {
-        return DropdownMenuItem<String>(
-          value: entry.key,
-          child: Text(entry.value),
-        );
-      }).toList(),
-      onChanged: (String? newValue) {
-        setState(() {
-          _selectedGId = newValue;
-        });
-      },
-      validator: (value) {
-        if (value == null) {
-          return 'Please select an ID';
+  Widget _buildKydIdTextField(
+    TextEditingController controller,
+    String hintText,
+    String validationMessage,
+    String validationKey, {
+    IconData icon = FontAwesomeIcons.solidCircleUser,
+    bool obscureText = false,
+    bool isEmail = false,
+    bool isPhoneNumber = false,
+    bool isAlphabetic = false,
+    bool isNumeric = false,
+    bool isZipNumber = false,
+    bool isRequired = true, // Add a flag to make the field optional
+    bool allowSpaces = false,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: isPhoneNumber
+          ? TextInputType.phone
+          : isEmail
+              ? TextInputType.emailAddress
+              : isNumeric || isZipNumber
+                  ? TextInputType.number
+                  : TextInputType.text,
+      inputFormatters: [
+        if (isNumeric) NumericCommaInputFormatter(),
+        if (isZipNumber) FilteringTextInputFormatter.digitsOnly,
+        if (isPhoneNumber)
+          LengthLimitingTextInputFormatter(12), // Limit to 12 digits
+        if (isAlphabetic)
+          FilteringTextInputFormatter.allow(
+            allowSpaces
+                ? RegExp(r'^[a-zA-Z\s]+$') // Allow alphabets and spaces
+                : RegExp(r'^[a-zA-Z]+$'), // Allow alphabets only (no spaces)
+          ),
+      ],
+      validator: (_selectedKycId) {
+        if (_selectedKycId == "" && _selectedGId != null) {
+          return 'Please Enter Id'; // Validation message if KYC ID is selected but no image uploaded
         }
         return null;
       },
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: WidgetSupport.inputLabel(),
+        suffixIcon: Padding(
+          padding: const EdgeInsets.all(0),
+          child: Icon(
+            icon,
+            color: Colors.purple,
+            size: 15,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdownField() {
+    return DropdownSearch<String>(
+      popupProps: PopupProps.menu(
+        showSearchBox: false, // Disable the search box
+        fit: FlexFit.loose,
+      ),
+      items: _gIdOptions.values.toList(),
+      dropdownDecoratorProps: DropDownDecoratorProps(
+        dropdownSearchDecoration: InputDecoration(
+          hintText: "Select a KYC ID",
+          hintStyle: WidgetSupport.inputLabel(),
+        ),
+      ),
+      selectedItem: _selectedGId != null ? _gIdOptions[_selectedGId] : null,
+      onChanged: (String? newValue) {
+        setState(() {
+          _selectedGId = _gIdOptions.entries
+              .firstWhere((entry) => entry.value == newValue)
+              .key;
+          _selectedKycId == true;
+        });
+      },
+      dropdownBuilder: (BuildContext context, String? _selectedGId) {
+        return Text(
+          _selectedGId ?? "Select KYC ID",
+          style: WidgetSupport.dropDownText(),
+        );
+      },
+    );
+  }
+
+  File? _image;
+
+  Widget _buildImageUploadField(
+      TextEditingController controller, String hintText) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: controller,
+          readOnly: true,
+          decoration: InputDecoration(
+            hintText: hintText,
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.upload_file),
+              onPressed: () async {
+                // Show dialog to choose between camera or gallery
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    return AlertDialog(
+                      title: const Text("Select Image Source"),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () async {
+                            final ImagePicker picker = ImagePicker();
+                            final XFile? image = await picker.pickImage(
+                                source: ImageSource.camera); // Open camera
+                            if (image != null) {
+                              setState(() {
+                                _image =
+                                    File(image.path); // Save the selected image
+                                controller.text = image
+                                    .path; // Update the controller with the image path
+                              });
+                            }
+                            Navigator.of(context).pop(); // Close dialog
+                          },
+                          child: const Text("Camera"),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            final ImagePicker picker = ImagePicker();
+                            final XFile? image = await picker.pickImage(
+                                source: ImageSource.gallery); // Open gallery
+                            if (image != null) {
+                              setState(() {
+                                _image =
+                                    File(image.path); // Save the selected image
+                                controller.text = image
+                                    .path; // Update the controller with the image path
+                              });
+                            }
+                            Navigator.of(context).pop(); // Close dialog
+                          },
+                          child: const Text("Gallery"),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                color: Colors.black45,
+              ),
+            ),
+          ),
+          validator: (_selectedKycId) {
+            if (_selectedGId != null && _image == null) {
+              return 'Please upload an image'; // Validation message if KYC ID is selected but no image uploaded
+            }
+            return null;
+          },
+        ),
+        if (_image != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 16.0),
+            child: ClipOval(
+              child: Image.file(
+                _image!,
+                height: 110,
+                width: 110,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -459,14 +609,15 @@ class _RegistrationState extends State<Registration> {
         String firstName = _firstName.text.trim();
         String lastName = _lastName.text.trim();
         String emailId = _emailId.text.trim();
-        String externalId = _externalId.text.trim();
         String office = _office.text.trim();
         String phoneNumber = _phoneNumber.text.trim();
-        String government_id_type = _selectedGId!;
+        String selectedGId = _selectedGId!;
+        String externalId = _externalId.text.trim();
+
         // Perform registration logic here, e.g., API call
         await Future.delayed(const Duration(seconds: 2)); // Simulating API call
 
-        // On success, navigate to OTP page
+        // On success, navigate to OTP page and pass the image
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -475,10 +626,11 @@ class _RegistrationState extends State<Registration> {
               firstName: firstName,
               lastName: lastName,
               emailId: emailId,
-              externalId: externalId,
               offic: office,
               phoneNumber: phoneNumber,
-              government_id_type: government_id_type,
+              kyc_id_type: selectedGId,
+              kyc_id_number: externalId,
+              kycDocument: _image, // Pass the image file
             ),
           ),
         );
