@@ -30,16 +30,16 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  image_picker: ^0.8.6
+  image_picker: ^1.1.2
   font_awesome_flutter: ^10.4.0
-  permission_handler: ^10.2.0
+  permission_handler: ^11.3.1
   circle_progress_bar: ^0.1.1
   shared_preferences: ^2.0.13
   cupertino_icons: ^1.0.8
   http: ^1.2.2
   get: ^4.6.5
   flutter_native_splash: ^2.4.2
-  file_picker: ^5.2.4
+  file_picker: ^8.1.7
   super_tooltip: ^2.0.9
   cs_tooltip: ^3.0.2
   table_calendar: ^3.1.2

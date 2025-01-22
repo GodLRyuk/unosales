@@ -181,7 +181,7 @@ class _RegistrationState extends State<Registration> {
                                 ),
                                 _buildTextField(
                                   _phoneNumber,
-                                  "Phone Number",
+                                  "(Please put country code e.g. 63XXXXXXXXXX)",
                                   'Please Enter Your Phone Number',
                                   'phone',
                                   isPhoneNumber: true,

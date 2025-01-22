@@ -142,7 +142,7 @@ class RegistrationOtpPageState extends State<RegistrationOtpPage> {
           String errorMessage = data['errors'] is List
               ? (data['errors'] as List).join('\n')
               : data['errors'].values.join('\n');
-
+          print(data['errors']);
           showDialog(
             context: context,
             builder: (BuildContext context) {

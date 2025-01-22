@@ -556,6 +556,7 @@ class _FsaCompanyLeadGenerateState extends State<FsaCompanyLeadGenerate> {
           ),
           if (_isLoading)
             Container(
+              // ignore: deprecated_member_use
               color: Colors.black.withOpacity(0.5),
               child: const Center(
                 child: CircularProgressIndicator(),
