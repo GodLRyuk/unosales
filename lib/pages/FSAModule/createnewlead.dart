@@ -45,14 +45,20 @@ class _LeadGenerateState extends State<LeadGenerate> {
   late List<Map<String, String>> _Activity = []; // Initialize as an empty map
   late List<Map<String, String>> _Tenor = []; // Initialize as an empty map
   late List<Map<String, String>> _doc = []; // Initialize as an empty map
-  late Map<String, String> _city = {}; // Initialize as an empty map
   late List<Map<String, String>> _filteredCompanies; // Store filtered companies
+  late Map<String, String> _CityIdOptions; // Store the All city
+  //late Map<String, String> _filteredCity = {}; // Store filtered City
+  late List<Map<String, String>> _filteredCity; // Store filtered companies
+
+  late List<Map<String, String>> _barangay = []; // Initialize as an empty map
 
   TextEditingController _searchController = TextEditingController();
+  TextEditingController _citysearchController = TextEditingController();
   String? _selectedCompany;
   bool _isFieldFocused = false; // Track if TextField is clicked
   String? _selectedGId;
   bool _selectedKycId = false;
+  bool _isCityFieldFocused = false;
 
   final Map<String, String> _gIdOptions = {
     'passport': 'Philippines Passport',
@@ -62,7 +68,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
     'sss_id': 'Social Security System (SSS) ID',
     'prc_id': 'Professional Regulation Commission (PRC) ID'
   };
-
   String _getIdHintText() {
     switch (_selectedGId) {
       case 'passport':
@@ -82,6 +87,11 @@ class _LeadGenerateState extends State<LeadGenerate> {
     }
   }
 
+  String? _selectedCustType;
+  final Map<String, String> _CustomerType = {
+    'salaried': 'Salaried ',
+    'self_employed': 'Self-employed',
+  };
   @override
   void initState() {
     super.initState();
@@ -91,13 +101,17 @@ class _LeadGenerateState extends State<LeadGenerate> {
     _Activity = [];
     _Tenor = [];
     _doc = [];
+    _ComIdOptions = {};
+    _filteredCity = [];
     _loadData();
     _loadLocationData();
     _loadActivityData();
     _loadTenorData();
     _loadDocData();
     _loadCityData();
-    _loadEditLead();
+    if (widget.edit != "") {
+      _loadEditLead();
+    }
   }
 
   // Load initial company data
@@ -120,7 +134,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
             fetchedData[item['id'].toString()] =
                 item['company_name'].toString();
           }
-
           setState(() {
             _ComIdOptions = fetchedData;
             // Initially, show all companies in the list
@@ -212,11 +225,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
     return {'Authorization': 'Bearer $token'};
   }
 
-  String? _selectedCustType;
-  final Map<String, String> _CustomerType = {
-    'salaried': 'Salaried ',
-    'self_employed': 'Self-employed',
-  };
   String? _selectedLocationType;
 
   Future<void> _loadLocationData() async {
@@ -432,23 +440,129 @@ class _LeadGenerateState extends State<LeadGenerate> {
     String? refresh = prefs.getString('refreshToken');
     try {
       final response = await http.get(
-        Uri.parse('http://167.88.160.87/api/leads/cities'),
+        Uri.parse('http://167.88.160.87/api/leads/cities/?page=2'),
         headers: {'Authorization': 'Bearer $token'},
       );
-
       if (response.statusCode == 200) {
-        // Decode the response as a List<dynamic>
-        List<dynamic> cityList = json.decode(response.body);
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['results'] != null && data['results'] is List) {
+          List<dynamic> citydata = data['results'];
+          Map<String, String> fetchedData = {};
+          for (var item in citydata) {
+            fetchedData[item['id'].toString()] = item['city_name'].toString();
+          }
 
-        // Create a map from the list of locations
-        Map<String, String> fetchedData = {};
-        for (var item in cityList) {
-          fetchedData[item['id'].toString()] = item['city_name'].toString();
+          setState(() {
+            _CityIdOptions = fetchedData;
+            _filteredCity = _CityIdOptions.entries
+                .map((e) => {'id': e.key, 'city_name': e.value})
+                .toList();
+          });
         }
+      } else if (response.statusCode == 401) {
+        Map<String, dynamic> mappedData = {'refresh': refresh};
+        final response2 = await http.post(
+          Uri.parse('http://167.88.160.87/api/users/token-refresh/'),
+          body: mappedData,
+        );
+        final data = json.decode(response2.body);
+        await prefs.setBool('isLoggedIn', true);
+        await prefs.setString('accessToken', data['access']);
+        await prefs.setString('refreshToken', data['refresh']);
+        _loadCityData();
+      } else {
+        throw Exception('Failed to load cities');
+      }
+    } catch (e) {
+      print('Error: $e');
+    }
+  }
 
-        setState(() {
-          _city = fetchedData; // Now _LocationType is a Map<String, String>
-        });
+  // Search for companies based on the query
+  Future<void> _filterCity(String query) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (query.isEmpty) {
+      setState(() {
+        _filteredCity = _CityIdOptions.entries
+            .map((e) => {'id': e.key, 'city_name': e.value})
+            .toList();
+      });
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://167.88.160.87/api/leads/cities/?search=$query'),
+        headers: await _getAuthHeader(),
+      );
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['results'] != null && data['results'] is List) {
+          List<dynamic> cityData = data['results'];
+
+          setState(() {
+            _filteredCity = cityData
+                .map((e) => {
+                      'id': e['id'].toString(),
+                      'city_name': e['city_name'].toString(),
+                    })
+                .toList();
+            _loadBarangayData(query);
+          });
+        }
+      } else if (response.statusCode == 401) {
+        String? refresh = prefs.getString('refreshToken');
+        Map<String, dynamic> mappedData = {
+          'refresh': refresh,
+        };
+        final response2 = await http.post(
+          Uri.parse(
+              'http://167.88.160.87/api/users/token-refresh/'), // Using leadId in the API URL
+          body: mappedData,
+        );
+        final data = json.decode(response2.body);
+        await prefs.setBool('isLoggedIn', true);
+        await prefs.setString('accessToken', data['access']);
+        await prefs.setString('refreshToken', data['refresh']);
+        _filterCity(query);
+      } else {
+        throw Exception('Failed to search City');
+      }
+    } catch (e) {
+      print('Search Error: $e');
+    }
+  }
+
+  String? _selectedBarangayType;
+
+  Future<void> _loadBarangayData(String query2) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('accessToken');
+    String? refresh = prefs.getString('refreshToken');
+    try {
+      final response = await http.get(
+        Uri.parse('http://167.88.160.87/api/leads/cities/${_selectedCity}'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['barangays'] != null && data['barangays'] is List) {
+          List<dynamic> barangays = data['barangays'];
+
+          Map<String, String> fetchedData = {};
+          for (var item in barangays) {
+            fetchedData[item['id'].toString()] =
+                item['barangay_name'].toString();
+          }
+
+          setState(() {
+            _ComIdOptions = fetchedData;
+            // Initially, show all companies in the list
+            _barangay = fetchedData.entries
+                .map((e) => {'id': e.key, 'barangay_name': e.value})
+                .toList();
+          });
+        }
       } else if (response.statusCode == 401) {
         Map<String, dynamic> mappedData = {
           'refresh': refresh,
@@ -462,13 +576,34 @@ class _LeadGenerateState extends State<LeadGenerate> {
         await prefs.setBool('isLoggedIn', true);
         await prefs.setString('accessToken', data['access']);
         await prefs.setString('refreshToken', data['refresh']);
-        _loadCityData();
+        _getAuthHeader();
       } else {
         throw Exception('Failed to load location types');
       }
     } catch (e) {
       print('Error: $e');
     }
+  }
+
+  String numericCommaInputFormatter(dynamic value) {
+    if (value == null || value.toString().isEmpty) {
+      return '';
+    }
+
+    // Parse the value to a number
+    final number = double.tryParse(value.toString());
+    if (number == null) {
+      return '';
+    }
+
+    // Format the number without trailing .00
+    final formatted = number.toStringAsFixed(2).replaceAllMapped(
+          RegExp(r'(\d)(?=(\d{3})+(\.\d{0,2})?$)'),
+          (Match match) => '${match[1]},',
+        );
+
+    // Remove unnecessary .00 at the end
+    return formatted.endsWith('.00') ? formatted.split('.')[0] : formatted;
   }
 
   Future<void> _loadEditLead() async {
@@ -480,10 +615,115 @@ class _LeadGenerateState extends State<LeadGenerate> {
         Uri.parse('http://167.88.160.87/api/leads/${widget.edit}'),
         headers: {'Authorization': 'Bearer $token'},
       );
+      final data = json.decode(response.body);
+      print("all data");
+      final cityresponse = await http.get(
+        Uri.parse('http://167.88.160.87/api/leads/cities'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final Map<String, dynamic> datacity = json.decode(cityresponse.body);
+      List<dynamic> citydata = datacity['results'];
+      Map<String, String> fetchedDataCt = {};
+      for (var item in citydata) {
+        fetchedDataCt[item['id'].toString()] = item['city_name'].toString();
+      }
+      var _city = fetchedDataCt;
+      print("ct data");
+
+      final locationresponse = await http.get(
+        Uri.parse('http://167.88.160.87/api/leads/location-types'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final Map<String, dynamic> data2 = json.decode(locationresponse.body);
+      if (data2['results'] != null && data2['results'] is List) {
+        List<dynamic> location = data2['results'];
+        Map<String, String> fetchedData2 = {};
+        for (var item in location) {
+          fetchedData2[item['id'].toString()] = item['id'].toString();
+        }
+        _ComIdOptions = fetchedData2;
+      }
+      print("loc type data");
+
+      final activityresponse = await http.get(
+        Uri.parse('http://167.88.160.87/api/leads/activities'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final Map<String, dynamic> data3 = json.decode(activityresponse.body);
+      if (data3['results'] != null && data3['results'] is List) {
+        List<dynamic> activity = data3['results'];
+        Map<String, String> fetchedData3 = {};
+        for (var item in activity) {
+          fetchedData3[item['id'].toString()] = item['id'].toString();
+        }
+        _ComIdOptions = fetchedData3;
+      }
+      print("activity data");
+
+      final tenorsresponse = await http.get(
+        Uri.parse('http://167.88.160.87/api/leads/tenors'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final Map<String, dynamic> data4 = json.decode(tenorsresponse.body);
+      if (data4['results'] != null && data4['results'] is List) {
+        List<dynamic> tenor = data4['results'];
+        Map<String, String> fetchedData4 = {};
+        for (var item in tenor) {
+          fetchedData4[item['id'].toString()] = item['id'].toString();
+        }
+        _ComIdOptions = fetchedData4;
+      }
+      print("tenors data");
+
+      final documentresponse = await http.get(
+        Uri.parse('http://167.88.160.87/api/leads/document-types'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final Map<String, dynamic> data5 = json.decode(documentresponse.body);
+      if (data5['results'] != null && data5['results'] is List) {
+        List<dynamic> docs = data5['results'];
+
+        Map<String, String> fetchedData5 = {};
+        for (var item in docs) {
+          fetchedData5[item['id'].toString()] = item['id'].toString();
+        }
+        _ComIdOptions = fetchedData5;
+      }
+      print("doc data");
+
+      final barangayresponse = await http.get(
+        Uri.parse('http://167.88.160.87/api/leads/cities/${data['barangay']}'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final Map<String, dynamic> data6 = json.decode(barangayresponse.body);
+      if (data6['barangays'] != null && data6['barangays'] is List) {
+        List<dynamic> barangays = data6['barangays'];
+
+        Map<String, String> fetchedData = {};
+        for (var item in barangays) {
+          fetchedData[item['id'].toString()] = item['id'].toString();
+        }
+        _ComIdOptions = fetchedData;
+        print(_ComIdOptions);
+      }
+      print("barangay data");
+      print(data);
+      final companyresponse = await http.get(
+        Uri.parse('http://167.88.160.87/api/leads/companies/?page_size=100'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final Map<String, dynamic> dataComp = json.decode(companyresponse.body);
+      if (dataComp['results'] != null && dataComp['results'] is List) {
+        List<dynamic> companies = dataComp['results'];
+
+        Map<String, String> fetchedDataComp = {};
+        for (var item in companies) {
+          fetchedDataComp[item['id'].toString()] = item['id'].toString();
+        }
+        _ComIdOptions = fetchedDataComp;
+      }
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
         setState(() {
-          print(data);
           _fname.text = data['first_name'];
           _mname.text = data['middle_name'];
           _lname.text = data['last_name'];
@@ -493,13 +733,71 @@ class _LeadGenerateState extends State<LeadGenerate> {
           _email.text = data['email'];
           _zip.text = data['zip'];
           _area.text = data['area'];
-          _income.text = data['income'];
-          _loanamount.text = data['loan_amount_requested'];
+          _income.text = numericCommaInputFormatter(data['income']);
+          _loanamount.text =
+              numericCommaInputFormatter(data['loan_amount_requested']);
           _businessNameController.text = data['business_name'];
-          _selectedCity = data['city'];
-          print(_selectedCity);
-          // _fname.text=data['customer_type'];
-          // _fname.text=data['first_name'];
+          _location.text = data['location'];
+          bool matchFound = false;
+          bool locmatchFound = false;
+          bool actmatchFound = false;
+          bool tenorsmatchFound = false;
+          bool docmatchFound = false;
+          bool bramatchFound = false;
+          for (var entry in _city.entries) {
+            if (data['city'].toString() == entry.value) {
+              _selectedCity = entry.key;
+              matchFound = true;
+              break;
+            }
+          }
+          for (var entry2 in _ComIdOptions.entries) {
+            if (data['location_type'].toString() == entry2.value) {
+              _selectedLocationType = entry2.key;
+              locmatchFound = true;
+              break;
+            }
+          }
+          for (var entry3 in _ComIdOptions.entries) {
+            if (data['activity'].toString() == entry3.value) {
+              _selectedActivity = entry3.key;
+              actmatchFound = true;
+              break;
+            }
+          }
+          for (var entry4 in _ComIdOptions.entries) {
+            if (data['tenor'].toString() == entry4.value) {
+              _selectedTenor = entry4.key;
+              tenorsmatchFound = true;
+              break;
+            }
+          }
+          for (var entry5 in _ComIdOptions.entries) {
+            if (data['document_type'].toString() == entry5.value) {
+              _selectedDocument = entry5.key;
+              docmatchFound = true;
+              break;
+            }
+          }
+          for (var entry6 in _ComIdOptions.entries) {
+            if (data['barangay'].toString() == entry6.value) {
+              _selectedBarangayType = entry6.key;
+              bramatchFound = true;
+              break;
+            }
+          }
+          if (data['customer_type'] == 'salaried') {
+            _selectedCustType = "salaried";
+          } else {
+            _selectedCustType = "self_employed";
+          }
+          for (var entry7 in _ComIdOptions.entries) {
+            if (data['company'].toString() == entry7.value) {
+              _selectedCompany = entry7.key;
+              bramatchFound = true;
+              break;
+            }
+          }
         });
       } else {
         throw Exception('Failed to load location types');
@@ -794,7 +1092,141 @@ class _LeadGenerateState extends State<LeadGenerate> {
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
-                          _buildCityDropdownField(),
+                          // _buildCityDropdownField(),
+                          Padding(
+                            padding: EdgeInsets.all(0.0),
+                            child: Column(
+                              children: [
+                                // TextField for searching cities
+                                Focus(
+                                  onFocusChange: (hasFocus) {
+                                    setState(() {
+                                      _isCityFieldFocused =
+                                          hasFocus; // Track if the TextField is focused
+                                    });
+                                  },
+                                  child: TextField(
+                                    controller: _citysearchController,
+                                    decoration: InputDecoration(
+                                      hintText: "Search City",
+                                      suffixIcon: IconButton(
+                                        icon: Icon(Icons.search),
+                                        onPressed: () {
+                                          // Trigger the search when the search icon is pressed
+                                          _filterCity(
+                                              _citysearchController.text);
+                                        },
+                                      ),
+                                    ),
+                                    onChanged: (query) {
+                                      if (query.isEmpty) {
+                                        // Reset to showing all companies if the input is cleared
+                                        setState(() {
+                                          _filteredCity = _CityIdOptions.entries
+                                              .map((e) => {
+                                                    'id': e.key,
+                                                    'city_name': e.value
+                                                  })
+                                              .toList();
+                                        });
+                                      }
+
+                                      // _filterCity(query);
+                                    },
+                                  ),
+                                ),
+                                if (_isCityFieldFocused)
+                                  Stack(
+                                    children: [
+                                      Positioned(
+                                        child: Material(
+                                          elevation: 4,
+                                          borderRadius:
+                                              BorderRadius.circular(8.0),
+                                          child: Container(
+                                            height: 200,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(8.0),
+                                            ),
+                                            child: ListView.builder(
+                                              itemCount: _filteredCity.length,
+                                              itemBuilder: (context, index) {
+                                                return ListTile(
+                                                  title: Text(
+                                                      _filteredCity[index]
+                                                          ['city_name']!),
+                                                  onTap: () {
+                                                    // Set the selected company
+                                                    setState(() {
+                                                      _selectedCity =
+                                                          _filteredCity[index]
+                                                              ['id'];
+                                                      _citysearchController
+                                                              .text =
+                                                          _filteredCity[index]
+                                                              ['city_name']!;
+                                                      _isCityFieldFocused =
+                                                          false;
+                                                      _loadBarangayData(
+                                                          _selectedCity!);
+                                                    });
+                                                  },
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                              ],
+                            ),
+                          ),
+                          // Stack(
+                          //   children: [
+                          //     Positioned(
+                          //       child: Material(
+                          //         elevation: 4,
+                          //         borderRadius: BorderRadius.circular(8.0),
+                          //         child: Container(
+                          //           height: 200,
+                          //           decoration: BoxDecoration(
+                          //             color: Colors.white,
+                          //             borderRadius: BorderRadius.circular(8.0),
+                          //           ),
+                          //           child: ListView.builder(
+                          //             itemCount: _filteredCompanies.length,
+                          //             itemBuilder: (context, index) {
+                          //               return ListTile(
+                          //                 title: Text(_filteredCompanies[index]
+                          //                     ['company_name']!),
+                          //                 onTap: () {
+                          //                   // Set the selected company
+                          //                   setState(() {
+                          //                     _selectedCompany =
+                          //                         _filteredCompanies[index]
+                          //                             ['id'];
+                          //                     _searchController.text =
+                          //                         _filteredCompanies[index]
+                          //                             ['company_name']!;
+                          //                     _isFieldFocused =
+                          //                         false; // Dismiss the suggestions after selection
+                          //                   });
+                          //                 },
+                          //               );
+                          //             },
+                          //           ),
+                          //         ),
+                          //       ),
+                          //     ),
+                          //   ],
+                          // ),
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.04,
+                          ),
+                          _buildBarangayDropdownField(),
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
@@ -827,6 +1259,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
                           _buildactivityDropdownField(),
+
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
@@ -973,9 +1406,9 @@ class _LeadGenerateState extends State<LeadGenerate> {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('accessToken');
       String? refresh = prefs.getString('refreshToken');
-      String selectedGId = _selectedGId!;
+      String selectedGId = _selectedGId ?? "";
       String externalId = _externalId.text.trim();
-
+      String barangay = _selectedBarangayType!;
       // Map the collected data to be sent in the request body
       Map<String, String> mappedData = {
         'company': company,
@@ -988,6 +1421,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
         'email': email,
         'zip': zip,
         'city': city,
+        'barangay': barangay,
         'location': location,
         'area': area,
         'income': income,
@@ -1013,13 +1447,13 @@ class _LeadGenerateState extends State<LeadGenerate> {
         var request = http.MultipartRequest('POST', url)
           ..headers['Authorization'] = 'Bearer $token'
           ..fields.addAll(mappedData);
-
         if (_image != null) {
           request.files.add(await http.MultipartFile.fromPath(
             'kyc_document',
             _image!.path,
           ));
         }
+        print(mappedData);
         http.Response response =
             await http.Response.fromStream(await request.send());
         if (response.statusCode == 201) {
@@ -1109,8 +1543,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
                   : TextInputType.text,
       inputFormatters: [
         if (isNumeric) NumericCommaInputFormatter(),
-        if (isZipNumber)
-        ...[
+        if (isZipNumber) ...[
           FilteringTextInputFormatter.digitsOnly,
           LengthLimitingTextInputFormatter(4), // Limit to 4 digits
         ],
@@ -1239,6 +1672,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
               .key;
           clearbusinessname();
         });
+        FocusScope.of(context).requestFocus(FocusNode());
       },
       validator: (value) {
         if (value == null || value.isEmpty) {
@@ -1278,6 +1712,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
               _Activity.firstWhere((e) => e['description'] == newValue)['id']
                   .toString();
         });
+        FocusScope.of(context).requestFocus(FocusNode());
       },
       validator: (value) {
         if (value == null || value.isEmpty) {
@@ -1321,6 +1756,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
                 .toString(); // Update _selectedLocationType with the selected id
           }
         });
+        FocusScope.of(context).requestFocus(FocusNode());
       },
       validator: (value) {
         if (value == null || value.isEmpty) {
@@ -1362,6 +1798,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
               _Tenor.firstWhere((e) => e['description'] == newValue)['id']
                   .toString();
         });
+        FocusScope.of(context).requestFocus(FocusNode());
       },
       validator: (value) {
         if (value == null || value.isEmpty) {
@@ -1372,6 +1809,48 @@ class _LeadGenerateState extends State<LeadGenerate> {
       dropdownBuilder: (BuildContext context, String? selectedItem) {
         return Text(
           selectedItem ?? "Select Tenor",
+          style: WidgetSupport.dropDownText(),
+        );
+      },
+    );
+  }
+
+  Widget _buildBarangayDropdownField() {
+    return DropdownSearch<String>(
+      popupProps: PopupProps.menu(
+        showSearchBox: false, // Disable the search box
+        fit: FlexFit.loose,
+      ),
+      items: _barangay.map((e) => e['barangay_name'].toString()).toList(),
+      dropdownDecoratorProps: DropDownDecoratorProps(
+        dropdownSearchDecoration: InputDecoration(
+          hintText: "Select Barangay",
+          hintStyle: WidgetSupport.inputLabel(),
+        ),
+      ),
+      selectedItem: _selectedBarangayType != null
+          ? _barangay.firstWhere(
+              (e) => e['id'] == _selectedBarangayType // Handle no match
+            )['barangay_name']
+          : null,
+      onChanged: (String? newValue) {
+        setState(() {
+          final selectedBarangay = _barangay.firstWhere(
+            (e) => e['barangay_name'] == newValue// Handle no match
+          );
+          _selectedBarangayType = selectedBarangay?['id']?.toString();
+        });
+        FocusScope.of(context).requestFocus(FocusNode());
+      },
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please select Barangay';
+        }
+        return null;
+      },
+      dropdownBuilder: (BuildContext context, String? selectedItem) {
+        return Text(
+          selectedItem ?? "Select Barangay",
           style: WidgetSupport.dropDownText(),
         );
       },
@@ -1406,6 +1885,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
               .firstWhere((entry) => entry.value == newValue)
               .key;
         });
+        FocusScope.of(context).requestFocus(FocusNode());
       },
       validator: (value) {
         if (value == null || value.isEmpty) {
@@ -1445,6 +1925,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
               .firstWhere((e) => e['description'] == newValue)['id']
               .toString();
         });
+        FocusScope.of(context).requestFocus(FocusNode());
       },
       validator: (value) {
         if (value == null || value.isEmpty) {
@@ -1455,41 +1936,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
       dropdownBuilder: (BuildContext context, String? selectedItem) {
         return Text(
           selectedItem ?? "Select Document",
-          style: WidgetSupport.dropDownText(),
-        );
-      },
-    );
-  }
-
-  Widget _buildCityDropdownField() {
-    return DropdownSearch<String>(
-      popupProps: PopupProps.menu(
-        showSearchBox: false, // Disable the search box
-        fit: FlexFit.loose,
-      ),
-      items: _city.values.toList(),
-      dropdownDecoratorProps: DropDownDecoratorProps(
-        dropdownSearchDecoration: InputDecoration(
-          hintText: "Select City",
-          hintStyle: WidgetSupport.inputLabel(),
-        ),
-      ),
-      selectedItem: _selectedCity != null ? _city[_selectedCity] : null,
-      onChanged: (String? newValue) {
-        setState(() {
-          _selectedCity =
-              _city.entries.firstWhere((entry) => entry.value == newValue).key;
-        });
-      },
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please Select City';
-        }
-        return null;
-      },
-      dropdownBuilder: (BuildContext context, String? selectedItem) {
-        return Text(
-          selectedItem ?? "Select City",
           style: WidgetSupport.dropDownText(),
         );
       },
@@ -1523,6 +1969,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
               .key;
           _selectedKycId == true;
         });
+        FocusScope.of(context).requestFocus(FocusNode());
       },
       dropdownBuilder: (BuildContext context, String? _selectedGId) {
         return Text(
