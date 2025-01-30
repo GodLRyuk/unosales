@@ -52,7 +52,6 @@ class _NavigationPageState extends State<NavigationPage> {
         },
         children: [
           ProfilePage(),
-          // Calculator(),
           Salesdashboard(),
           if (_role == "DSA") Salesdashboard(),
           if (_role == "FR") Fsadashboard(),

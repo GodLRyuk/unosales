@@ -738,51 +738,39 @@ class _LeadGenerateState extends State<LeadGenerate> {
               numericCommaInputFormatter(data['loan_amount_requested']);
           _businessNameController.text = data['business_name'];
           _location.text = data['location'];
-          bool matchFound = false;
-          bool locmatchFound = false;
-          bool actmatchFound = false;
-          bool tenorsmatchFound = false;
-          bool docmatchFound = false;
-          bool bramatchFound = false;
           for (var entry in _city.entries) {
             if (data['city'].toString() == entry.value) {
               _selectedCity = entry.key;
-              matchFound = true;
               break;
             }
           }
           for (var entry2 in _ComIdOptions.entries) {
             if (data['location_type'].toString() == entry2.value) {
               _selectedLocationType = entry2.key;
-              locmatchFound = true;
               break;
             }
           }
           for (var entry3 in _ComIdOptions.entries) {
             if (data['activity'].toString() == entry3.value) {
               _selectedActivity = entry3.key;
-              actmatchFound = true;
               break;
             }
           }
           for (var entry4 in _ComIdOptions.entries) {
             if (data['tenor'].toString() == entry4.value) {
               _selectedTenor = entry4.key;
-              tenorsmatchFound = true;
               break;
             }
           }
           for (var entry5 in _ComIdOptions.entries) {
             if (data['document_type'].toString() == entry5.value) {
               _selectedDocument = entry5.key;
-              docmatchFound = true;
               break;
             }
           }
           for (var entry6 in _ComIdOptions.entries) {
             if (data['barangay'].toString() == entry6.value) {
               _selectedBarangayType = entry6.key;
-              bramatchFound = true;
               break;
             }
           }
@@ -794,7 +782,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
           for (var entry7 in _ComIdOptions.entries) {
             if (data['company'].toString() == entry7.value) {
               _selectedCompany = entry7.key;
-              bramatchFound = true;
               break;
             }
           }
@@ -1838,7 +1825,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
           final selectedBarangay = _barangay.firstWhere(
             (e) => e['barangay_name'] == newValue// Handle no match
           );
-          _selectedBarangayType = selectedBarangay?['id']?.toString();
+          _selectedBarangayType = selectedBarangay['id']?.toString();
         });
         FocusScope.of(context).requestFocus(FocusNode());
       },
