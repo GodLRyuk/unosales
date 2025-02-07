@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:dropdown_search/dropdown_search.dart';
@@ -7,19 +8,19 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/generalscreens/customNavigation.dart';
-import 'package:unosfa/pages/FSAModule/loancalculation.dart';
+import 'package:unosfa/pages/FSAModule/frleaddashboard.dart';
+import 'package:unosfa/pages/FSAModule/frloancalculation.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:intl/intl.dart';
 
-class LeadGenerate extends StatefulWidget {
+class FsaLeadGenerate extends StatefulWidget {
   final String edit;
-  const LeadGenerate({Key? key, required this.edit}) : super(key: key);
+  const FsaLeadGenerate({super.key, required this.edit});
   @override
-  _LeadGenerateState createState() => _LeadGenerateState();
+  _FsaLeadGenerateState createState() => _FsaLeadGenerateState();
 }
 
-class _LeadGenerateState extends State<LeadGenerate> {
+class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
   final _formKey = GlobalKey<FormState>();
   // final _companyName = TextEditingController();
   final _fname = TextEditingController();
@@ -31,34 +32,58 @@ class _LeadGenerateState extends State<LeadGenerate> {
   final _zip = TextEditingController();
   final _email = TextEditingController();
   final _location = TextEditingController();
-  final _area = TextEditingController();
   final _income = TextEditingController();
   final _loanamount = TextEditingController();
   final _businessNameController = TextEditingController();
-  final _imageController = TextEditingController();
-  final _externalId = TextEditingController();
-
+  final _area = TextEditingController();
+  final _otherCompanyController = TextEditingController();
+  String _customCompanyName = "";
   bool _isLoading = false;
   late Map<String, String> _ComIdOptions; // Store the fetched companies
+  late Map<String, String> _LocatinIdOptions; // Store the fetched location
+  late Map<String, String> _ActivityIdOptions; // Store the fetched activity
+// Store the fetched Loan
+  late Map<String, String> _DocumentIdOptions; // Store the fetched location
+  late Map<String, String> _TenorIdOptions; // Store the fetched location
+
+  late List<Map<String, String>> _Tenor = []; // Initialize as an empty map
   late List<Map<String, String>> _LocationType =
       []; // Initialize as an empty map
   late List<Map<String, String>> _Activity = []; // Initialize as an empty map
-  late List<Map<String, String>> _Tenor = []; // Initialize as an empty map
-  late List<Map<String, String>> _doc = []; // Initialize as an empty map
   late List<Map<String, String>> _filteredCompanies; // Store filtered companies
   late Map<String, String> _CityIdOptions; // Store the All city
-  //late Map<String, String> _filteredCity = {}; // Store filtered City
-  late List<Map<String, String>> _filteredCity; // Store filtered companies
-
-  late List<Map<String, String>> _barangay = []; // Initialize as an empty map
-
-  TextEditingController _searchController = TextEditingController();
   TextEditingController _citysearchController = TextEditingController();
+  late List<Map<String, String>> _filteredCity; // Store filtered companies
+  late List<Map<String, String>> _barangay = []; // Initialize as an empty map
+  String? _selectedGId;
+  late List<Map<String, String>> _doc = []; // Initialize as an empty map
+  String? _selectedDocument;
+  TextEditingController _searchController = TextEditingController();
   String? _selectedCompany;
   bool _isFieldFocused = false; // Track if TextField is clicked
-  String? _selectedGId;
-  bool _selectedKycId = false;
   bool _isCityFieldFocused = false;
+  final _externalId = TextEditingController();
+  final _imageController = TextEditingController();
+  bool _selectedKycId = false;
+  bool _showOtherCompanyField = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ComIdOptions = {};
+    _filteredCompanies = [];
+    _Tenor = [];
+    _doc = [];
+    _loadData();
+    _loadLocationData();
+    _loadActivityData();
+    _loadTenorData();
+    _loadDocData();
+    _loadCityData();
+    if (widget.edit != "") {
+      _loadEditLead();
+    }
+  }
 
   final Map<String, String> _gIdOptions = {
     'passport': 'Philippines Passport',
@@ -87,33 +112,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
     }
   }
 
-  String? _selectedCustType;
-  final Map<String, String> _CustomerType = {
-    'salaried': 'Salaried ',
-    'self_employed': 'Self-employed',
-  };
-  @override
-  void initState() {
-    super.initState();
-    _ComIdOptions = {};
-    _filteredCompanies = [];
-    _LocationType = [];
-    _Activity = [];
-    _Tenor = [];
-    _doc = [];
-    _ComIdOptions = {};
-    _filteredCity = [];
-    _loadData();
-    _loadLocationData();
-    _loadActivityData();
-    _loadTenorData();
-    _loadDocData();
-    _loadCityData();
-    if (widget.edit != "") {
-      _loadEditLead();
-    }
-  }
-
   // Load initial company data
   Future<void> _loadData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -121,7 +119,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
     String? refresh = prefs.getString('refreshToken');
     try {
       final response = await http.get(
-        Uri.parse('http://167.88.160.87/api/leads/companies/?page_size=100'),
+        Uri.parse('http://167.88.160.87/api/leads/companies/?page_size=10'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
@@ -134,12 +132,15 @@ class _LeadGenerateState extends State<LeadGenerate> {
             fetchedData[item['id'].toString()] =
                 item['company_name'].toString();
           }
+
           setState(() {
             _ComIdOptions = fetchedData;
-            // Initially, show all companies in the list
             _filteredCompanies = fetchedData.entries
                 .map((e) => {'id': e.key, 'company_name': e.value})
                 .toList();
+
+            // Append "Others" option
+            _filteredCompanies.add({'id': 'others', 'company_name': 'Others'});
           });
         }
       } else if (response.statusCode == 401) {
@@ -148,8 +149,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
           'refresh': refresh,
         };
         final response2 = await http.post(
-          Uri.parse(
-              'http://167.88.160.87/api/users/token-refresh/'), // Using leadId in the API URL
+          Uri.parse('http://167.88.160.87/api/users/token-refresh/'),
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -165,7 +165,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
     }
   }
 
-  // Search for companies based on the query
   Future<void> _searchCompany(String query) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     if (query.isEmpty) {
@@ -173,6 +172,9 @@ class _LeadGenerateState extends State<LeadGenerate> {
         _filteredCompanies = _ComIdOptions.entries
             .map((e) => {'id': e.key, 'company_name': e.value})
             .toList();
+
+        // Append "Others" option
+        _filteredCompanies.add({'id': 'others', 'company_name': 'Others'});
       });
       return;
     }
@@ -194,6 +196,9 @@ class _LeadGenerateState extends State<LeadGenerate> {
                       'company_name': e['company_name'].toString(),
                     })
                 .toList();
+
+            // Append "Others" option
+            _filteredCompanies.add({'id': 'others', 'company_name': 'Others'});
           });
         }
       } else if (response.statusCode == 401) {
@@ -202,8 +207,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
           'refresh': refresh,
         };
         final response2 = await http.post(
-          Uri.parse(
-              'http://167.88.160.87/api/users/token-refresh/'), // Using leadId in the API URL
+          Uri.parse('http://167.88.160.87/api/users/token-refresh/'),
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -225,8 +229,12 @@ class _LeadGenerateState extends State<LeadGenerate> {
     return {'Authorization': 'Bearer $token'};
   }
 
+  String? _selectedCustType;
+  final Map<String, String> _CustomerType = {
+    'salaried': 'Salaried ',
+    'self_employed': 'Self-employed',
+  };
   String? _selectedLocationType;
-
   Future<void> _loadLocationData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
@@ -380,7 +388,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
 
   String? _selectedPricing;
   final Map<String, String> _pricing = {'1.99': '1.99%'};
-  String? _selectedDocument;
   Future<void> _loadDocData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
@@ -607,6 +614,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
   }
 
   Future<void> _loadEditLead() async {
+    _isLoading = true;
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
     prefs.getString('refreshToken');
@@ -616,20 +624,32 @@ class _LeadGenerateState extends State<LeadGenerate> {
         headers: {'Authorization': 'Bearer $token'},
       );
       final data = json.decode(response.body);
-      print("all data");
       final cityresponse = await http.get(
-        Uri.parse('http://167.88.160.87/api/leads/cities'),
+        Uri.parse(
+            'http://167.88.160.87/api/leads/cities/?search=${data['city_name']}'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      final Map<String, dynamic> datacity = json.decode(cityresponse.body);
-      List<dynamic> citydata = datacity['results'];
-      Map<String, String> fetchedDataCt = {};
-      for (var item in citydata) {
-        fetchedDataCt[item['id'].toString()] = item['city_name'].toString();
-      }
-      var _city = fetchedDataCt;
-      print("ct data");
+      final Map<String, dynamic> data44 = json.decode(cityresponse.body);
+      if (data44['results'] != null && data44['results'] is List) {
+        List<dynamic> citydata = data44['results'];
+        Map<String, String> fetchedData = {};
+        // Map<String, String> fetchedData2 = {};
 
+        for (var item in citydata) {
+          fetchedData[item['id'].toString()] = item['city_name'].toString();
+        }
+        setState(() {
+          _CityIdOptions = fetchedData;
+          _filteredCity = _CityIdOptions.entries
+              .map((e) => {'id': e.key, 'city_name': e.value})
+              .toList();
+
+          _selectedCity = data['city'].toString();
+          _citysearchController.text = _CityIdOptions[_selectedCity] ?? '';
+          //  _selectedCity = data['city'].toString();
+          // _barangay = _CityIdOptions[_selectedCity] ?? '';
+        });
+      }
       final locationresponse = await http.get(
         Uri.parse('http://167.88.160.87/api/leads/location-types'),
         headers: {'Authorization': 'Bearer $token'},
@@ -641,9 +661,8 @@ class _LeadGenerateState extends State<LeadGenerate> {
         for (var item in location) {
           fetchedData2[item['id'].toString()] = item['id'].toString();
         }
-        _ComIdOptions = fetchedData2;
+        _LocatinIdOptions = fetchedData2;
       }
-      print("loc type data");
 
       final activityresponse = await http.get(
         Uri.parse('http://167.88.160.87/api/leads/activities'),
@@ -656,9 +675,8 @@ class _LeadGenerateState extends State<LeadGenerate> {
         for (var item in activity) {
           fetchedData3[item['id'].toString()] = item['id'].toString();
         }
-        _ComIdOptions = fetchedData3;
+        _ActivityIdOptions = fetchedData3;
       }
-      print("activity data");
 
       final tenorsresponse = await http.get(
         Uri.parse('http://167.88.160.87/api/leads/tenors'),
@@ -671,9 +689,8 @@ class _LeadGenerateState extends State<LeadGenerate> {
         for (var item in tenor) {
           fetchedData4[item['id'].toString()] = item['id'].toString();
         }
-        _ComIdOptions = fetchedData4;
+        _TenorIdOptions = fetchedData4;
       }
-      print("tenors data");
 
       final documentresponse = await http.get(
         Uri.parse('http://167.88.160.87/api/leads/document-types'),
@@ -682,45 +699,63 @@ class _LeadGenerateState extends State<LeadGenerate> {
       final Map<String, dynamic> data5 = json.decode(documentresponse.body);
       if (data5['results'] != null && data5['results'] is List) {
         List<dynamic> docs = data5['results'];
-
         Map<String, String> fetchedData5 = {};
         for (var item in docs) {
           fetchedData5[item['id'].toString()] = item['id'].toString();
         }
-        _ComIdOptions = fetchedData5;
+        _DocumentIdOptions = fetchedData5;
       }
-      print("doc data");
 
       final barangayresponse = await http.get(
-        Uri.parse('http://167.88.160.87/api/leads/cities/${data['barangay']}'),
+        Uri.parse('http://167.88.160.87/api/leads/cities/${data['city']}'),
         headers: {'Authorization': 'Bearer $token'},
       );
       final Map<String, dynamic> data6 = json.decode(barangayresponse.body);
-      if (data6['barangays'] != null && data6['barangays'] is List) {
-        List<dynamic> barangays = data6['barangays'];
 
-        Map<String, String> fetchedData = {};
-        for (var item in barangays) {
-          fetchedData[item['id'].toString()] = item['id'].toString();
-        }
-        _ComIdOptions = fetchedData;
-        print(_ComIdOptions);
+      if (data6['barangays'] != null && data6['barangays'] is List) {
+        setState(() {
+          _barangay =
+              List<Map<String, String>>.from(data6['barangays'].map((item) {
+            return {
+              'id': item['id'].toString(),
+              'barangay_name': item['barangay_name'].toString(),
+            };
+          }));
+
+          // Ensure the selected barangay is correctly set
+          _selectedBarangayType = data['barangay']?.toString();
+        });
       }
-      print("barangay data");
-      print(data);
-      final companyresponse = await http.get(
+      final companyResponse = await http.get(
         Uri.parse('http://167.88.160.87/api/leads/companies/?page_size=100'),
         headers: {'Authorization': 'Bearer $token'},
       );
-      final Map<String, dynamic> dataComp = json.decode(companyresponse.body);
+
+      final Map<String, dynamic> dataComp = json.decode(companyResponse.body);
+
       if (dataComp['results'] != null && dataComp['results'] is List) {
         List<dynamic> companies = dataComp['results'];
 
         Map<String, String> fetchedDataComp = {};
         for (var item in companies) {
-          fetchedDataComp[item['id'].toString()] = item['id'].toString();
+          fetchedDataComp[item['id'].toString()] =
+              item['company_name'].toString();
         }
-        _ComIdOptions = fetchedDataComp;
+
+        setState(() {
+          _ComIdOptions = fetchedDataComp;
+
+          // Ensure the selected company is set correctly
+          _selectedCompany = data['company']?.toString() ?? '';
+
+          // Populate the search field with the selected company's name
+          _searchController.text = _ComIdOptions[_selectedCompany] ?? '';
+
+          // Initialize filtered company list
+          _filteredCompanies = _ComIdOptions.entries
+              .map((e) => {'id': e.key, 'company_name': e.value})
+              .toList();
+        });
       }
       if (response.statusCode == 200) {
         setState(() {
@@ -738,39 +773,30 @@ class _LeadGenerateState extends State<LeadGenerate> {
               numericCommaInputFormatter(data['loan_amount_requested']);
           _businessNameController.text = data['business_name'];
           _location.text = data['location'];
-          for (var entry in _city.entries) {
-            if (data['city'].toString() == entry.value) {
-              _selectedCity = entry.key;
-              break;
-            }
-          }
-          for (var entry2 in _ComIdOptions.entries) {
+          for (var entry2 in _LocatinIdOptions.entries) {
             if (data['location_type'].toString() == entry2.value) {
               _selectedLocationType = entry2.key;
               break;
             }
           }
-          for (var entry3 in _ComIdOptions.entries) {
+
+          for (var entry3 in _ActivityIdOptions.entries) {
             if (data['activity'].toString() == entry3.value) {
               _selectedActivity = entry3.key;
               break;
             }
           }
-          for (var entry4 in _ComIdOptions.entries) {
+
+          for (var entry4 in _TenorIdOptions.entries) {
             if (data['tenor'].toString() == entry4.value) {
               _selectedTenor = entry4.key;
               break;
             }
           }
-          for (var entry5 in _ComIdOptions.entries) {
+
+          for (var entry5 in _DocumentIdOptions.entries) {
             if (data['document_type'].toString() == entry5.value) {
               _selectedDocument = entry5.key;
-              break;
-            }
-          }
-          for (var entry6 in _ComIdOptions.entries) {
-            if (data['barangay'].toString() == entry6.value) {
-              _selectedBarangayType = entry6.key;
               break;
             }
           }
@@ -785,6 +811,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
               break;
             }
           }
+          _isLoading = false;
         });
       } else {
         throw Exception('Failed to load location types');
@@ -832,8 +859,9 @@ class _LeadGenerateState extends State<LeadGenerate> {
                 Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
-                        builder: (context) =>
-                            NavigationPage())); // Go back to the previous screen
+                        builder: (context) => FsaLeadDashBoard(
+                              searchQuery: '',
+                            ))); // Go back to the previous screen
               },
             ),
           ),
@@ -862,8 +890,8 @@ class _LeadGenerateState extends State<LeadGenerate> {
                 Flexible(
                     child: SingleChildScrollView(
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 20),
                     child: Form(
                       key: _formKey,
                       child: Column(
@@ -910,19 +938,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
                             height: MediaQuery.of(context).size.height * 0.03,
                           ),
                           _buildTextField(
-                            _email,
-                            "Email Address",
-                            'Please Enter Your Email',
-                            'email',
-                            isNumeric: false,
-                            icon: FontAwesomeIcons.mailchimp,
-                            isRequired: true,
-                            isEmail: true,
-                          ),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.03,
-                          ),
-                          _buildTextField(
                             _phoneNumber,
                             "(Please put country code e.g. 63XXXXXXXXXX)",
                             'Please Enter Your Phone Number',
@@ -947,9 +962,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
                                   Focus(
                                     onFocusChange: (hasFocus) {
                                       setState(() {
-                                        _isFieldFocused =
-                                            hasFocus; // Track if the TextField is focused
-                                        // _businessNameController.clear();
+                                        _isFieldFocused = hasFocus;
                                       });
                                     },
                                     child: TextField(
@@ -1014,8 +1027,10 @@ class _LeadGenerateState extends State<LeadGenerate> {
                                                   _searchController.text =
                                                       _filteredCompanies[index]
                                                           ['company_name']!;
-                                                  _isFieldFocused =
-                                                      false; // Dismiss the suggestions after selection
+                                                  _isFieldFocused = false;
+                                                  _showOtherCompanyField =
+                                                      _selectedCompany ==
+                                                          'others';
                                                 });
                                               },
                                             );
@@ -1029,6 +1044,26 @@ class _LeadGenerateState extends State<LeadGenerate> {
                             SizedBox(
                               height: MediaQuery.of(context).size.height * 0.03,
                             ),
+                          ],
+                          if (_showOtherCompanyField)...[
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 0.0),
+                              child: TextField(
+                                controller: _otherCompanyController,
+                                decoration: InputDecoration(
+                                  hintText: "Enter company name",
+                                ),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _customCompanyName = value;
+                                  });
+                                },
+                              ),
+                            ),
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.04,
+                          ),
                           ],
                           if (_selectedCustType == 'self_employed') ...[
                             TextField(
@@ -1059,7 +1094,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
                             "Address line 2",
                             'Please Enter Your Address line 2',
                             'address',
-                            isEmail: false,
+                            isEmail: true,
                             isNumeric: false,
                             icon: FontAwesomeIcons.mapLocationDot,
                             isRequired: false,
@@ -1079,7 +1114,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
-                          // _buildCityDropdownField(),
                           Padding(
                             padding: EdgeInsets.all(0.0),
                             child: Column(
@@ -1088,6 +1122,9 @@ class _LeadGenerateState extends State<LeadGenerate> {
                                 Focus(
                                   onFocusChange: (hasFocus) {
                                     setState(() {
+                                      if (widget.edit != "") {
+                                        _loadCityData();
+                                      }
                                       _isCityFieldFocused =
                                           hasFocus; // Track if the TextField is focused
                                     });
@@ -1171,45 +1208,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
                               ],
                             ),
                           ),
-                          // Stack(
-                          //   children: [
-                          //     Positioned(
-                          //       child: Material(
-                          //         elevation: 4,
-                          //         borderRadius: BorderRadius.circular(8.0),
-                          //         child: Container(
-                          //           height: 200,
-                          //           decoration: BoxDecoration(
-                          //             color: Colors.white,
-                          //             borderRadius: BorderRadius.circular(8.0),
-                          //           ),
-                          //           child: ListView.builder(
-                          //             itemCount: _filteredCompanies.length,
-                          //             itemBuilder: (context, index) {
-                          //               return ListTile(
-                          //                 title: Text(_filteredCompanies[index]
-                          //                     ['company_name']!),
-                          //                 onTap: () {
-                          //                   // Set the selected company
-                          //                   setState(() {
-                          //                     _selectedCompany =
-                          //                         _filteredCompanies[index]
-                          //                             ['id'];
-                          //                     _searchController.text =
-                          //                         _filteredCompanies[index]
-                          //                             ['company_name']!;
-                          //                     _isFieldFocused =
-                          //                         false; // Dismiss the suggestions after selection
-                          //                   });
-                          //                 },
-                          //               );
-                          //             },
-                          //           ),
-                          //         ),
-                          //       ),
-                          //     ),
-                          //   ],
-                          // ),
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
@@ -1246,7 +1244,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
                           _buildactivityDropdownField(),
-
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
@@ -1280,6 +1277,19 @@ class _LeadGenerateState extends State<LeadGenerate> {
                           _buildPricingDropdownField(),
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
+                          ),
+                          _buildTextField(
+                            _email,
+                            "Contact Person Email ID ",
+                            'Please Enter Your Email',
+                            'email',
+                            isNumeric: false,
+                            icon: FontAwesomeIcons.mailchimp,
+                            isRequired: true,
+                            isEmail: true,
+                          ),
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.03,
                           ),
                           _buildDocTypeDropdownField(),
                           SizedBox(
@@ -1338,7 +1348,9 @@ class _LeadGenerateState extends State<LeadGenerate> {
                               ],
                             ),
                           ),
-                          SizedBox(height: 180),
+                          SizedBox(
+                              height:
+                                  MediaQuery.of(context).size.height * 0.30),
                         ],
                       ),
                     ),
@@ -1360,21 +1372,27 @@ class _LeadGenerateState extends State<LeadGenerate> {
   }
 
   Future<void> leadSubmit() async {
+    setState(() {
+      _isLoading = true;
+    });
+    String finalOtherCompanyName = _selectedCompany == 'others'
+        ? _otherCompanyController.text.trim()
+        : (_selectedCompany ?? '');
     // Check if the form is valid
+    String middle_name = _mname.text.trim();
     if (_formKey.currentState!.validate()) {
       // Collect form data
       String first_name = _fname.text.trim();
-      String middle_name = _mname.text.trim();
       String last_name = _lname.text.trim();
       String phone_number = _phoneNumber.text.trim();
       String address1 = _address1.text.trim();
       String address2 = _address2.text.trim();
       String email = _email.text.trim();
       String zip = _zip.text.trim();
+      String area = _area.text.trim();
       String city = _selectedCity!;
       String location = _location.text.trim();
       String location_type = _selectedLocationType!;
-      String area = _area.text.trim();
       String income = _income.text.trim().replaceAll(',', '');
       String loan_amount_requested =
           _loanamount.text.trim().replaceAll(',', '');
@@ -1388,16 +1406,18 @@ class _LeadGenerateState extends State<LeadGenerate> {
           : '';
       String tenor = _selectedTenor!;
       String document_type = _selectedDocument!;
-      String company =
-          _selectedCompany?.isNotEmpty ?? false ? _selectedCompany! : '';
+
+      String? company = finalOtherCompanyName.isNotEmpty ? "" : _selectedCompany;
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('accessToken');
       String? refresh = prefs.getString('refreshToken');
-      String selectedGId = _selectedGId ?? "";
-      String externalId = _externalId.text.trim();
       String barangay = _selectedBarangayType!;
+      String disposition_code = "";
+      String sub_disposition_code = "";
+      
+
       // Map the collected data to be sent in the request body
-      Map<String, String> mappedData = {
+      Map<String, dynamic> mappedData = {
         'company': company,
         'first_name': first_name,
         'middle_name': middle_name,
@@ -1406,88 +1426,144 @@ class _LeadGenerateState extends State<LeadGenerate> {
         'address1': address1,
         'address2': address2,
         'email': email,
+        'area': area,
         'zip': zip,
         'city': city,
         'barangay': barangay,
         'location': location,
-        'area': area,
         'income': income,
         'loan_amount_requested': loan_amount_requested,
         'submitted_on_uno_app': submitted_on_uno_app.toString(),
         'need_to_follow_up': need_to_follow_up.toString(),
         'customer_type': customer_type,
-        'location_type': location_type,
-        'activity': activity,
         'interest': interest,
         'business_name': business_name,
         'tenor': tenor,
+        'location_type': location_type,
+        'activity': activity,
         'document_type': document_type,
-        'kyc_id_type': selectedGId,
-        'kyc_id_number': externalId,
+        'disposition_code': disposition_code,
+        'sub_disposition_code': sub_disposition_code,
+        'others_company': finalOtherCompanyName
       };
-      setState(() {
-        _isLoading = true;
-      });
-      try {
-        var url = Uri.parse('http://167.88.160.87/api/leads/');
+      if (widget.edit == "") {
+        try {
+          var url = Uri.parse('http://167.88.160.87/api/leads/');
 
-        var request = http.MultipartRequest('POST', url)
-          ..headers['Authorization'] = 'Bearer $token'
-          ..fields.addAll(mappedData);
-        if (_image != null) {
-          request.files.add(await http.MultipartFile.fromPath(
-            'kyc_document',
-            _image!.path,
-          ));
-        }
-        print(mappedData);
-        http.Response response =
-            await http.Response.fromStream(await request.send());
-        if (response.statusCode == 201) {
-          final data = json.decode(response.body);
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => Loancalculation(
-                id: data['id'],
-                loanAmountRequested: data['loan_amount_requested'],
-                tenorDescription: data['tenor_description'],
-                monthlyInstallment: data['monthly_installment'],
-                interest: data['interest'],
+          http.Response response = await http.post(
+            url,
+            body: mappedData,
+            headers: {
+              'Authorization': 'Bearer $token',
+            },
+          );
+
+          if (response.statusCode == 201) {
+            final data = json.decode(response.body);
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => FsaLoancalculation(
+                  id: data['id'],
+                  loanAmountRequested: data['loan_amount_requested'],
+                  tenorDescription: data['tenor_description'],
+                  monthlyInstallment: data['monthly_installment'],
+                  interest: data['interest'],
+                ),
               ),
+            );
+          } else if (response.statusCode == 401) {
+            setState(() {
+              _isLoading = false;
+            });
+            Map<String, dynamic> mappedData = {
+              'refresh': refresh,
+            };
+            final response2 = await http.post(
+              Uri.parse('http://167.88.160.87/api/users/token-refresh/'),
+              body: mappedData,
+            );
+            final data = json.decode(response2.body);
+            SharedPreferences prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('isLoggedIn', true);
+            await prefs.setString('accessToken', data['access']);
+            await prefs.setString('refreshToken', data['refresh']);
+            leadSubmit();
+          } else {
+            // Handle API errors
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Failed to submit lead. Error: ${response.body}"),
+              ),
+            );
+          }
+        } catch (e) {
+          // Handle network errors
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("An error occurred: $e"),
             ),
           );
-        } else if (response.statusCode == 401) {
+        }
+      } else {
+        try {
+          var url = Uri.parse('http://167.88.160.87/api/leads/${widget.edit}/');
+
+          http.Response response = await http.put(
+            url,
+            body: mappedData,
+            headers: {
+              'Authorization': 'Bearer $token',
+            },
+          );
+          if (response.statusCode == 200) {
+            final data = json.decode(response.body);
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => FsaLoancalculation(
+                  id: data['id'],
+                  loanAmountRequested: data['loan_amount_requested'],
+                  tenorDescription: data['tenor_description'],
+                  monthlyInstallment: data['monthly_installment'],
+                  interest: data['interest'],
+                ),
+              ),
+            );
+          } else if (response.statusCode == 400) {
+            setState(() {
+              _isLoading = false;
+            });
+            Map<String, dynamic> mappedData = {
+              'refresh': refresh,
+            };
+            final response2 = await http.post(
+              Uri.parse('http://167.88.160.87/api/users/token-refresh/'),
+              body: mappedData,
+            );
+            final data = json.decode(response2.body);
+            SharedPreferences prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('isLoggedIn', true);
+            await prefs.setString('accessToken', data['access']);
+            await prefs.setString('refreshToken', data['refresh']);
+            leadSubmit();
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Failed to update lead. Error: ${response.body}"),
+              ),
+            );
+          }
+        } catch (e) {
           setState(() {
             _isLoading = false;
           });
-          // Refresh token
-          Map<String, dynamic> refreshData = {'refresh': refresh};
-          final response2 = await http.post(
-            Uri.parse('http://167.88.160.87/api/users/token-refresh/'),
-            body: refreshData,
-          );
-          final data = json.decode(response2.body);
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isLoggedIn', true);
-          await prefs.setString('accessToken', data['access']);
-          await prefs.setString('refreshToken', data['refresh']);
-          leadSubmit(); // Retry the submission
-        } else {
-          // Handle API errors
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text("Failed to submit lead. Error: ${response.body}"),
+              content: Text("An error occurred: $e"),
             ),
           );
         }
-      } catch (e) {
-        // Handle network errors
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("An error occurred: $e"),
-          ),
-        );
       }
     } else {
       // Show a snackbar or other UI indication if validation fails
@@ -1500,6 +1576,38 @@ class _LeadGenerateState extends State<LeadGenerate> {
     setState(() {
       _isLoading = false;
     });
+  }
+
+  void clearbusinessname() {
+    _businessNameController.clear();
+    _searchController.clear();
+    _selectedCompany = null;
+  }
+
+  void clearAllFields() {
+    _fname.clear();
+    _mname.clear();
+    _lname.clear();
+    _phoneNumber.clear();
+    _address1.clear();
+    _address2.clear();
+    _zip.clear();
+    _location.clear();
+    _income.clear();
+    _loanamount.clear();
+    _businessNameController.clear();
+
+    // Reset selected values
+    setState(() {
+      _selectedCity = null;
+      _selectedCustType = null;
+      _selectedPricing = null;
+      _selectedTenor = null;
+      _selectedCompany = null;
+    });
+
+    // Reset the form state
+    _formKey.currentState?.reset();
   }
 
   Widget _buildTextField(
@@ -1578,65 +1686,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
     );
   }
 
-  Widget _buildKydIdTextField(
-    TextEditingController controller,
-    String hintText,
-    String validationMessage,
-    String validationKey, {
-    IconData icon = FontAwesomeIcons.solidCircleUser,
-    bool obscureText = false,
-    bool isEmail = false,
-    bool isPhoneNumber = false,
-    bool isAlphabetic = false,
-    bool isNumeric = false,
-    bool isZipNumber = false,
-    bool isRequired = true, // Add a flag to make the field optional
-    bool allowSpaces = false,
-  }) {
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: isPhoneNumber
-          ? TextInputType.phone
-          : isEmail
-              ? TextInputType.emailAddress
-              : isNumeric || isZipNumber
-                  ? TextInputType.number
-                  : TextInputType.text,
-      inputFormatters: [
-        if (isNumeric) NumericCommaInputFormatter(),
-        if (isZipNumber) FilteringTextInputFormatter.digitsOnly,
-        if (isPhoneNumber)
-          LengthLimitingTextInputFormatter(12), // Limit to 12 digits
-        if (isAlphabetic)
-          FilteringTextInputFormatter.allow(
-            allowSpaces
-                ? RegExp(r'^[a-zA-Z\s]+$') // Allow alphabets and spaces
-                : RegExp(r'^[a-zA-Z]+$'), // Allow alphabets only (no spaces)
-          ),
-      ],
-      validator: (_selectedKycId) {
-        if (_selectedKycId == "" && _selectedGId != null) {
-          return 'Please Enter Id'; // Validation message if KYC ID is selected but no image uploaded
-        }
-
-        return null;
-      },
-      decoration: InputDecoration(
-        hintText: hintText,
-        hintStyle: WidgetSupport.inputLabel(),
-        suffixIcon: Padding(
-          padding: const EdgeInsets.all(0),
-          child: Icon(
-            icon,
-            color: Colors.purple,
-            size: 15,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildCtypeDropdownField() {
     return DropdownSearch<String>(
       popupProps: PopupProps.menu(
@@ -1659,7 +1708,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
               .key;
           clearbusinessname();
         });
-        FocusScope.of(context).requestFocus(FocusNode());
       },
       validator: (value) {
         if (value == null || value.isEmpty) {
@@ -1671,6 +1719,93 @@ class _LeadGenerateState extends State<LeadGenerate> {
         return Text(
           selectedItem ?? "Select Customer Type",
           style: WidgetSupport.dropDownText(),
+        );
+      },
+    );
+  }
+
+  Widget _buildBarangayDropdownField() {
+    return DropdownSearch<String>(
+      popupProps: PopupProps.menu(
+        showSearchBox: false,
+        fit: FlexFit.loose,
+      ),
+      items: _barangay.map((e) => e['barangay_name'].toString()).toList(),
+      dropdownDecoratorProps: DropDownDecoratorProps(
+        dropdownSearchDecoration: InputDecoration(
+          hintText: "Select Barangay",
+          hintStyle: WidgetSupport.inputLabel(),
+        ),
+      ),
+      selectedItem: _barangay.isNotEmpty
+          ? _barangay.firstWhere(
+              (e) => e['id'] == _selectedBarangayType,
+              orElse: () => {'barangay_name': "Select Barangay"},
+            )['barangay_name']
+          : "Select Barangay",
+      onChanged: (String? newValue) {
+        setState(() {
+          final selectedBarangay = _barangay.firstWhere(
+            (e) => e['barangay_name'] == newValue,
+          );
+          _selectedBarangayType = selectedBarangay['id']?.toString();
+        });
+        FocusScope.of(context).requestFocus(FocusNode());
+      },
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please select Barangay';
+        }
+        return null;
+      },
+      dropdownBuilder: (BuildContext context, String? selectedItem) {
+        return Text(
+          selectedItem ?? "Select Barangay",
+          style: WidgetSupport.dropDownText(),
+        );
+      },
+    );
+  }
+
+  Widget _buildLocTypeDropdownField() {
+    return DropdownSearch<String>(
+      popupProps: PopupProps.menu(
+        showSearchBox: false,
+        fit: FlexFit.loose,
+      ),
+      items: _LocationType.map((e) => e['description'].toString()).toList(),
+      dropdownDecoratorProps: DropDownDecoratorProps(
+        dropdownSearchDecoration: InputDecoration(
+          hintText: "Select Location Type",
+          hintStyle: WidgetSupport.inputLabel(),
+        ),
+      ),
+      selectedItem: _selectedLocationType != null
+          ? _LocationType.firstWhere(
+              (e) => e['id'] == _selectedLocationType)['description']
+          : null,
+      onChanged: (String? newValue) {
+        setState(() {
+          if (newValue != null) {
+            _selectedLocationType = _LocationType.firstWhere(
+                    (e) => e['description'] == newValue)['id']
+                .toString(); // Update _selectedLocationType with the selected id
+          }
+        });
+        FocusScope.of(context).requestFocus(FocusNode());
+      },
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please Select Location Type'; // Validation message if no item is selected
+        }
+        return null; // If selection is valid, return null
+      },
+      dropdownBuilder: (BuildContext context, String? selectedItem) {
+        return Text(
+          selectedItem ??
+              "Select Location Type", // Display selected item or default hint
+          style: WidgetSupport
+              .dropDownText(), // Custom text style for the dropdown display
         );
       },
     );
@@ -1716,52 +1851,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
     );
   }
 
-  Widget _buildLocTypeDropdownField() {
-    return DropdownSearch<String>(
-      popupProps: PopupProps.menu(
-        showSearchBox: false, // Hide the search box in the dropdown
-        fit: FlexFit.loose, // Adjust the dropdown to fit the content
-      ),
-      items: _LocationType.map((e) => e['description'].toString())
-          .toList(), // Populate dropdown with descriptions
-      dropdownDecoratorProps: DropDownDecoratorProps(
-        dropdownSearchDecoration: InputDecoration(
-          hintText: "Select Location Type", // Hint text in the input field
-          hintStyle:
-              WidgetSupport.inputLabel(), // Custom style for the hint text
-        ),
-      ),
-      selectedItem: _selectedLocationType != null
-          ? _LocationType.firstWhere((e) => e['id'] == _selectedLocationType)[
-              'description'] // Show selected description
-          : null, // If no location is selected, show null (empty state)
-      onChanged: (String? newValue) {
-        setState(() {
-          if (newValue != null) {
-            _selectedLocationType = _LocationType.firstWhere(
-                    (e) => e['description'] == newValue)['id']
-                .toString(); // Update _selectedLocationType with the selected id
-          }
-        });
-        FocusScope.of(context).requestFocus(FocusNode());
-      },
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please Select Location Type'; // Validation message if no item is selected
-        }
-        return null; // If selection is valid, return null
-      },
-      dropdownBuilder: (BuildContext context, String? selectedItem) {
-        return Text(
-          selectedItem ??
-              "Select Location Type", // Display selected item or default hint
-          style: WidgetSupport
-              .dropDownText(), // Custom text style for the dropdown display
-        );
-      },
-    );
-  }
-
   Widget _buildTenorDropdownField() {
     return DropdownSearch<String>(
       popupProps: PopupProps.menu(
@@ -1785,7 +1874,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
               _Tenor.firstWhere((e) => e['description'] == newValue)['id']
                   .toString();
         });
-        FocusScope.of(context).requestFocus(FocusNode());
       },
       validator: (value) {
         if (value == null || value.isEmpty) {
@@ -1796,48 +1884,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
       dropdownBuilder: (BuildContext context, String? selectedItem) {
         return Text(
           selectedItem ?? "Select Tenor",
-          style: WidgetSupport.dropDownText(),
-        );
-      },
-    );
-  }
-
-  Widget _buildBarangayDropdownField() {
-    return DropdownSearch<String>(
-      popupProps: PopupProps.menu(
-        showSearchBox: false, // Disable the search box
-        fit: FlexFit.loose,
-      ),
-      items: _barangay.map((e) => e['barangay_name'].toString()).toList(),
-      dropdownDecoratorProps: DropDownDecoratorProps(
-        dropdownSearchDecoration: InputDecoration(
-          hintText: "Select Barangay",
-          hintStyle: WidgetSupport.inputLabel(),
-        ),
-      ),
-      selectedItem: _selectedBarangayType != null
-          ? _barangay.firstWhere(
-              (e) => e['id'] == _selectedBarangayType // Handle no match
-            )['barangay_name']
-          : null,
-      onChanged: (String? newValue) {
-        setState(() {
-          final selectedBarangay = _barangay.firstWhere(
-            (e) => e['barangay_name'] == newValue// Handle no match
-          );
-          _selectedBarangayType = selectedBarangay['id']?.toString();
-        });
-        FocusScope.of(context).requestFocus(FocusNode());
-      },
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please select Barangay';
-        }
-        return null;
-      },
-      dropdownBuilder: (BuildContext context, String? selectedItem) {
-        return Text(
-          selectedItem ?? "Select Barangay",
           style: WidgetSupport.dropDownText(),
         );
       },
@@ -1872,7 +1918,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
               .firstWhere((entry) => entry.value == newValue)
               .key;
         });
-        FocusScope.of(context).requestFocus(FocusNode());
       },
       validator: (value) {
         if (value == null || value.isEmpty) {
@@ -1883,84 +1928,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
       dropdownBuilder: (BuildContext context, String? selectedItem) {
         return Text(
           selectedItem ?? "Select Interest",
-          style: WidgetSupport.dropDownText(),
-        );
-      },
-    );
-  }
-
-  Widget _buildDocTypeDropdownField() {
-    return DropdownSearch<String>(
-      popupProps: PopupProps.menu(
-        showSearchBox: false, // Disable the search box
-        fit: FlexFit.loose,
-      ),
-      items: _doc.map((e) => e['description'].toString()).toList(),
-      dropdownDecoratorProps: DropDownDecoratorProps(
-        dropdownSearchDecoration: InputDecoration(
-          hintText: "Select Document",
-          hintStyle: WidgetSupport.inputLabel(),
-        ),
-      ),
-      selectedItem: _selectedDocument != null
-          ? _doc.firstWhere((e) => e['id'] == _selectedDocument)[
-              'description'] // Show selected description
-          : null,
-      onChanged: (String? newValue) {
-        setState(() {
-          _selectedDocument = _doc
-              .firstWhere((e) => e['description'] == newValue)['id']
-              .toString();
-        });
-        FocusScope.of(context).requestFocus(FocusNode());
-      },
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please Select Document';
-        }
-        return null;
-      },
-      dropdownBuilder: (BuildContext context, String? selectedItem) {
-        return Text(
-          selectedItem ?? "Select Document",
-          style: WidgetSupport.dropDownText(),
-        );
-      },
-    );
-  }
-
-  void clearbusinessname() {
-    _businessNameController.clear();
-    _searchController.clear();
-    _selectedCompany = null;
-  }
-
-  Widget _buildDropdownField() {
-    return DropdownSearch<String>(
-      popupProps: PopupProps.menu(
-        showSearchBox: false, // Disable the search box
-        fit: FlexFit.loose,
-      ),
-      items: _gIdOptions.values.toList(),
-      dropdownDecoratorProps: DropDownDecoratorProps(
-        dropdownSearchDecoration: InputDecoration(
-          hintText: "Select a KYC ID",
-          hintStyle: WidgetSupport.inputLabel(),
-        ),
-      ),
-      selectedItem: _selectedGId != null ? _gIdOptions[_selectedGId] : null,
-      onChanged: (String? newValue) {
-        setState(() {
-          _selectedGId = _gIdOptions.entries
-              .firstWhere((entry) => entry.value == newValue)
-              .key;
-          _selectedKycId == true;
-        });
-        FocusScope.of(context).requestFocus(FocusNode());
-      },
-      dropdownBuilder: (BuildContext context, String? _selectedGId) {
-        return Text(
-          _selectedGId ?? "Select KYC ID",
           style: WidgetSupport.dropDownText(),
         );
       },
@@ -2055,6 +2022,123 @@ class _LeadGenerateState extends State<LeadGenerate> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildKydIdTextField(
+    TextEditingController controller,
+    String hintText,
+    String validationMessage,
+    String validationKey, {
+    IconData icon = FontAwesomeIcons.solidCircleUser,
+    bool obscureText = false,
+    bool isEmail = false,
+    bool isPhoneNumber = false,
+    bool isNumeric = false,
+    bool isZipNumber = false,
+    bool isRequired = true,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: isPhoneNumber
+          ? TextInputType.phone
+          : isEmail
+              ? TextInputType.emailAddress
+              : isNumeric || isZipNumber
+                  ? TextInputType.number
+                  : TextInputType.text,
+      validator: (_selectedKycId) {
+        if (_selectedKycId == "" && _selectedGId != null) {
+          return 'Please Enter Id'; // Validation message if KYC ID is selected but no image uploaded
+        }
+
+        return null;
+      },
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: WidgetSupport.inputLabel(),
+        suffixIcon: Padding(
+          padding: const EdgeInsets.all(0),
+          child: Icon(
+            icon,
+            color: Colors.purple,
+            size: 15,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDocTypeDropdownField() {
+    return DropdownSearch<String>(
+      popupProps: PopupProps.menu(
+        showSearchBox: false, // Disable the search box
+        fit: FlexFit.loose,
+      ),
+      items: _doc.map((e) => e['description'].toString()).toList(),
+      dropdownDecoratorProps: DropDownDecoratorProps(
+        dropdownSearchDecoration: InputDecoration(
+          hintText: "Select Document",
+          hintStyle: WidgetSupport.inputLabel(),
+        ),
+      ),
+      selectedItem: _selectedDocument != null
+          ? _doc.firstWhere((e) => e['id'] == _selectedDocument)[
+              'description'] // Show selected description
+          : null,
+      onChanged: (String? newValue) {
+        setState(() {
+          _selectedDocument = _doc
+              .firstWhere((e) => e['description'] == newValue)['id']
+              .toString();
+        });
+        FocusScope.of(context).requestFocus(FocusNode());
+      },
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please Select Document';
+        }
+        return null;
+      },
+      dropdownBuilder: (BuildContext context, String? selectedItem) {
+        return Text(
+          selectedItem ?? "Select Document",
+          style: WidgetSupport.dropDownText(),
+        );
+      },
+    );
+  }
+
+  Widget _buildDropdownField() {
+    return DropdownSearch<String>(
+      popupProps: PopupProps.menu(
+        showSearchBox: false, // Disable the search box
+        fit: FlexFit.loose,
+      ),
+      items: _gIdOptions.values.toList(),
+      dropdownDecoratorProps: DropDownDecoratorProps(
+        dropdownSearchDecoration: InputDecoration(
+          hintText: "Select a KYC ID",
+          hintStyle: WidgetSupport.inputLabel(),
+        ),
+      ),
+      selectedItem: _selectedGId != null ? _gIdOptions[_selectedGId] : null,
+      onChanged: (String? newValue) {
+        setState(() {
+          _selectedGId = _gIdOptions.entries
+              .firstWhere((entry) => entry.value == newValue)
+              .key;
+          _selectedKycId == true;
+        });
+        FocusScope.of(context).requestFocus(FocusNode());
+      },
+      dropdownBuilder: (BuildContext context, String? _selectedGId) {
+        return Text(
+          _selectedGId ?? "Select KYC ID",
+          style: WidgetSupport.dropDownText(),
+        );
+      },
     );
   }
 }

@@ -3,12 +3,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/FRModule/frdashboard.dart';
+import 'package:unosfa/pages/FSAModule/frdashboard.dart';
 import 'package:unosfa/pages/generalscreens/entrypage.dart';
 import 'package:unosfa/pages/generalscreens/forcepasswordchange.dart';
 import 'package:unosfa/pages/generalscreens/forgotpassword.dart';
 import 'package:unosfa/pages/otpscreens/login_otp.dart';
-import 'package:unosfa/pages/FSAModule/salesdashboard.dart';
+import 'package:unosfa/pages/FRModule/salesdashboard.dart';
 import '../../widgetSupport/widgetstyle.dart';
 import 'package:http/http.dart' as http;
 
@@ -38,12 +38,12 @@ class _LoginPageState extends State<LoginPage> {
     bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
 
     if (isLoggedIn) {
-      if (widget.loginWith == "FR") {
+      if (widget.loginWith == "FSA") {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const Fsadashboard()),
         );
-      } else if (widget.loginWith == "FSA") {
+      } else if (widget.loginWith == "FR") {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const Salesdashboard()),

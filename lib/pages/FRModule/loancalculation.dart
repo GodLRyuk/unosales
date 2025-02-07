@@ -4,16 +4,17 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
+import 'package:unosfa/pages/FRModule/createnewlead.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 
-class FsaLoancalculation extends StatefulWidget {
+class Loancalculation extends StatefulWidget {
   final loanAmountRequested;
   final tenorDescription;
   final monthlyInstallment;
   final interest;
   final id;
 
-  const FsaLoancalculation({
+  const Loancalculation({
     super.key,
     required this.loanAmountRequested,
     required this.tenorDescription,
@@ -22,17 +23,17 @@ class FsaLoancalculation extends StatefulWidget {
     required this.id,
   });
   @override
-  State<FsaLoancalculation> createState() => _FsaLoancalculationState();
+  State<Loancalculation> createState() => _LoancalculationState();
 }
 
-class _FsaLoancalculationState extends State<FsaLoancalculation> {
+class _LoancalculationState extends State<Loancalculation> {
   final _formKey = GlobalKey<FormState>();
   final _lamount = TextEditingController();
   final _tenor = TextEditingController();
   final _minstallment = TextEditingController();
   final _intrest = TextEditingController();
   bool _isLoading = false;
-
+  bool isSubmittedPresent = false;
   late Map<String, String> dispositionCode = {}; // Initialize as an empty map
   late Map<String, String> _dependentData = {}; // List for second dropdown data
 
@@ -58,7 +59,6 @@ class _FsaLoancalculationState extends State<FsaLoancalculation> {
         Uri.parse('http://167.88.160.87/api/leads/disposition-codes/'),
         headers: {'Authorization': 'Bearer $token'},
       );
-
       if (response.statusCode == 200) {
         var decodedResponse = json.decode(response.body);
         if (decodedResponse is Map<String, dynamic> &&
@@ -104,7 +104,9 @@ class _FsaLoancalculationState extends State<FsaLoancalculation> {
   Future<void> _loadDependentData(String locationId) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
-
+    setState(() {
+      _isLoading = true;
+    });
     try {
       final response = await http.get(
         Uri.parse(
@@ -113,6 +115,12 @@ class _FsaLoancalculationState extends State<FsaLoancalculation> {
       );
       if (response.statusCode == 200) {
         var decodedResponse = json.decode(response.body);
+        if (decodedResponse['description'] == 'Submitted') {
+          isSubmittedPresent = true;
+          _selectedDependentData = "";
+        } else {
+          isSubmittedPresent = false;
+        }
         if (decodedResponse is Map<String, dynamic> &&
             decodedResponse['sub_disposition_codes'] != null) {
           decodedResponse = decodedResponse['sub_disposition_codes'];
@@ -125,6 +133,9 @@ class _FsaLoancalculationState extends State<FsaLoancalculation> {
 
           setState(() {
             _dependentData = fetchedData;
+          });
+          setState(() {
+            _isLoading = false;
           });
         } else {
           throw Exception('Unexpected response format');
@@ -153,7 +164,8 @@ class _FsaLoancalculationState extends State<FsaLoancalculation> {
       print('Error: $e');
     }
   }
-Future<bool?> _showExitConfirmationDialog(BuildContext context) {
+
+  Future<bool?> _showExitConfirmationDialog(BuildContext context) {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -177,150 +189,199 @@ Future<bool?> _showExitConfirmationDialog(BuildContext context) {
     );
   }
 
+
   @override
   Widget build(BuildContext context) {
     // ignore: deprecated_member_use
-    return  WillPopScope(
+    return WillPopScope(
       onWillPop: () async {
         final shouldLeave = await _showExitConfirmationDialog(context);
-        return shouldLeave ?? false; 
+        return shouldLeave ?? false;
       },
       child: Scaffold(
-          resizeToAvoidBottomInset: false,
-          appBar: AppBar(
-            // leading: IconButton(
-            //   icon: const Icon(Icons.arrow_back),
-            //   onPressed: () => Navigator.pop(context),
-            // ),
-            title: Center(
-              child: Text("Loan Calculation        ",
-                  style: WidgetSupport.titleText()),
-            ),
+        resizeToAvoidBottomInset: false,
+        appBar: AppBar(
+          // leading: IconButton(
+          //   icon: const Icon(Icons.arrow_back),
+          //   onPressed: () => Navigator.pop(context),
+          // ),
+          title: Center(
+            child: Text("Loan Calculation        ",
+                style: WidgetSupport.titleText()),
           ),
-          body: Stack(
-            children: [
-              Container(
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                      image: AssetImage("images/AppBg2.PNG"), fit: BoxFit.fill),
-                ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 50),
-                      child: Image(
-                        image: const AssetImage("images/logo.PNG"),
-                        width: MediaQuery.of(context).size.width * 0.7,
-                        height: MediaQuery.of(context).size.height * 0.2,
-                      ),
+        ),
+        body: Stack(
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                    image: AssetImage("images/AppBg2.PNG"), fit: BoxFit.fill),
+              ),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 10, horizontal: 50),
+                    child: Image(
+                      image: const AssetImage("images/logo.PNG"),
+                      width: MediaQuery.of(context).size.width * 0.7,
+                      height: MediaQuery.of(context).size.height * 0.2,
                     ),
-                    Flexible(
-                      child: SingleChildScrollView(
-                        child: Container(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildTextField(
-                                  _lamount,
-                                  "Loan Amount",
-                                  '',
-                                  'lamount',
-                                  isReadOnly: true,
-                                ),
-                                SizedBox(
-                                    height: MediaQuery.of(context).size.height * 0.03),
-                                _buildTextField(
-                                  _tenor,
-                                  "Tenor",
-                                  '',
-                                  'tenor',
-                                  isReadOnly: true,
-                                ),
-                                SizedBox(
-                                    height: MediaQuery.of(context).size.height * 0.03),
-                                _buildTextField(
-                                  _minstallment,
-                                  "Monthly Installment",
-                                  '',
-                                  'minstallment',
-                                  isReadOnly: true,
-                                ),
-                                SizedBox(
-                                    height: MediaQuery.of(context).size.height * 0.03),
-                                _buildTextField(
-                                  _intrest,
-                                  "Interest",
-                                  '',
-                                  'intrest',
-                                  isReadOnly: true,
-                                ),
-                                SizedBox(
-                                    height: MediaQuery.of(context).size.height * 0.03),
-                                _builddispositionDropdownField(),
-                                SizedBox(
-                                    height: MediaQuery.of(context).size.height * 0.03),
+                  ),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 0),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildTextField(
+                                _lamount,
+                                "Loan Amount",
+                                '',
+                                'lamount',
+                                isReadOnly: true,
+                              ),
+                              SizedBox(
+                                  height: MediaQuery.of(context).size.height *
+                                      0.03),
+                              _buildTextField(
+                                _tenor,
+                                "Tenor",
+                                '',
+                                'tenor',
+                                isReadOnly: true,
+                              ),
+                              SizedBox(
+                                  height: MediaQuery.of(context).size.height *
+                                      0.03),
+                              _buildTextField(
+                                _minstallment,
+                                "Monthly Installment",
+                                '',
+                                'minstallment',
+                                isReadOnly: true,
+                              ),
+                              SizedBox(
+                                  height: MediaQuery.of(context).size.height *
+                                      0.03),
+                              _buildTextField(
+                                _intrest,
+                                "Interest",
+                                '',
+                                'intrest',
+                                isReadOnly: true,
+                              ),
+                              SizedBox(
+                                  height: MediaQuery.of(context).size.height *
+                                      0.03),
+                              _builddispositionDropdownField(),
+                              SizedBox(
+                                  height: MediaQuery.of(context).size.height *
+                                      0.03),
+                              if (!isSubmittedPresent)
                                 _buildDependentDropdownField(),
-                                SizedBox(
-                                  height: MediaQuery.of(context).size.height * 0.04,
-                                ),
-                                SizedBox(
-                                    height: MediaQuery.of(context).size.height * 0.02),
-                                Container(
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      ElevatedButton(
-                                        onPressed: () {
-                                          if (_formKey.currentState!.validate()) {
-                                            leadSubmit();
-                                          }
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.transparent,
-                                          shadowColor: Colors.transparent,
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal:
-                                                MediaQuery.of(context).size.width * 0.1,
-                                            vertical:
-                                                MediaQuery.of(context).size.height *
-                                                    0.01,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(8.0),
-                                          ),
+                              SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.04,
+                              ),
+                              SizedBox(
+                                  height: MediaQuery.of(context).size.height *
+                                      0.02),
+                              Container(
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.pushReplacement(
+                                            context,
+                                            MaterialPageRoute(
+                                                builder: (context) =>
+                                                    LeadGenerate(
+                                                        edit: widget.id
+                                                            .toString())));
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        shadowColor: Colors.transparent,
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: MediaQuery.of(context)
+                                                  .size
+                                                  .width *
+                                              0.0,
+                                          vertical: MediaQuery.of(context)
+                                                  .size
+                                                  .height *
+                                              0.00,
                                         ),
-                                        child: Text(
-                                          "COMPLETE",
-                                          style: WidgetSupport.LoginButtonTextColor(),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(0.0),
                                         ),
                                       ),
-                                    ],
-                                  ),
+                                      child: Text(
+                                        "BACK",
+                                        style: WidgetSupport
+                                            .LoginButtonTextColor(),
+                                      ),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        if (_formKey.currentState!.validate()) {
+                                          leadSubmit();
+                                        }
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        shadowColor: Colors.transparent,
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: MediaQuery.of(context)
+                                                  .size
+                                                  .width *
+                                              0.0,
+                                          vertical: MediaQuery.of(context)
+                                                  .size
+                                                  .height *
+                                              0.01,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8.0),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        "COMPLETE",
+                                        style: WidgetSupport
+                                            .LoginButtonTextColor(),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                SizedBox(height: 180),
-                              ],
-                            ),
+                              ),
+                              SizedBox(height: 180),
+                            ],
                           ),
                         ),
                       ),
                     ),
-                  ],
+                  ),
+                ],
+              ),
+            ),
+            if (_isLoading)
+              Container(
+                color: Colors.black.withOpacity(0.5),
+                child: const Center(
+                  child: CircularProgressIndicator(),
                 ),
               ),
-              if (_isLoading)
-                Container(
-                  color: Colors.black.withOpacity(0.5),
-                  child: const Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                ),
-            ],
-          ),
-       
+          ],
+        ),
       ),
     );
   }
@@ -431,13 +492,17 @@ Future<bool?> _showExitConfirmationDialog(BuildContext context) {
     });
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
+
     if (_formKey.currentState!.validate()) {
-      String disposition_code = _selectedDispositionCode!;
-      String sub_disposition_code = _selectedDependentData!;
+      // Directly assign disposition_code and sub_disposition_code
+      String? disposition_code = _selectedDispositionCode;
+      String? sub_disposition_code = _selectedDependentData?.isNotEmpty ?? false
+          ? _selectedDependentData
+          : null;
 
       Map<String, dynamic> mappedData = {
         'disposition_code': disposition_code,
-        'sub_disposition_code': sub_disposition_code
+        'sub_disposition_code': sub_disposition_code, // This can be null
       };
 
       try {
@@ -445,14 +510,15 @@ Future<bool?> _showExitConfirmationDialog(BuildContext context) {
 
         http.Response response = await http.patch(
           url,
-          body: mappedData,
+          body: json.encode(mappedData), // Ensure the body is properly encoded
           headers: {
             'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json', // Make sure the request is JSON
           },
         );
+
         if (response.statusCode == 200) {
           json.decode(response.body);
-
           showDialog(
             context: context,
             builder: (BuildContext context) {
@@ -478,8 +544,8 @@ Future<bool?> _showExitConfirmationDialog(BuildContext context) {
           );
         } else {
           setState(() {
-          _isLoading = false;
-        });
+            _isLoading = false;
+          });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text("Failed to submit lead. Error: ${response.body}"),
@@ -498,8 +564,8 @@ Future<bool?> _showExitConfirmationDialog(BuildContext context) {
       }
     } else {
       setState(() {
-          _isLoading = false;
-        });
+        _isLoading = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Form validation failed"),

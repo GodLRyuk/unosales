@@ -3,18 +3,18 @@ import 'package:dropdown_search/dropdown_search.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unosfa/pages/FSAModule/frcreatenewlead.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
-import 'package:unosfa/pages/FSAModule/createnewlead.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 
-class Loancalculation extends StatefulWidget {
+class FsaLoancalculation extends StatefulWidget {
   final loanAmountRequested;
   final tenorDescription;
   final monthlyInstallment;
   final interest;
   final id;
 
-  const Loancalculation({
+  const FsaLoancalculation({
     super.key,
     required this.loanAmountRequested,
     required this.tenorDescription,
@@ -23,17 +23,17 @@ class Loancalculation extends StatefulWidget {
     required this.id,
   });
   @override
-  State<Loancalculation> createState() => _LoancalculationState();
+  State<FsaLoancalculation> createState() => _FsaLoancalculationState();
 }
 
-class _LoancalculationState extends State<Loancalculation> {
+class _FsaLoancalculationState extends State<FsaLoancalculation> {
   final _formKey = GlobalKey<FormState>();
   final _lamount = TextEditingController();
   final _tenor = TextEditingController();
   final _minstallment = TextEditingController();
   final _intrest = TextEditingController();
   bool _isLoading = false;
-  bool isSubmittedPresent = false;
+
   late Map<String, String> dispositionCode = {}; // Initialize as an empty map
   late Map<String, String> _dependentData = {}; // List for second dropdown data
 
@@ -59,6 +59,7 @@ class _LoancalculationState extends State<Loancalculation> {
         Uri.parse('http://167.88.160.87/api/leads/disposition-codes/'),
         headers: {'Authorization': 'Bearer $token'},
       );
+
       if (response.statusCode == 200) {
         var decodedResponse = json.decode(response.body);
         if (decodedResponse is Map<String, dynamic> &&
@@ -104,9 +105,7 @@ class _LoancalculationState extends State<Loancalculation> {
   Future<void> _loadDependentData(String locationId) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
-    setState(() {
-      _isLoading = true;
-    });
+
     try {
       final response = await http.get(
         Uri.parse(
@@ -115,12 +114,6 @@ class _LoancalculationState extends State<Loancalculation> {
       );
       if (response.statusCode == 200) {
         var decodedResponse = json.decode(response.body);
-        if (decodedResponse['description'] == 'Submitted') {
-          isSubmittedPresent = true;
-          _selectedDependentData = "";
-        } else {
-          isSubmittedPresent = false;
-        }
         if (decodedResponse is Map<String, dynamic> &&
             decodedResponse['sub_disposition_codes'] != null) {
           decodedResponse = decodedResponse['sub_disposition_codes'];
@@ -133,9 +126,6 @@ class _LoancalculationState extends State<Loancalculation> {
 
           setState(() {
             _dependentData = fetchedData;
-          });
-          setState(() {
-            _isLoading = false;
           });
         } else {
           throw Exception('Unexpected response format');
@@ -171,30 +161,6 @@ class _LoancalculationState extends State<Loancalculation> {
       builder: (context) => AlertDialog(
         title: Text("Form is not completed"),
         content: Text("Are you sure you want to leave this page?"),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(false); // Stay on the page
-            },
-            child: Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(true); // Exit the page
-            },
-            child: Text("Leave"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<bool?> _showBackConfirmationDialog(BuildContext context) {
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text("Form is not completed"),
-        content: Text("Are you sure you want to go back?"),
         actions: [
           TextButton(
             onPressed: () {
@@ -305,8 +271,7 @@ class _LoancalculationState extends State<Loancalculation> {
                               SizedBox(
                                   height: MediaQuery.of(context).size.height *
                                       0.03),
-                              if (!isSubmittedPresent)
-                                _buildDependentDropdownField(),
+                              _buildDependentDropdownField(),
                               SizedBox(
                                 height:
                                     MediaQuery.of(context).size.height * 0.04,
@@ -325,7 +290,7 @@ class _LoancalculationState extends State<Loancalculation> {
                                             context,
                                             MaterialPageRoute(
                                                 builder: (context) =>
-                                                    LeadGenerate(
+                                                    FsaLeadGenerate(
                                                         edit: widget.id
                                                             .toString())));
                                       },
@@ -510,36 +475,29 @@ class _LoancalculationState extends State<Loancalculation> {
   }
 
   Future<void> leadSubmit() async {
-    setState(() {
-      _isLoading = true;
-    });
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
+    String? refresh = prefs.getString('refreshToken');
 
     if (_formKey.currentState!.validate()) {
-      // Directly assign disposition_code and sub_disposition_code
-      String? disposition_code = _selectedDispositionCode;
-      String? sub_disposition_code = _selectedDependentData?.isNotEmpty ?? false
-          ? _selectedDependentData
-          : null;
+      int disposition_code = int.tryParse(_selectedDispositionCode!) ?? 0;
+      int sub_disposition_code = int.tryParse(_selectedDependentData!) ?? 0;
 
       Map<String, dynamic> mappedData = {
         'disposition_code': disposition_code,
-        'sub_disposition_code': sub_disposition_code, // This can be null
+        'sub_disposition_code': sub_disposition_code
       };
 
       try {
         var url = Uri.parse('http://167.88.160.87/api/leads/${widget.id}/');
-
         http.Response response = await http.patch(
           url,
-          body: json.encode(mappedData), // Ensure the body is properly encoded
+          body: json.encode(mappedData), // Convert data to JSON string
           headers: {
             'Authorization': 'Bearer $token',
-            'Content-Type': 'application/json', // Make sure the request is JSON
+            'Content-Type': 'application/json', // Set content type
           },
         );
-
         if (response.statusCode == 200) {
           json.decode(response.body);
           showDialog(
@@ -565,10 +523,23 @@ class _LoancalculationState extends State<Loancalculation> {
               );
             },
           );
+        } else if (response.statusCode == 401) {
+          Map<String, dynamic> refreshData = {'refresh': refresh};
+
+          final response2 = await http.post(
+            Uri.parse('http://167.88.160.87/api/users/token-refresh/'),
+            body:
+                json.encode(refreshData), // Convert refresh data to JSON string
+            headers: {'Content-Type': 'application/json'},
+          );
+
+          final data = json.decode(response2.body);
+          await prefs.setBool('isLoggedIn', true);
+          await prefs.setString('accessToken', data['access']);
+          await prefs.setString('refreshToken', data['refresh']);
+
+          leadSubmit(); // Retry lead submission
         } else {
-          setState(() {
-            _isLoading = false;
-          });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text("Failed to submit lead. Error: ${response.body}"),
@@ -576,9 +547,6 @@ class _LoancalculationState extends State<Loancalculation> {
           );
         }
       } catch (e) {
-        setState(() {
-          _isLoading = false;
-        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("An error occurred: $e"),
@@ -586,9 +554,6 @@ class _LoancalculationState extends State<Loancalculation> {
         );
       }
     } else {
-      setState(() {
-        _isLoading = false;
-      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Form validation failed"),

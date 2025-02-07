@@ -1,42 +1,43 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:gradient_floating_button/gradient_floating_button.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/FRModule/frcreatenewlead.dart';
-import 'package:unosfa/pages/FRModule/frcustomersingleleaddetail.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
+import 'package:unosfa/pages/FRModule/singleleaddetail.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 
-class FsaLeadDashBoard extends StatefulWidget {
+class LeadDashBoard extends StatefulWidget {
   final String searchQuery;
-  const FsaLeadDashBoard({super.key, required this.searchQuery});
+  const LeadDashBoard({super.key, required this.searchQuery});
 
   @override
-  State<FsaLeadDashBoard> createState() => _FsaLeadDashBoardState();
+  State<LeadDashBoard> createState() => _LeadDashBoardState();
 }
 
-class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
+class _LeadDashBoardState extends State<LeadDashBoard> {
   final _searchFilter = TextEditingController();
   final _toDate = TextEditingController();
   final _fromDate = TextEditingController();
-  final _scrollController = ScrollController(); // Scroll controller
   List<Map<String, String>> leads = [];
   List<Map<String, String>> filteredLeads = [];
+  String filterText = '';
   bool isLoading = true;
-  bool isFetchingMore = false; // Loader for lazy loading
-  int currentPage = 1; // Pagination page
-  bool hasMoreData = true; // Flag to check if more data is available
   bool areDateFieldsVisible =
       false; // Boolean to control visibility of date fields
   DateTime? selectedFromDate;
   DateTime? selectedToDate;
+  final _scrollController = ScrollController();
+  bool isFetchingMore = false;
+  int currentPage = 1;
+  bool hasMoreData = true;
 
   @override
   void initState() {
     super.initState();
-    fetchLeads(); // Fetch initial data
-    _scrollController.addListener(_onScroll); // Attach scroll listener
+    selectedFromDate = DateTime.now();
+    selectedToDate = DateTime.now();
+    fetchLeads(); // Fetch leads on initialization
+    _scrollController.addListener(_onScroll);
   }
 
   @override
@@ -45,7 +46,7 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
     super.dispose();
   }
 
-  // Fetch leads from API
+  // Method to fetch leads
   Future<void> fetchLeads({bool isLoadMore = false}) async {
     if (isLoadMore) {
       setState(() {
@@ -56,6 +57,7 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
         isLoading = true;
       });
     }
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
     String apiUrl =
@@ -66,7 +68,6 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
         Uri.parse(apiUrl),
         headers: {'Authorization': 'Bearer $token'},
       );
-      print(response.statusCode);
 
       if (response.statusCode == 200) {
         Map<String, dynamic> data = json.decode(response.body);
@@ -117,7 +118,7 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
     }
   }
 
-  // Scroll listener
+// Scroll listener
   void _onScroll() {
     if (_scrollController.position.pixels ==
             _scrollController.position.maxScrollExtent &&
@@ -165,7 +166,6 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
 
           isLoading = false;
           isFetchingMore = false;
-
         });
       } else if (response.statusCode == 401) {
         final response2 = await http.post(
@@ -225,8 +225,7 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
       areDateFieldsVisible = !areDateFieldsVisible;
     });
   }
-
-  @override
+ @override
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -437,7 +436,7 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) =>
-                                                  CustomerSingleLead(
+                                                  SingleLead(
                                                       leadId: leadId),
                                             ),
                                           );
@@ -509,39 +508,6 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
                 ],
               ),
             ),
-            floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 50, // Adjust the width
-              height: 50, // Adjust the height
-              child: GradientFloatingButton().withLinearGradient(
-                onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => FsaLeadGenerate(),
-                    ),
-                  );
-                },
-                iconWidget: const Icon(
-                  Icons.add,
-                  color: Colors.white,
-                  size: 36, // Increase icon size if needed
-                ),
-                alignmentEnd: Alignment.topRight,
-                alignmentBegin: Alignment.bottomLeft,
-                colors: [
-                  Color(0xFF1f8bdf),
-                  Color(0xFF1f8bdf),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

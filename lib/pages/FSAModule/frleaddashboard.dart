@@ -1,43 +1,42 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:gradient_floating_button/gradient_floating_button.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unosfa/pages/FSAModule/frcreatenewlead.dart';
+import 'package:unosfa/pages/FSAModule/frcustomersingleleaddetail.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
-import 'package:unosfa/pages/FSAModule/singleleaddetail.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 
-class LeadDashBoard extends StatefulWidget {
+class FsaLeadDashBoard extends StatefulWidget {
   final String searchQuery;
-  const LeadDashBoard({super.key, required this.searchQuery});
+  const FsaLeadDashBoard({super.key, required this.searchQuery});
 
   @override
-  State<LeadDashBoard> createState() => _LeadDashBoardState();
+  State<FsaLeadDashBoard> createState() => _FsaLeadDashBoardState();
 }
 
-class _LeadDashBoardState extends State<LeadDashBoard> {
+class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
   final _searchFilter = TextEditingController();
   final _toDate = TextEditingController();
   final _fromDate = TextEditingController();
+  final _scrollController = ScrollController(); // Scroll controller
   List<Map<String, String>> leads = [];
   List<Map<String, String>> filteredLeads = [];
-  String filterText = '';
   bool isLoading = true;
+  bool isFetchingMore = false; // Loader for lazy loading
+  int currentPage = 1; // Pagination page
+  bool hasMoreData = true; // Flag to check if more data is available
   bool areDateFieldsVisible =
       false; // Boolean to control visibility of date fields
   DateTime? selectedFromDate;
   DateTime? selectedToDate;
-  final _scrollController = ScrollController();
-  bool isFetchingMore = false;
-  int currentPage = 1;
-  bool hasMoreData = true;
 
   @override
   void initState() {
     super.initState();
-    selectedFromDate = DateTime.now();
-    selectedToDate = DateTime.now();
-    fetchLeads(); // Fetch leads on initialization
-    _scrollController.addListener(_onScroll);
+    fetchLeads(); // Fetch initial data
+    _scrollController.addListener(_onScroll); // Attach scroll listener
   }
 
   @override
@@ -46,7 +45,7 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
     super.dispose();
   }
 
-  // Method to fetch leads
+  // Fetch leads from API
   Future<void> fetchLeads({bool isLoadMore = false}) async {
     if (isLoadMore) {
       setState(() {
@@ -57,7 +56,6 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
         isLoading = true;
       });
     }
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
     String apiUrl =
@@ -68,6 +66,7 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
         Uri.parse(apiUrl),
         headers: {'Authorization': 'Bearer $token'},
       );
+      print(response.statusCode);
 
       if (response.statusCode == 200) {
         Map<String, dynamic> data = json.decode(response.body);
@@ -118,7 +117,7 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
     }
   }
 
-// Scroll listener
+  // Scroll listener
   void _onScroll() {
     if (_scrollController.position.pixels ==
             _scrollController.position.maxScrollExtent &&
@@ -166,6 +165,7 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
 
           isLoading = false;
           isFetchingMore = false;
+
         });
       } else if (response.statusCode == 401) {
         final response2 = await http.post(
@@ -225,7 +225,8 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
       areDateFieldsVisible = !areDateFieldsVisible;
     });
   }
- @override
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -436,7 +437,7 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) =>
-                                                  SingleLead(
+                                                  CustomerSingleLead(
                                                       leadId: leadId),
                                             ),
                                           );
@@ -508,6 +509,39 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
                 ],
               ),
             ),
+            floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 50, // Adjust the width
+              height: 50, // Adjust the height
+              child: GradientFloatingButton().withLinearGradient(
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FsaLeadGenerate(edit: '',),
+                    ),
+                  );
+                },
+                iconWidget: const Icon(
+                  Icons.add,
+                  color: Colors.white,
+                  size: 36, // Increase icon size if needed
+                ),
+                alignmentEnd: Alignment.topRight,
+                alignmentBegin: Alignment.bottomLeft,
+                colors: [
+                  Color(0xFF1f8bdf),
+                  Color(0xFF1f8bdf),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

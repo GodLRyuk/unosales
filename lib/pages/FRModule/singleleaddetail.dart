@@ -2,7 +2,7 @@ import 'dart:convert'; // for json.decode
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/FSAModule/leaddashboard.dart';
+import 'package:unosfa/pages/FRModule/leaddashboard.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 
 class SingleLead extends StatefulWidget {
@@ -603,7 +603,7 @@ class _SingleLeadState extends State<SingleLead> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    leadDetails['kyc_id_type'].toUpperCase(),
+                                    leadDetails['kyc_id_type'],
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/FRModule/frdashboard.dart';
+import 'package:unosfa/pages/FSAModule/frdashboard.dart';
 import 'package:unosfa/pages/generalscreens/profile.dart';
 import 'package:unosfa/pages/generalscreens/setting.dart';
-import 'package:unosfa/pages/FSAModule/salesdashboard.dart';
+import 'package:unosfa/pages/FRModule/salesdashboard.dart';
 
 class NavigationPage extends StatefulWidget {
   const NavigationPage({super.key});
@@ -53,8 +53,8 @@ class _NavigationPageState extends State<NavigationPage> {
         children: [
           ProfilePage(),
           Salesdashboard(),
-          if (_role == "DSA") Salesdashboard(),
-          if (_role == "FR") Fsadashboard(),
+           if (_role == "FR") Salesdashboard(),
+          if (_role == "FSA") Fsadashboard(),
           Salesdashboard(),
          // NotificationMess(),
           SettingsPage(searchQuery: '',),

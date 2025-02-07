@@ -9,6 +9,9 @@
         android:label="UNOSales"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyBe8XXxbSwRcEs1ax2iZ4k-kNpe2Yppex8" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

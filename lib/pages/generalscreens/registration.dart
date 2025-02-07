@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:unosfa/pages/FSAModule/createnewlead.dart';
+import 'package:unosfa/pages/FRModule/createnewlead.dart';
 import 'package:unosfa/pages/generalscreens/entrypage.dart';
 import 'package:unosfa/pages/otpscreens/registration_otp.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';

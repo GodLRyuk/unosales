@@ -4,21 +4,22 @@ import 'package:circle_progress_bar/circle_progress_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/FRModule/frcompanyleaddashboard.dart';
-import 'package:unosfa/pages/FRModule/frleaddashboard.dart';
+import 'package:unosfa/pages/FRModule/createnewlead.dart';
+import 'package:unosfa/pages/FRModule/leaddashboard.dart';
+import 'package:unosfa/pages/FRModule/mytodolist.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
-class Fsadashboard extends StatefulWidget {
+class Salesdashboard extends StatefulWidget {
   // final String loginWith;
-  const Fsadashboard({super.key});
+  const Salesdashboard({super.key});
 
   @override
-  State<Fsadashboard> createState() => _FsadashboardState();
+  State<Salesdashboard> createState() => _SalesdashboardState();
 }
 
-class _FsadashboardState extends State<Fsadashboard> {
+class _SalesdashboardState extends State<Salesdashboard> {
   String capitalize(String text) {
     if (text.isEmpty) return text;
     return text[0].toUpperCase() + text.substring(1).toLowerCase();
@@ -28,10 +29,8 @@ class _FsadashboardState extends State<Fsadashboard> {
   int leadDetails = 0;
   final TextEditingController searchController = TextEditingController();
   bool tokenisLoading = false;
-  bool areDateFieldsVisible = false;
-  final _searchFilter = TextEditingController();
-
   String? role;
+
   @override
   void initState() {
     super.initState();
@@ -44,14 +43,12 @@ class _FsadashboardState extends State<Fsadashboard> {
     String? refresh = prefs.getString('refreshToken');
     role = prefs.getString('role');
     if (mounted) {
-      setState(() {
-        userInfo = prefs.getStringList('userInfo');
-      });
+      setState(() => userInfo = prefs.getStringList('userInfo'));
     }
     try {
       final response = await http.get(
         Uri.parse(
-            'http://167.88.160.87/api/leads/?ordering=-created_at'), // Using leadId in the API URL
+            'http://167.88.160.87/api/leads/'), // Using leadId in the API URL
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -80,15 +77,6 @@ class _FsadashboardState extends State<Fsadashboard> {
     } catch (e) {
       print('Error fetching lead details: $e');
     }
-  }
-
-  List<String> leadOptions = ['Customer Lead', 'Company Lead'];
-  String? selectedLeadType; // Initially null or set a default value.
-
-  void _toggleDateFieldsVisibility() {
-    setState(() {
-      areDateFieldsVisible = !areDateFieldsVisible;
-    });
   }
 
   @override
@@ -134,12 +122,18 @@ class _FsadashboardState extends State<Fsadashboard> {
           SizedBox(
             height: MediaQuery.of(context).size.width > 600
                 ? MediaQuery.of(context).size.height * 0.03
-                : MediaQuery.of(context).size.height * 0.02,
+                : MediaQuery.of(context).size.height * 0.04,
           ),
           _buildMidContainerWithButton(),
-          _smallBoxLeadDetailsContainer(),
+
+          _smallBoxFirstContainer(),
           _smallBoxSecondContainer(),
           _smallBoxThirdContainer(),
+          // SizedBox(
+          //   height: MediaQuery.of(context).size.height * 0.01,
+          // ),
+          // _firstNudgesControler(),
+          // _secondNudgesController(),
           SizedBox(
             height: MediaQuery.of(context).size.height * 0.02,
           ),
@@ -172,151 +166,65 @@ class _FsadashboardState extends State<Fsadashboard> {
                   ),
                 ),
                 SizedBox(
-                    height: MediaQuery.of(context).size.width > 600 ? 30 : 0),
+                    height: MediaQuery.of(context).size.width > 600 ? 30 : 10),
                 Padding(
-                  padding: const EdgeInsets.all(10.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // TextField for phone number filter
-                      TextField(
-                        controller: _searchFilter,
-                        decoration: InputDecoration(
-                          labelText: 'Filter By Phone Number',
-                          border: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.grey),
-                          ),
-                          suffixIcon: IconButton(
-                            icon: Icon(Icons.filter_list),
-                            onPressed:
-                                _toggleDateFieldsVisibility, // Toggle date fields visibility
-                          ),
-                        ),
-                        style: TextStyle(height: 1),
-                        // onChanged: _filterLeads, // Uncomment if needed
+                  padding: const EdgeInsets.only(left: 15, right: 15),
+                  child: TextField(
+                    controller: searchController,
+                    decoration: InputDecoration(
+                      hintText: "Search By Phone Number..",
+                      hintStyle: TextStyle(
+                          color: const Color.fromARGB(255, 162, 160, 160)),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 10,
                       ),
-
-                      // Date fields visibility control
-                      if (areDateFieldsVisible)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                value:
-                                    selectedLeadType, // The currently selected value
-                                onChanged: (value) {
-                                  setState(() {
-                                    selectedLeadType =
-                                        value; // Update the selected lead type
-                                  });
-                                },
-                                decoration: InputDecoration(
-                                  hintText: selectedLeadType == null
-                                      ? 'Select Lead Type'
-                                      : selectedLeadType,
-                                  enabledBorder: UnderlineInputBorder(
-                                    borderSide: BorderSide(color: Colors.grey),
-                                  ),
-                                  focusedBorder: UnderlineInputBorder(
-                                    borderSide:
-                                        BorderSide(color: Color(0xFF640D78)),
-                                  ),
-                                ),
-                                items: leadOptions.map((String lead) {
-                                  return DropdownMenuItem<String>(
-                                    value: lead,
-                                    child: Text(lead),
-                                  );
-                                }).toList(),
+                      suffixIcon: Container(
+                        color: const Color(0xFFac00d0),
+                        child: IconButton(
+                          onPressed: () {
+                            final String searchData = searchController.text;
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    LeadDashBoard(searchQuery: searchData),
                               ),
-                            ),
-                          ],
-                        ),
-
-                      SizedBox(
-                        height: 10,
-                      ),
-
-                      // Search button for applying filters
-                      if (areDateFieldsVisible)
-                        Padding(
-                          padding: const EdgeInsets.all(0.0),
-                          child: Column(
-                            children: [
-                              SizedBox(
-                                child: Container(
-                                  width: MediaQuery.of(context).size.width,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Color(0xFFc433e0),
-                                        Color(0xFF9a37ae)
-                                      ], // Define your gradient colors
-                                      begin: Alignment
-                                          .topLeft, // Start from top-left
-                                      end: Alignment
-                                          .bottomRight, // End at bottom-right
-                                    ),
-                                  ),
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      final String searchData =
-                                          _searchFilter.text;
-                                      final String? _FilterData =
-                                          selectedLeadType != null
-                                              ? selectedLeadType
-                                              : '';
-                                      if (_FilterData == "Customer Lead") {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                FsaLeadDashBoard(
-                                                    searchQuery: searchData),
-                                          ),
-                                        );
-                                      }
-                                      if (_FilterData == "Company Lead") {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                FsaCompanyLeadDashBoard(
-                                                    searchQuery: searchData),
-                                          ),
-                                        );
-                                      } else if (_FilterData == "") {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text('Select Lead Type'),
-                                            duration: Duration(
-                                                seconds:
-                                                    3), // Optional: Set the duration
-                                          ),
-                                        );
-                                      }
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      elevation: 0,
-                                    ),
-                                    child: Text(
-                                      "Search",
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 18), // Text style
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.search,
+                            color: Colors.white,
                           ),
                         ),
-                    ],
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(0),
+                        borderSide: const BorderSide(
+                          color: Colors.grey,
+                          width: 1.0,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(0),
+                        borderSide: const BorderSide(
+                          color: Colors.grey,
+                          width: 1.0,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(0),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFac00d0),
+                          width: 1.0,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
                   ),
                 ),
+                //const SizedBox(height: 25),
               ],
             ),
           ),
@@ -338,7 +246,7 @@ class _FsadashboardState extends State<Fsadashboard> {
     double containerHeight3 = isLandscape
         ? screenHeight * 0.40 // Adjusted height for landscape
         : screenHeight > 600
-            ? screenHeight * 0.25 // Portrait - tablet
+            ? screenHeight * 0.27 // Portrait - tablet
             : screenHeight * 0.26; // Portrait - mobile
 
     double containerWidth = isLandscape
@@ -1022,68 +930,74 @@ class _FsadashboardState extends State<Fsadashboard> {
     );
   }
 
-  Widget _smallBoxLeadDetailsContainer() {
+  Widget _smallBoxFirstContainer() {
+    double screenHeight = MediaQuery.of(context).size.height;
     double screenWidth = MediaQuery.of(context).size.width;
+    bool isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
 
+    double containerHeight = screenWidth > 600
+        ? (isLandscape ? screenHeight * 0.08 : screenHeight * 0.05)
+        : (isLandscape ? screenHeight * 0.07 : screenHeight * 0.05);
 
     return Padding(
       padding: const EdgeInsets.all(10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          // GestureDetector(
-          //   onTap: () async {
-          //     Navigator.push(
-          //         context,
-          //         MaterialPageRoute(
-          //             builder: (context) => FsaLeadDashBoard(
-          //                   searchQuery: '',
-          //                 )));
-          //   },
-          //   child: Column(
-          //     children: [
-          //       SizedBox(
-          //         child: Container(
-          //           width: screenWidth * 0.43,
-          //           height: containerHeight,
-          //           decoration: BoxDecoration(
-          //             color: Colors.transparent,
-          //             borderRadius: BorderRadius.circular(5),
-          //             // boxShadow: [
-          //             //   BoxShadow(
-          //             //     color: Colors.grey[300]!,
-          //             //     spreadRadius: 2,
-          //             //     blurRadius: 2,
-          //             //     offset: const Offset(0, 1),
-          //             //   ),
-          //             // ],
-          //           ),
-          //           child: Row(
-          //             mainAxisAlignment: MainAxisAlignment.start,
-          //             crossAxisAlignment: CrossAxisAlignment.center,
-          //             children: [
-          //               FaIcon(
-          //                 Icons.handshake,
-          //                 size:
-          //                     MediaQuery.of(context).size.width > 600 ? 40 : 20,
-          //                 color: Colors.purple,
-          //               ),
-          //               const SizedBox(
-          //                 width: 5,
-          //               ),
-          //               Text(
-          //                 "Customer Lead",
-          //                 style: MediaQuery.of(context).size.width > 600
-          //                     ? WidgetSupport.normalblackTextTab()
-          //                     : WidgetSupport.normalblackText(),
-          //               ),
-          //             ],
-          //           ),
-          //         ),
-          //       ),
-          //     ],
-          //   ),
-          // ),
+          GestureDetector(
+            onTap: () async {
+              Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => LeadGenerate(
+                            edit: '',
+                          )));
+            },
+            child: Column(
+              children: [
+                SizedBox(
+                  child: Container(
+                    width: screenWidth * 0.43,
+                    height: containerHeight,
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(5),
+                      // boxShadow: [
+                      //   BoxShadow(
+                      //     color: Colors.grey[300]!,
+                      //     spreadRadius: 2,
+                      //     blurRadius: 2,
+                      //     offset: const Offset(0, 1),
+                      //   ),
+                      // ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        FaIcon(
+                          Icons.person_add_alt_outlined,
+                          size:
+                              MediaQuery.of(context).size.width > 600 ? 40 : 20,
+                          color: Colors.purple,
+                        ),
+                        const SizedBox(
+                          width: 5,
+                        ),
+                        Text(
+                          "Create New Lead",
+                          style: MediaQuery.of(context).size.width > 600
+                              ? WidgetSupport.normalblackTextTab()
+                              : WidgetSupport.normalblackText(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
           // My Leads Box - triggers Tooltip for Training
           GestureDetector(
@@ -1091,7 +1005,7 @@ class _FsadashboardState extends State<Fsadashboard> {
               Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => FsaCompanyLeadDashBoard(
+                      builder: (context) => LeadDashBoard(
                             searchQuery: '',
                           )));
             },
@@ -1136,7 +1050,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                           width: 5,
                         ),
                         Text(
-                          "Company Lead",
+                          "Assigned Leads",
                           style: MediaQuery.of(context).size.width > 600
                               ? WidgetSupport.normalblackTextTab()
                               : WidgetSupport.normalblackText(),
@@ -1148,7 +1062,23 @@ class _FsadashboardState extends State<Fsadashboard> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
 
+  final GlobalKey<TooltipState> _tooltipKey = GlobalKey<TooltipState>();
+  final GlobalKey<TooltipState> _TrainingtooltipKey = GlobalKey<TooltipState>();
+  final GlobalKey<TooltipState> _CampaigntooltipKey = GlobalKey<TooltipState>();
+
+  Widget _smallBoxSecondContainer() {
+    double screenWidth = MediaQuery.of(context).size.width;
+
+    return Padding(
+      padding: const EdgeInsets.all(10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
           GestureDetector(
             onTap: () {
               // Trigger the tooltip on tap
@@ -1201,16 +1131,76 @@ class _FsadashboardState extends State<Fsadashboard> {
               ),
             ),
           ),
+
+          // My Leads Box - triggers Tooltip for Training
+          GestureDetector(
+            onTap: () async {
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => MyTodoList(searchQuery: '',)));
+            },
+            // onTap: () {
+            //   _ToDotooltipKey.currentState?.ensureTooltipVisible();
+            // },
+            child: Column(
+              children: [
+                SizedBox(
+                  child: Container(
+                    width: screenWidth * 0.43,
+                    // height: screenHeight * 0.07,
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(5),
+                      // boxShadow: [
+                      //   BoxShadow(
+                      //     color: Colors.grey[300]!,
+                      //     spreadRadius: 2,
+                      //     blurRadius: 2,
+                      //     offset: const Offset(0, 1),
+                      //   ),
+                      // ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment.start, // Center horizontally
+                      crossAxisAlignment:
+                          CrossAxisAlignment.center, // Center vertically
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(top: 10),
+                        ),
+                        FaIcon(
+                          FontAwesomeIcons.listCheck,
+                          size:
+                              MediaQuery.of(context).size.width > 600 ? 40 : 20,
+                          color: Colors.green,
+                        ),
+                        const SizedBox(
+                          width: 5,
+                        ),
+                        Text(
+                          "My To-Do List",
+                          style: MediaQuery.of(context).size.width > 600
+                              ? WidgetSupport.normalblackTextTab()
+                              : WidgetSupport.normalblackText(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _smallBoxSecondContainer() {
-    double screenWidth = MediaQuery.of(context).size.width;
+  Widget _smallBoxThirdContainer() {
     double screenHeight = MediaQuery.of(context).size.height;
+    double screenWidth = MediaQuery.of(context).size.width;
     bool isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
+
     double containerHeight = screenWidth > 600
         ? (isLandscape ? screenHeight * 0.08 : screenHeight * 0.05)
         : (isLandscape ? screenHeight * 0.07 : screenHeight * 0.05);
@@ -1220,72 +1210,6 @@ class _FsadashboardState extends State<Fsadashboard> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          // My Leads Box - triggers Tooltip for Training
-          GestureDetector(
-            onTap: () {
-              _ToDotooltipKey.currentState?.ensureTooltipVisible();
-            },
-            child: Tooltip(
-              key: _ToDotooltipKey,
-              message: 'Coming Soon',
-              decoration: BoxDecoration(
-                color: Color(
-                    0xFFa604ad), // Set the background color of the tooltip
-                borderRadius:
-                    BorderRadius.circular(5), // Optional: rounded corners
-              ),
-              child: Column(
-                children: [
-                  SizedBox(
-                    child: Container(
-                      width: screenWidth * 0.43,
-                      // height: screenHeight * 0.07,
-                      decoration: BoxDecoration(
-                        color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(5),
-                        // boxShadow: [
-                        //   BoxShadow(
-                        //     color: Colors.grey[300]!,
-                        //     spreadRadius: 2,
-                        //     blurRadius: 2,
-                        //     offset: const Offset(0, 1),
-                        //   ),
-                        // ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment.start, // Center horizontally
-                        crossAxisAlignment:
-                            CrossAxisAlignment.center, // Center vertically
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.only(top: 10),
-                          ),
-                          FaIcon(
-                            FontAwesomeIcons.listCheck,
-                            size: MediaQuery.of(context).size.width > 600
-                                ? 40
-                                : 20,
-                            color: Colors.green,
-                          ),
-                          const SizedBox(
-                            width: 5,
-                          ),
-                          Text(
-                            "My To-Do List",
-                            style: MediaQuery.of(context).size.width > 600
-                                ? WidgetSupport.normalblackTextTab()
-                                : WidgetSupport.normalblackText(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
           GestureDetector(
             onTap: () async {
               _TrainingtooltipKey.currentState?.ensureTooltipVisible();
@@ -1345,22 +1269,7 @@ class _FsadashboardState extends State<Fsadashboard> {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
 
-  final GlobalKey<TooltipState> _tooltipKey = GlobalKey<TooltipState>();
-  final GlobalKey<TooltipState> _ToDotooltipKey = GlobalKey<TooltipState>();
-  final GlobalKey<TooltipState> _TrainingtooltipKey = GlobalKey<TooltipState>();
-  final GlobalKey<TooltipState> _CampaigntooltipKey = GlobalKey<TooltipState>();
-  Widget _smallBoxThirdContainer() {
-    double screenWidth = MediaQuery.of(context).size.width;
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
           // My Leads Box - triggers Tooltip for Training
           GestureDetector(
             onTap: () async {
@@ -1426,6 +1335,328 @@ class _FsadashboardState extends State<Fsadashboard> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  // ignore: unused_element
+  Widget _firstNudgesControler() {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Column(
+            children: [
+              SizedBox(
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.10,
+                  height: 35,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFae03cb),
+                    borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(10),
+                        bottomLeft: Radius.circular(10)),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.grey[300]!,
+                          spreadRadius: 2,
+                          blurRadius: 2,
+                          offset: const Offset(0, 2))
+                    ],
+                  ),
+                  child: const Column(
+                    children: [
+                      Padding(padding: EdgeInsets.all(4)),
+                      FaIcon(
+                        FontAwesomeIcons.handPointRight,
+                        size: 20,
+                        color: Colors.white,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Column(
+            children: [
+              SizedBox(
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.35,
+                  height: 35,
+                  decoration: const BoxDecoration(
+                    color: Color.fromARGB(52, 33, 219, 243),
+                    borderRadius: BorderRadius.only(
+                      topRight: Radius.circular(10),
+                      bottomRight: Radius.circular(10),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text("Nudges",
+                            style: WidgetSupport.verticalBarInnerText()),
+                      ),
+                      SizedBox(
+                        width: MediaQuery.of(context).size.width * 0.095,
+                      ),
+                      Transform.rotate(
+                        angle: 3.14159,
+                        alignment: Alignment.centerRight,
+                        child: const Icon(
+                          Icons.arrow_back_ios_new_outlined,
+                          size: 20,
+                          color: Colors.purple,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(
+            width: 10,
+          ),
+          Column(
+            children: [
+              SizedBox(
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.10,
+                  height: 35,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFae03cb),
+                    borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(10),
+                        bottomLeft: Radius.circular(10)),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.grey[300]!,
+                          spreadRadius: 2,
+                          blurRadius: 2,
+                          offset: const Offset(0, 2))
+                    ],
+                  ),
+                  child: const Column(
+                    children: [
+                      Padding(padding: EdgeInsets.all(4)),
+                      FaIcon(
+                        FontAwesomeIcons.handPointRight,
+                        size: 20,
+                        color: Colors.white,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Column(
+            children: [
+              SizedBox(
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.35,
+                  height: 35,
+                  decoration: const BoxDecoration(
+                    color: Color.fromARGB(52, 33, 219, 243),
+                    borderRadius: BorderRadius.only(
+                      topRight: Radius.circular(10),
+                      bottomRight: Radius.circular(10),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text("Cheerworthy",
+                            style: WidgetSupport.verticalBarInnerText()),
+                      ),
+                      SizedBox(
+                        width: MediaQuery.of(context).size.width * 0.045,
+                      ),
+                      Transform.rotate(
+                        angle: 3.14159,
+                        alignment: Alignment.centerRight,
+                        child: const Icon(
+                          Icons.arrow_back_ios_new_outlined,
+                          size: 20,
+                          color: Colors.purple,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ignore: unused_element
+  Widget _secondNudgesController() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 5, left: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Column(
+            children: [
+              SizedBox(
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.10,
+                  height: 35,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFae03cb),
+                    borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(10),
+                        bottomLeft: Radius.circular(10)),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.grey[300]!,
+                          spreadRadius: 2,
+                          blurRadius: 2,
+                          offset: const Offset(0, 2))
+                    ],
+                  ),
+                  child: const Column(
+                    children: [
+                      Padding(padding: EdgeInsets.all(4)),
+                      Icon(
+                        Icons.calendar_month,
+                        size: 20,
+                        color: Colors.white,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Column(
+            children: [
+              SizedBox(
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.35,
+                  height: 35,
+                  decoration: const BoxDecoration(
+                    color: Color.fromARGB(52, 33, 219, 243),
+                    borderRadius: BorderRadius.only(
+                      topRight: Radius.circular(10),
+                      bottomRight: Radius.circular(10),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text("Calender",
+                            style: WidgetSupport.verticalBarInnerText()),
+                      ),
+                      SizedBox(
+                        width: MediaQuery.of(context).size.width * 0.095,
+                      ),
+                      Transform.rotate(
+                        angle: 3.14159,
+                        alignment: Alignment.centerRight,
+                        child: const Icon(
+                          Icons.arrow_back_ios_new_outlined,
+                          size: 20,
+                          color: Colors.purple,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(
+            width: 10,
+          ),
+          Column(
+            children: [
+              SizedBox(
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.45,
+                  height: 35,
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: MediaQuery.of(context).size.width * 0.10,
+                        height: 35,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFae03cb),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(10),
+                            bottomLeft: Radius.circular(10),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey[300]!,
+                              spreadRadius: 2,
+                              blurRadius: 2,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.menu,
+                            size: 20,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        width: MediaQuery.of(context).size.width * 0.35,
+                        height: 35,
+                        decoration: const BoxDecoration(
+                          color: Color.fromARGB(52, 33, 219, 243),
+                          borderRadius: BorderRadius.only(
+                            topRight: Radius.circular(10),
+                            bottomRight: Radius.circular(10),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text(
+                                "More                    ",
+                                style: WidgetSupport.verticalBarInnerText(),
+                              ),
+                            ),
+                            Transform.rotate(
+                              angle: 3.14159,
+                              alignment: Alignment.centerRight,
+                              child: const Icon(
+                                Icons.arrow_back_ios_new_outlined,
+                                size: 20,
+                                color: Colors.purple,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          )
         ],
       ),
     );
@@ -1501,7 +1732,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                     bottom: 0,
                     left: 0,
                     child: Padding(
-                      padding: const EdgeInsets.all(8.0),
+                      padding: const EdgeInsets.all(5.0),
                       child: Row(
                         children: [
                           Container(
@@ -1529,7 +1760,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                                     ? MediaQuery.of(context).size.width *
                                         0.08 // Landscape for mobile
                                     : MediaQuery.of(context).size.width *
-                                        0.23, // Portrait for mobile
+                                        0.22, // Portrait for mobile
                           ),
                           Container(
                             width: 10.0, // Small green box width

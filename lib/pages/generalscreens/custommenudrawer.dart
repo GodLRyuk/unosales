@@ -59,13 +59,13 @@ class CustomScaffold extends StatelessWidget {
                 ),
               ),
             ),
-            ListTile(
-              leading: Icon(Icons.home,color: Color(0xFFa604ad),),
-              title: Text('Home'),
-              onTap: () {
-                // Handle Option 1
-              },
-            ),
+            // ListTile(
+            //   leading: Icon(Icons.home,color: Color(0xFFa604ad),),
+            //   title: Text('Home'),
+            //   onTap: () {
+            //     // Handle Option 1
+            //   },
+            // ),
             ListTile(
               leading: Icon(Icons.account_circle,color: Color(0xFFa604ad),),
               title: Text('Profile'),
@@ -73,27 +73,27 @@ class CustomScaffold extends StatelessWidget {
                 // Handle Option 2
               },
             ),
-            ListTile(
-              leading: Icon(Icons.calculate,color: Color(0xFFa604ad),),
-              title: Text('Calculator'),
-              onTap: () {
-                // Handle Option 2
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.notifications,color: Color(0xFFa604ad),),
-              title: Text('Notification'),
-              onTap: () {
-                // Handle Option 2
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.settings,color: Color(0xFFa604ad),),
-              title: Text('Calculator'),
-              onTap: () {
-                // Handle Option 2
-              },
-            ),
+            // ListTile(
+            //   leading: Icon(Icons.calculate,color: Color(0xFFa604ad),),
+            //   title: Text('Calculator'),
+            //   onTap: () {
+            //     // Handle Option 2
+            //   },
+            // ),
+            // ListTile(
+            //   leading: Icon(Icons.notifications,color: Color(0xFFa604ad),),
+            //   title: Text('Notification'),
+            //   onTap: () {
+            //     // Handle Option 2
+            //   },
+            // ),
+            // ListTile(
+            //   leading: Icon(Icons.settings,color: Color(0xFFa604ad),),
+            //   title: Text('Calculator'),
+            //   onTap: () {
+            //     // Handle Option 2
+            //   },
+            // ),
           ],
         ),
       ),

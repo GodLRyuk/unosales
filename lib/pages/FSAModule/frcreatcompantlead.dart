@@ -7,9 +7,9 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/FRModule/frcompanyleaddashboard.dart';
+import 'package:unosfa/pages/FSAModule/frcompanyleaddashboard.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
-import 'package:unosfa/pages/FSAModule/createnewlead.dart';
+import 'package:unosfa/pages/FRModule/createnewlead.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 
 class FsaCompanyLeadGenerate extends StatefulWidget {
@@ -263,294 +263,297 @@ class _FsaCompanyLeadGenerateState extends State<FsaCompanyLeadGenerate> {
                   ),
                 ),
                 Flexible(
-                    child: SingleChildScrollView(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 20),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildTextField(
-                            company_name,
-                            "Enter Company Name",
-                            'Please Enter Your Company Name',
-                            'name',
-                            isNumeric: false,
-                            icon: FontAwesomeIcons.solidCircleUser,
-                            isAlphabetic: true,
-                            allowSpaces: true,
-                          ),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.03,
-                          ),
-                          Padding(
-                            padding: EdgeInsets.all(0.0),
-                            child: Column(
-                              children: [
-                                // TextField for searching companies
-                                Focus(
-                                  onFocusChange: (hasFocus) {
-                                    setState(() {
-                                      _isDropdownVisible = hasFocus;
-                                    });
-                                  },
-                                  child: TextField(
-                                    controller: _searchController,
-                                    decoration: InputDecoration(
-                                      hintText: "Type of Company",
-                                      suffixIcon: IconButton(
-                                        icon: Icon(Icons.search),
-                                        onPressed: () {
-                                          // Trigger the search when the search icon is pressed
-                                          _searchCompany(
-                                              _searchController.text);
-                                        },
+                  child: SingleChildScrollView(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 20),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildTextField(
+                              company_name,
+                              "Enter Company Name",
+                              'Please Enter Your Company Name',
+                              'name',
+                              isNumeric: false,
+                              icon: FontAwesomeIcons.solidCircleUser,
+                              isAlphabetic: true,
+                              allowSpaces: true,
+                            ),
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.03,
+                            ),
+                            Padding(
+                              padding: EdgeInsets.all(0.0),
+                              child: Column(
+                                children: [
+                                  // TextField for searching companies
+                                  Focus(
+                                    onFocusChange: (hasFocus) {
+                                      setState(() {
+                                        _isDropdownVisible = hasFocus;
+                                      });
+                                    },
+                                    child: TextField(
+                                      controller: _searchController,
+                                      decoration: InputDecoration(
+                                        hintText: "Type of Company",
+                                        suffixIcon: IconButton(
+                                          icon: Icon(Icons.search),
+                                          onPressed: () {
+                                            // Trigger the search when the search icon is pressed
+                                            _searchCompany(
+                                                _searchController.text);
+                                          },
+                                        ),
+                                      ),
+                                      onChanged: (query) {
+                                        if (query.isEmpty) {
+                                          // Reset to showing all companies if the input is cleared
+                                          setState(() {
+                                            _filteredCompanies = _ComIdOptions
+                                                .entries
+                                                .map((e) => {
+                                                      'id': e.key,
+                                                      'type_name': e.value
+                                                    })
+                                                .toList();
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (_isDropdownVisible)
+                              Stack(
+                                children: [
+                                  Positioned(
+                                    child: Material(
+                                      elevation: 4,
+                                      borderRadius: BorderRadius.circular(8.0),
+                                      child: Container(
+                                        height: 200,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(8.0),
+                                        ),
+                                        child: ListView.builder(
+                                          itemCount: _filteredCompanies.length,
+                                          itemBuilder: (context, index) {
+                                            return ListTile(
+                                              title: Text(
+                                                  _filteredCompanies[index]
+                                                      ['type_name']!),
+                                              onTap: () {
+                                                setState(() {
+                                                  _searchController.text =
+                                                      _filteredCompanies[index]
+                                                          ['type_name']!;
+                                                  _selectedCompanyType =
+                                                      _filteredCompanies[index]
+                                                          ['id']!;
+                                                  _isDropdownVisible =
+                                                      false; // Close dropdown
+                                                  print(_selectedCompanyType);
+                                                });
+                                              },
+                                            );
+                                          },
+                                        ),
                                       ),
                                     ),
-                                    onChanged: (query) {
-                                      if (query.isEmpty) {
-                                        // Reset to showing all companies if the input is cleared
-                                        setState(() {
-                                          _filteredCompanies = _ComIdOptions
-                                              .entries
-                                              .map((e) => {
-                                                    'id': e.key,
-                                                    'type_name': e.value
-                                                  })
-                                              .toList();
-                                        });
+                                  ),
+                                ],
+                              ),
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.03,
+                            ),
+                            _buildTextField(
+                              number_of_employees,
+                              "Nummber of Employes",
+                              "Please Enter Number of Employees",
+                              "noemp",
+                              isEmail: false,
+                              isNumeric: true,
+                              icon: FontAwesomeIcons.personCircleQuestion,
+                              allowSpaces: true,
+                            ),
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.03,
+                            ),
+                            _buildTextField(
+                              operating_since,
+                              "Operationg Since ",
+                              "Please Enter Operating Since",
+                              "noemp",
+                              isEmail: false,
+                              isNumeric: true,
+                              icon: FontAwesomeIcons.solidCalendarCheck,
+                              allowSpaces: true,
+                            ),
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.03,
+                            ),
+                            _buildTextField(
+                              address_line_1,
+                              "Address line 1",
+                              'Please Enter Your Address line 1',
+                              'address',
+                              isEmail: false,
+                              isNumeric: false,
+                              icon: FontAwesomeIcons.mapLocation,
+                              allowSpaces: true,
+                            ),
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.04,
+                            ),
+                            _buildTextField(
+                              address_line_2,
+                              "Address line 2",
+                              'Please Enter Your Address line 2',
+                              'address',
+                              isEmail: false,
+                              isNumeric: false,
+                              icon: FontAwesomeIcons.mapLocationDot,
+                              isRequired: false,
+                              allowSpaces: true,
+                            ),
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.04,
+                            ),
+                            _buildTextField(
+                              zip_code,
+                              "Zip",
+                              'Please Enter Zip Code',
+                              'zip',
+                              isZipNumber: true,
+                              icon: FontAwesomeIcons.mapPin,
+                            ),
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.04,
+                            ),
+                            _buildCityDropdownField(),
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.04,
+                            ),
+                            _buildTextField(
+                              contact_person_first_name, // Use the controller here
+                              "Contact Person First Name",
+                              'Please Enter Contact Person First Name',
+                              'cpname',
+                              isNumeric: false,
+                              icon: FontAwesomeIcons.person,
+                              allowSpaces: true,
+                            ),
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.04,
+                            ),
+                            _buildTextField(
+                              contact_person_last_name, // Use the controller here
+                              "Contact Person Last  Name",
+                              'Please Enter Contact Person Last  Name',
+                              'cpname',
+                              isNumeric: false,
+                              icon: FontAwesomeIcons.person,
+                              allowSpaces: true,
+                            ),
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.04,
+                            ),
+                            _buildTextField(
+                              contact_person_mobile_no,
+                              "(Please put country code e.g. 63XXXXXXXXXX)",
+                              'Please Enter Your Phone Number',
+                              'phone',
+                              isPhoneNumber: true,
+                              icon: FontAwesomeIcons.phoneVolume,
+                              allowSpaces: false,
+                            ),
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.04,
+                            ),
+                            _buildTextField(
+                              email,
+                              "Contact Person Email ID",
+                              'Please Enter Contact Person Email ID',
+                              'mail',
+                              isEmail: true,
+                              icon: FontAwesomeIcons.mailchimp,
+                              isNumeric: false,
+                              allowSpaces: false,
+                            ),
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.04,
+                            ),
+                            _buildDropdownField(),
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.04,
+                            ),
+                            _buildKydIdTextField(
+                              _externalId,
+                              _getIdHintText(),
+                              'Please Enter External ID',
+                              '',
+                              icon: FontAwesomeIcons.idCard,
+                              isRequired: false,
+                            ),
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.04,
+                            ),
+                            _buildImageUploadField(
+                                _imageController, "Select Image"),
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.02,
+                            ),
+                            Container(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      if (_formKey.currentState!.validate()) {
+                                        leadSubmit();
                                       }
                                     },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (_isDropdownVisible)
-                            Stack(
-                              children: [
-                                Positioned(
-                                  child: Material(
-                                    elevation: 4,
-                                    borderRadius: BorderRadius.circular(8.0),
-                                    child: Container(
-                                      height: 200,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      shadowColor: Colors.transparent,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal:
+                                            MediaQuery.of(context).size.width *
+                                                0.1,
+                                        vertical:
+                                            MediaQuery.of(context).size.height *
+                                                0.01,
+                                      ),
+                                      shape: RoundedRectangleBorder(
                                         borderRadius:
                                             BorderRadius.circular(8.0),
                                       ),
-                                      child: ListView.builder(
-                                        itemCount: _filteredCompanies.length,
-                                        itemBuilder: (context, index) {
-                                          return ListTile(
-                                            title: Text(
-                                                _filteredCompanies[index]
-                                                    ['type_name']!),
-                                            onTap: () {
-                                              setState(() {
-                                                _searchController.text =
-                                                    _filteredCompanies[index]
-                                                        ['type_name']!;
-                                                _selectedCompanyType =
-                                                    _filteredCompanies[index]
-                                                        ['id']!;
-                                                _isDropdownVisible =
-                                                    false; // Close dropdown
-                                                print(_selectedCompanyType);
-                                              });
-                                            },
-                                          );
-                                        },
-                                      ),
+                                    ),
+                                    child: Text(
+                                      "SUBMIT",
+                                      style:
+                                          WidgetSupport.LoginButtonTextColor(),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.03,
-                          ),
-                          _buildTextField(
-                            number_of_employees,
-                            "Nummber of Employes",
-                            "Please Enter Number of Employees",
-                            "noemp",
-                            isEmail: false,
-                            isNumeric: true,
-                            icon: FontAwesomeIcons.personCircleQuestion,
-                            allowSpaces: true,
-                          ),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.03,
-                          ),
-                          _buildTextField(
-                            operating_since,
-                            "Operationg Since ",
-                            "Please Enter Operating Since",
-                            "noemp",
-                            isEmail: false,
-                            isNumeric: true,
-                            icon: FontAwesomeIcons.solidCalendarCheck,
-                            allowSpaces: true,
-                          ),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.03,
-                          ),
-                          _buildTextField(
-                            address_line_1,
-                            "Address line 1",
-                            'Please Enter Your Address line 1',
-                            'address',
-                            isEmail: false,
-                            isNumeric: false,
-                            icon: FontAwesomeIcons.mapLocation,
-                            allowSpaces: true,
-                          ),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.04,
-                          ),
-                          _buildTextField(
-                            address_line_2,
-                            "Address line 2",
-                            'Please Enter Your Address line 2',
-                            'address',
-                            isEmail: false,
-                            isNumeric: false,
-                            icon: FontAwesomeIcons.mapLocationDot,
-                            isRequired: false,
-                            allowSpaces: true,
-                          ),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.04,
-                          ),
-                          _buildTextField(
-                            zip_code,
-                            "Zip",
-                            'Please Enter Zip Code',
-                            'zip',
-                            isZipNumber: true,
-                            icon: FontAwesomeIcons.mapPin,
-                          ),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.04,
-                          ),
-                          _buildCityDropdownField(),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.04,
-                          ),
-                          _buildTextField(
-                            contact_person_first_name, // Use the controller here
-                            "Contact Person First Name",
-                            'Please Enter Contact Person First Name',
-                            'cpname',
-                            isNumeric: false,
-                            icon: FontAwesomeIcons.person,
-                            allowSpaces: true,
-                          ),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.04,
-                          ),
-                          _buildTextField(
-                            contact_person_last_name, // Use the controller here
-                            "Contact Person Last  Name",
-                            'Please Enter Contact Person Last  Name',
-                            'cpname',
-                            isNumeric: false,
-                            icon: FontAwesomeIcons.person,
-                            allowSpaces: true,
-                          ),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.04,
-                          ),
-                          _buildTextField(
-                            contact_person_mobile_no,
-                            "(Please put country code e.g. 63XXXXXXXXXX)",
-                            'Please Enter Your Phone Number',
-                            'phone',
-                            isPhoneNumber: true,
-                            icon: FontAwesomeIcons.phoneVolume,
-                            allowSpaces: false,
-                          ),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.04,
-                          ),
-                          _buildTextField(
-                            email,
-                            "Contact Person Email ID",
-                            'Please Enter Contact Person Email ID',
-                            'mail',
-                            isEmail: true,
-                            icon: FontAwesomeIcons.mailchimp,
-                            isNumeric: false,
-                            allowSpaces: false,
-                          ),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.04,
-                          ),
-                          _buildDropdownField(),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.04,
-                          ),
-                          _buildKydIdTextField(
-                            _externalId,
-                            _getIdHintText(),
-                            'Please Enter External ID',
-                            '',
-                            icon: FontAwesomeIcons.idCard,
-                            isRequired: false,
-                          ),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.04,
-                          ),
-                          _buildImageUploadField(
-                              _imageController, "Select Image"),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.02,
-                          ),
-                          Container(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                ElevatedButton(
-                                  onPressed: () {
-                                    if (_formKey.currentState!.validate()) {
-                                      leadSubmit();
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.transparent,
-                                    shadowColor: Colors.transparent,
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal:
-                                          MediaQuery.of(context).size.width *
-                                              0.1,
-                                      vertical:
-                                          MediaQuery.of(context).size.height *
-                                              0.01,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    "SUBMIT",
-                                    style: WidgetSupport.LoginButtonTextColor(),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(
-                              height:
-                                  MediaQuery.of(context).size.height * 0.30),
-                        ],
+                            SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.30),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ))
+                )
               ],
             ),
           ),

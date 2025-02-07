@@ -1,20 +1,24 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/FRModule/frleaddashboard.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
+import 'package:intl/intl.dart';
 
-class FsaLeadGenerate extends StatefulWidget {
+class LeadGenerate extends StatefulWidget {
+  final String edit;
+  const LeadGenerate({Key? key, required this.edit}) : super(key: key);
   @override
-  _FsaLeadGenerateState createState() => _FsaLeadGenerateState();
+  _LeadGenerateState createState() => _LeadGenerateState();
 }
 
-class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
+class _LeadGenerateState extends State<LeadGenerate> {
   final _formKey = GlobalKey<FormState>();
   // final _companyName = TextEditingController();
   final _fname = TextEditingController();
@@ -24,34 +28,84 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
   final _address1 = TextEditingController();
   final _address2 = TextEditingController();
   final _zip = TextEditingController();
-  //final _city = TextEditingController();
+  final _email = TextEditingController();
   final _location = TextEditingController();
+  final _area = TextEditingController();
   final _income = TextEditingController();
   final _loanamount = TextEditingController();
   final _businessNameController = TextEditingController();
+  final _imageController = TextEditingController();
+  final _externalId = TextEditingController();
+
   bool _isLoading = false;
   late Map<String, String> _ComIdOptions; // Store the fetched companies
+// Initialize as an empty map
+// Initialize as an empty map
   late List<Map<String, String>> _Tenor = []; // Initialize as an empty map
 // Initialize as an empty map
-  late Map<String, String> _city = {}; // Initialize as an empty map
   late List<Map<String, String>> _filteredCompanies; // Store filtered companies
+  late Map<String, String> _CityIdOptions; // Store the All city
+  late List<Map<String, String>> _filteredCity; // Store filtered companies
+
+  late List<Map<String, String>> _barangay = []; // Initialize as an empty map
 
   TextEditingController _searchController = TextEditingController();
+  TextEditingController _citysearchController = TextEditingController();
   String? _selectedCompany;
   bool _isFieldFocused = false; // Track if TextField is clicked
+  String? _selectedGId;
+  bool _selectedKycId = false;
+  bool _isCityFieldFocused = false;
 
+  final Map<String, String> _gIdOptions = {
+    'passport': 'Philippines Passport',
+    'national_id': 'Philippine National ID (PhilSys ID)',
+    'drivers_license': 'Driver\'s License',
+    'umid': 'Unified Multi-Purpose ID (UMID)',
+    'sss_id': 'Social Security System (SSS) ID',
+    'prc_id': 'Professional Regulation Commission (PRC) ID'
+  };
+  String _getIdHintText() {
+    switch (_selectedGId) {
+      case 'passport':
+        return 'Enter your Philippines Passport Number';
+      case 'national_id':
+        return 'Enter your PhilSys ID';
+      case 'drivers_license':
+        return 'Enter your Driver’s License Number';
+      case 'umid':
+        return 'Enter your Unified Multi-Purpose ID';
+      case 'sss_id':
+        return 'Enter your Social Security System (SSS) ID';
+      case 'prc_id':
+        return 'Enter your Professional Regulation Commission (PRC) ID';
+      default:
+        return 'Enter ID Number';
+    }
+  }
+
+  String? _selectedCustType;
+  final Map<String, String> _CustomerType = {
+    'salaried': 'Salaried ',
+    'self_employed': 'Self-employed',
+  };
   @override
   void initState() {
     super.initState();
     _ComIdOptions = {};
     _filteredCompanies = [];
     _Tenor = [];
+    _ComIdOptions = {};
+    _filteredCity = [];
     _loadData();
     _loadLocationData();
     _loadActivityData();
     _loadTenorData();
     _loadDocData();
     _loadCityData();
+    if (widget.edit != "") {
+      _loadEditLead();
+    }
   }
 
   // Load initial company data
@@ -74,7 +128,6 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
             fetchedData[item['id'].toString()] =
                 item['company_name'].toString();
           }
-
           setState(() {
             _ComIdOptions = fetchedData;
             // Initially, show all companies in the list
@@ -166,11 +219,6 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
     return {'Authorization': 'Bearer $token'};
   }
 
-  String? _selectedCustType;
-  final Map<String, String> _CustomerType = {
-    'salaried': 'Salaried ',
-    'self_employed': 'Self-employed',
-  };
 
   Future<void> _loadLocationData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -367,30 +415,136 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
 
   String? _selectedCity; // To store the selected city
 
-// Map to hold the city value (key) and display text (value)
+  // Map to hold the city value (key) and display text (value)
   Future<void> _loadCityData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
     String? refresh = prefs.getString('refreshToken');
     try {
       final response = await http.get(
-        Uri.parse('http://167.88.160.87/api/leads/cities'),
+        Uri.parse('http://167.88.160.87/api/leads/cities/?page=2'),
         headers: {'Authorization': 'Bearer $token'},
       );
-
       if (response.statusCode == 200) {
-        // Decode the response as a List<dynamic>
-        List<dynamic> cityList = json.decode(response.body);
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['results'] != null && data['results'] is List) {
+          List<dynamic> citydata = data['results'];
+          Map<String, String> fetchedData = {};
+          for (var item in citydata) {
+            fetchedData[item['id'].toString()] = item['city_name'].toString();
+          }
 
-        // Create a map from the list of locations
-        Map<String, String> fetchedData = {};
-        for (var item in cityList) {
-          fetchedData[item['id'].toString()] = item['city_name'].toString();
+          setState(() {
+            _CityIdOptions = fetchedData;
+            _filteredCity = _CityIdOptions.entries
+                .map((e) => {'id': e.key, 'city_name': e.value})
+                .toList();
+          });
         }
+      } else if (response.statusCode == 401) {
+        Map<String, dynamic> mappedData = {'refresh': refresh};
+        final response2 = await http.post(
+          Uri.parse('http://167.88.160.87/api/users/token-refresh/'),
+          body: mappedData,
+        );
+        final data = json.decode(response2.body);
+        await prefs.setBool('isLoggedIn', true);
+        await prefs.setString('accessToken', data['access']);
+        await prefs.setString('refreshToken', data['refresh']);
+        _loadCityData();
+      } else {
+        throw Exception('Failed to load cities');
+      }
+    } catch (e) {
+      print('Error: $e');
+    }
+  }
 
-        setState(() {
-          _city = fetchedData; // Now _LocationType is a Map<String, String>
-        });
+  // Search for companies based on the query
+  Future<void> _filterCity(String query) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (query.isEmpty) {
+      setState(() {
+        _filteredCity = _CityIdOptions.entries
+            .map((e) => {'id': e.key, 'city_name': e.value})
+            .toList();
+      });
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://167.88.160.87/api/leads/cities/?search=$query'),
+        headers: await _getAuthHeader(),
+      );
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['results'] != null && data['results'] is List) {
+          List<dynamic> cityData = data['results'];
+
+          setState(() {
+            _filteredCity = cityData
+                .map((e) => {
+                      'id': e['id'].toString(),
+                      'city_name': e['city_name'].toString(),
+                    })
+                .toList();
+            _loadBarangayData(query);
+          });
+        }
+      } else if (response.statusCode == 401) {
+        String? refresh = prefs.getString('refreshToken');
+        Map<String, dynamic> mappedData = {
+          'refresh': refresh,
+        };
+        final response2 = await http.post(
+          Uri.parse(
+              'http://167.88.160.87/api/users/token-refresh/'), // Using leadId in the API URL
+          body: mappedData,
+        );
+        final data = json.decode(response2.body);
+        await prefs.setBool('isLoggedIn', true);
+        await prefs.setString('accessToken', data['access']);
+        await prefs.setString('refreshToken', data['refresh']);
+        _filterCity(query);
+      } else {
+        throw Exception('Failed to search City');
+      }
+    } catch (e) {
+      print('Search Error: $e');
+    }
+  }
+
+  String? _selectedBarangayType;
+
+  Future<void> _loadBarangayData(String query2) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('accessToken');
+    String? refresh = prefs.getString('refreshToken');
+    try {
+      final response = await http.get(
+        Uri.parse('http://167.88.160.87/api/leads/cities/${_selectedCity}'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['barangays'] != null && data['barangays'] is List) {
+          List<dynamic> barangays = data['barangays'];
+
+          Map<String, String> fetchedData = {};
+          for (var item in barangays) {
+            fetchedData[item['id'].toString()] =
+                item['barangay_name'].toString();
+          }
+
+          setState(() {
+            _ComIdOptions = fetchedData;
+            // Initially, show all companies in the list
+            _barangay = fetchedData.entries
+                .map((e) => {'id': e.key, 'barangay_name': e.value})
+                .toList();
+          });
+        }
       } else if (response.statusCode == 401) {
         Map<String, dynamic> mappedData = {
           'refresh': refresh,
@@ -404,7 +558,230 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
         await prefs.setBool('isLoggedIn', true);
         await prefs.setString('accessToken', data['access']);
         await prefs.setString('refreshToken', data['refresh']);
-        _loadCityData();
+        _getAuthHeader();
+      } else {
+        throw Exception('Failed to load location types');
+      }
+    } catch (e) {
+      print('Error: $e');
+    }
+  }
+
+  String numericCommaInputFormatter(dynamic value) {
+    if (value == null || value.toString().isEmpty) {
+      return '';
+    }
+
+    // Parse the value to a number
+    final number = double.tryParse(value.toString());
+    if (number == null) {
+      return '';
+    }
+
+    // Format the number without trailing .00
+    final formatted = number.toStringAsFixed(2).replaceAllMapped(
+          RegExp(r'(\d)(?=(\d{3})+(\.\d{0,2})?$)'),
+          (Match match) => '${match[1]},',
+        );
+
+    // Remove unnecessary .00 at the end
+    return formatted.endsWith('.00') ? formatted.split('.')[0] : formatted;
+  }
+
+  Future<void> _loadEditLead() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('accessToken');
+    prefs.getString('refreshToken');
+    try {
+      final response = await http.get(
+        Uri.parse('http://167.88.160.87/api/leads/${widget.edit}'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final data = json.decode(response.body);
+      final cityresponse = await http.get(
+        Uri.parse(
+            'http://167.88.160.87/api/leads/cities/?search=${data['city_name']}'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final Map<String, dynamic> data44 = json.decode(cityresponse.body);
+      if (data44['results'] != null && data44['results'] is List) {
+        List<dynamic> citydata = data44['results'];
+        Map<String, String> fetchedData = {};
+        // Map<String, String> fetchedData2 = {};
+
+        for (var item in citydata) {
+          fetchedData[item['id'].toString()] = item['city_name'].toString();
+        }
+        setState(() {
+          _CityIdOptions = fetchedData;
+          _filteredCity = _CityIdOptions.entries
+              .map((e) => {'id': e.key, 'city_name': e.value})
+              .toList();
+
+          _selectedCity = data['city'].toString();
+          _citysearchController.text = _CityIdOptions[_selectedCity] ?? '';
+          //  _selectedCity = data['city'].toString();
+          // _barangay = _CityIdOptions[_selectedCity] ?? '';
+        });
+      }
+      final locationresponse = await http.get(
+        Uri.parse('http://167.88.160.87/api/leads/location-types'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final Map<String, dynamic> data2 = json.decode(locationresponse.body);
+      if (data2['results'] != null && data2['results'] is List) {
+        List<dynamic> location = data2['results'];
+        Map<String, String> fetchedData2 = {};
+        for (var item in location) {
+          fetchedData2[item['id'].toString()] = item['id'].toString();
+        }
+        _ComIdOptions = fetchedData2;
+      }
+
+      final activityresponse = await http.get(
+        Uri.parse('http://167.88.160.87/api/leads/activities'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final Map<String, dynamic> data3 = json.decode(activityresponse.body);
+      if (data3['results'] != null && data3['results'] is List) {
+        List<dynamic> activity = data3['results'];
+        Map<String, String> fetchedData3 = {};
+        for (var item in activity) {
+          fetchedData3[item['id'].toString()] = item['id'].toString();
+        }
+        _ComIdOptions = fetchedData3;
+      }
+
+      final tenorsresponse = await http.get(
+        Uri.parse('http://167.88.160.87/api/leads/tenors'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final Map<String, dynamic> data4 = json.decode(tenorsresponse.body);
+      if (data4['results'] != null && data4['results'] is List) {
+        List<dynamic> tenor = data4['results'];
+        Map<String, String> fetchedData4 = {};
+        for (var item in tenor) {
+          fetchedData4[item['id'].toString()] = item['id'].toString();
+        }
+        _ComIdOptions = fetchedData4;
+      }
+
+      final documentresponse = await http.get(
+        Uri.parse('http://167.88.160.87/api/leads/document-types'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final Map<String, dynamic> data5 = json.decode(documentresponse.body);
+      if (data5['results'] != null && data5['results'] is List) {
+        List<dynamic> docs = data5['results'];
+
+        Map<String, String> fetchedData5 = {};
+        for (var item in docs) {
+          fetchedData5[item['id'].toString()] = item['id'].toString();
+        }
+        _ComIdOptions = fetchedData5;
+      }
+
+      final barangayresponse = await http.get(
+        Uri.parse('http://167.88.160.87/api/leads/cities/${data['city']}'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final Map<String, dynamic> data6 = json.decode(barangayresponse.body);
+
+      if (data6['barangays'] != null && data6['barangays'] is List) {
+        setState(() {
+          _barangay =
+              List<Map<String, String>>.from(data6['barangays'].map((item) {
+            return {
+              'id': item['id'].toString(),
+              'barangay_name': item['barangay_name'].toString(),
+            };
+          }));
+
+          // Ensure the selected barangay is correctly set
+          _selectedBarangayType = data['barangay']?.toString();
+        });
+      }
+      final companyResponse = await http.get(
+        Uri.parse('http://167.88.160.87/api/leads/companies/?page_size=100'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      final Map<String, dynamic> dataComp = json.decode(companyResponse.body);
+
+      if (dataComp['results'] != null && dataComp['results'] is List) {
+        List<dynamic> companies = dataComp['results'];
+
+        Map<String, String> fetchedDataComp = {};
+        for (var item in companies) {
+          fetchedDataComp[item['id'].toString()] =
+              item['company_name'].toString();
+        }
+
+        setState(() {
+          _ComIdOptions = fetchedDataComp;
+
+          // Ensure the selected company is set correctly
+          _selectedCompany = data['company']?.toString() ?? '';
+
+          // Populate the search field with the selected company's name
+          _searchController.text = _ComIdOptions[_selectedCompany] ?? '';
+
+          // Initialize filtered company list
+          _filteredCompanies = _ComIdOptions.entries
+              .map((e) => {'id': e.key, 'company_name': e.value})
+              .toList();
+        });
+      }
+      if (response.statusCode == 200) {
+        setState(() {
+          _fname.text = data['first_name'];
+          _mname.text = data['middle_name'];
+          _lname.text = data['last_name'];
+          _phoneNumber.text = data['phone_number'];
+          _address1.text = data['address1'];
+          _address2.text = data['address2'];
+          _email.text = data['email'];
+          _zip.text = data['zip'];
+          _area.text = data['area'];
+          _income.text = numericCommaInputFormatter(data['income']);
+          _loanamount.text =
+              numericCommaInputFormatter(data['loan_amount_requested']);
+          _businessNameController.text = data['business_name'];
+          _location.text = data['location'];
+
+          for (var entry2 in _ComIdOptions.entries) {
+            if (data['location_type'].toString() == entry2.value) {
+              break;
+            }
+          }
+          for (var entry3 in _ComIdOptions.entries) {
+            if (data['activity'].toString() == entry3.value) {
+              break;
+            }
+          }
+          for (var entry4 in _ComIdOptions.entries) {
+            if (data['tenor'].toString() == entry4.value) {
+              _selectedTenor = entry4.key;
+              break;
+            }
+          }
+          for (var entry5 in _ComIdOptions.entries) {
+            if (data['document_type'].toString() == entry5.value) {
+              break;
+            }
+          }
+          if (data['customer_type'] == 'salaried') {
+            _selectedCustType = "salaried";
+          } else {
+            _selectedCustType = "self_employed";
+          }
+          for (var entry7 in _ComIdOptions.entries) {
+            if (data['company'].toString() == entry7.value) {
+              _selectedCompany = entry7.key;
+              break;
+            }
+          }
+        });
       } else {
         throw Exception('Failed to load location types');
       }
@@ -451,9 +828,8 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                 Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => FsaLeadDashBoard(
-                              searchQuery: '',
-                            ))); // Go back to the previous screen
+                        builder: (context) =>
+                            NavigationPage())); // Go back to the previous screen
               },
             ),
           ),
@@ -482,8 +858,8 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                 Flexible(
                     child: SingleChildScrollView(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 20),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
                     child: Form(
                       key: _formKey,
                       child: Column(
@@ -531,7 +907,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                           ),
                           _buildTextField(
                             _phoneNumber,
-                            "Phone Number",
+                            "(Please put country code e.g. 63XXXXXXXXXX)",
                             'Please Enter Your Phone Number',
                             'phone',
                             isPhoneNumber: true,
@@ -550,12 +926,10 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                               padding: EdgeInsets.all(0.0),
                               child: Column(
                                 children: [
-                                  // TextField for searching companies
                                   Focus(
                                     onFocusChange: (hasFocus) {
                                       setState(() {
-                                        _isFieldFocused =
-                                            hasFocus; 
+                                        _isFieldFocused = hasFocus;
                                       });
                                     },
                                     child: TextField(
@@ -565,7 +939,6 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                                         suffixIcon: IconButton(
                                           icon: Icon(Icons.search),
                                           onPressed: () {
-                                            // Trigger the search when the search icon is pressed
                                             _searchCompany(
                                                 _searchController.text);
                                           },
@@ -573,7 +946,6 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                                       ),
                                       onChanged: (query) {
                                         if (query.isEmpty) {
-                                          // Reset to showing all companies if the input is cleared
                                           setState(() {
                                             _filteredCompanies = _ComIdOptions
                                                 .entries
@@ -612,7 +984,6 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                                                   _filteredCompanies[index]
                                                       ['company_name']!),
                                               onTap: () {
-                                                // Set the selected company
                                                 setState(() {
                                                   _selectedCompany =
                                                       _filteredCompanies[index]
@@ -620,9 +991,13 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                                                   _searchController.text =
                                                       _filteredCompanies[index]
                                                           ['company_name']!;
-                                                  _isFieldFocused =
-                                                      false; 
+                                                  _isFieldFocused = false;
                                                 });
+
+                                                print(
+                                                    "Selected Company ID: $_selectedCompany");
+                                                print(
+                                                    "Selected Company Name: ${_searchController.text}");
                                               },
                                             );
                                           },
@@ -647,7 +1022,6 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                               height: MediaQuery.of(context).size.height * 0.03,
                             ),
                           ],
-                          
                           _buildTextField(
                             _address1,
                             "Address line 1",
@@ -666,7 +1040,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                             "Address line 2",
                             'Please Enter Your Address line 2',
                             'address',
-                            isEmail: true,
+                            isEmail: false,
                             isNumeric: false,
                             icon: FontAwesomeIcons.mapLocationDot,
                             isRequired: false,
@@ -686,7 +1060,141 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
-                          _buildCityDropdownField(),
+                          // _buildCityDropdownField(),
+                          Padding(
+                            padding: EdgeInsets.all(0.0),
+                            child: Column(
+                              children: [
+                                // TextField for searching cities
+                                Focus(
+                                  onFocusChange: (hasFocus) {
+                                    setState(() {
+                                      _isCityFieldFocused =
+                                          hasFocus; // Track if the TextField is focused
+                                    });
+                                  },
+                                  child: TextField(
+                                    controller: _citysearchController,
+                                    decoration: InputDecoration(
+                                      hintText: "Search City",
+                                      suffixIcon: IconButton(
+                                        icon: Icon(Icons.search),
+                                        onPressed: () {
+                                          // Trigger the search when the search icon is pressed
+                                          _filterCity(
+                                              _citysearchController.text);
+                                        },
+                                      ),
+                                    ),
+                                    onChanged: (query) {
+                                      if (query.isEmpty) {
+                                        // Reset to showing all companies if the input is cleared
+                                        setState(() {
+                                          _filteredCity = _CityIdOptions.entries
+                                              .map((e) => {
+                                                    'id': e.key,
+                                                    'city_name': e.value
+                                                  })
+                                              .toList();
+                                        });
+                                      }
+
+                                      // _filterCity(query);
+                                    },
+                                  ),
+                                ),
+                                if (_isCityFieldFocused)
+                                  Stack(
+                                    children: [
+                                      Positioned(
+                                        child: Material(
+                                          elevation: 4,
+                                          borderRadius:
+                                              BorderRadius.circular(8.0),
+                                          child: Container(
+                                            height: 200,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(8.0),
+                                            ),
+                                            child: ListView.builder(
+                                              itemCount: _filteredCity.length,
+                                              itemBuilder: (context, index) {
+                                                return ListTile(
+                                                  title: Text(
+                                                      _filteredCity[index]
+                                                          ['city_name']!),
+                                                  onTap: () {
+                                                    // Set the selected company
+                                                    setState(() {
+                                                      _selectedCity =
+                                                          _filteredCity[index]
+                                                              ['id'];
+                                                      _citysearchController
+                                                              .text =
+                                                          _filteredCity[index]
+                                                              ['city_name']!;
+                                                      _isCityFieldFocused =
+                                                          false;
+                                                      _loadBarangayData(
+                                                          _selectedCity!);
+                                                    });
+                                                  },
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                              ],
+                            ),
+                          ),
+                          // Stack(
+                          //   children: [
+                          //     Positioned(
+                          //       child: Material(
+                          //         elevation: 4,
+                          //         borderRadius: BorderRadius.circular(8.0),
+                          //         child: Container(
+                          //           height: 200,
+                          //           decoration: BoxDecoration(
+                          //             color: Colors.white,
+                          //             borderRadius: BorderRadius.circular(8.0),
+                          //           ),
+                          //           child: ListView.builder(
+                          //             itemCount: _filteredCompanies.length,
+                          //             itemBuilder: (context, index) {
+                          //               return ListTile(
+                          //                 title: Text(_filteredCompanies[index]
+                          //                     ['company_name']!),
+                          //                 onTap: () {
+                          //                   // Set the selected company
+                          //                   setState(() {
+                          //                     _selectedCompany =
+                          //                         _filteredCompanies[index]
+                          //                             ['id'];
+                          //                     _searchController.text =
+                          //                         _filteredCompanies[index]
+                          //                             ['company_name']!;
+                          //                     _isFieldFocused =
+                          //                         false; // Dismiss the suggestions after selection
+                          //                   });
+                          //                 },
+                          //               );
+                          //             },
+                          //           ),
+                          //         ),
+                          //       ),
+                          //     ),
+                          //   ],
+                          // ),
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.04,
+                          ),
+                          _buildBarangayDropdownField(),
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
@@ -702,6 +1210,27 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
+                          // _buildTextField(
+                          //   _area,
+                          //   "Area",
+                          //   'Please Enter Area',
+                          //   'rate',
+                          //   isNumeric: false,
+                          //   icon: FontAwesomeIcons.mapLocation,
+                          //   allowSpaces: true,
+                          // ),
+                          // SizedBox(
+                          //   height: MediaQuery.of(context).size.height * 0.04,
+                          // ),
+                          // _buildLocTypeDropdownField(),
+                          // SizedBox(
+                          //   height: MediaQuery.of(context).size.height * 0.04,
+                          // ),
+                          // _buildactivityDropdownField(),
+
+                          // SizedBox(
+                          //   height: MediaQuery.of(context).size.height * 0.04,
+                          // ),
                           _buildTextField(
                             _income,
                             "Monthly Income",
@@ -732,6 +1261,43 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                           _buildPricingDropdownField(),
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
+                          ),
+                          // _buildDocTypeDropdownField(),
+                          // SizedBox(
+                          //   height: MediaQuery.of(context).size.height * 0.04,
+                          // ),
+                          _buildTextField(
+                            _email,
+                            "Contact Person Email ID",
+                            'Please Enter Your Email',
+                            'email',
+                            isNumeric: false,
+                            icon: FontAwesomeIcons.mailchimp,
+                            isRequired: true,
+                            isEmail: true,
+                          ),
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.03,
+                          ),
+                          _buildDropdownField(),
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.04,
+                          ),
+                          _buildKydIdTextField(
+                            _externalId,
+                            _getIdHintText(),
+                            'Please Enter External ID',
+                            '',
+                            icon: FontAwesomeIcons.idCard,
+                            isRequired: false,
+                          ),
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.04,
+                          ),
+                          _buildImageUploadField(
+                              _imageController, "Select Image"),
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.02,
                           ),
                           Container(
                             child: Row(
@@ -766,9 +1332,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                               ],
                             ),
                           ),
-                          SizedBox(
-                              height:
-                                  MediaQuery.of(context).size.height * 0.30),
+                          SizedBox(height: 180),
                         ],
                       ),
                     ),
@@ -790,24 +1354,24 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
   }
 
   Future<void> leadSubmit() async {
-    setState(() {
-      _isLoading = true;
-    });
     // Check if the form is valid
-    String middle_name = _mname.text.trim();
     if (_formKey.currentState!.validate()) {
       // Collect form data
       String first_name = _fname.text.trim();
+      String middle_name = _mname.text.trim();
       String last_name = _lname.text.trim();
       String phone_number = _phoneNumber.text.trim();
       String address1 = _address1.text.trim();
       String address2 = _address2.text.trim();
+      String email = _email.text.trim();
       String zip = _zip.text.trim();
       String city = _selectedCity!;
       String location = _location.text.trim();
       String location_type = "";
-      String income = _income.text.trim();
-      String loan_amount_requested = _loanamount.text.trim();
+      String area = "";
+      String income = _income.text.trim().replaceAll(',', '');
+      String loan_amount_requested =
+          _loanamount.text.trim().replaceAll(',', '');
       bool submitted_on_uno_app = true;
       bool need_to_follow_up = false;
       String customer_type = _selectedCustType!;
@@ -818,16 +1382,17 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
           : '';
       String tenor = _selectedTenor!;
       String document_type = "";
-
+      // String document_type = _selectedDocument!;
       String company =
           _selectedCompany?.isNotEmpty ?? false ? _selectedCompany! : '';
-          print(_selectedCompany);
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('accessToken');
       String? refresh = prefs.getString('refreshToken');
-
+      String selectedGId = _selectedGId ?? "";
+      String externalId = _externalId.text.trim();
+      String barangay = _selectedBarangayType!;
       // Map the collected data to be sent in the request body
-      Map<String, dynamic> mappedData = {
+      Map<String, String> mappedData = {
         'company': company,
         'first_name': first_name,
         'middle_name': middle_name,
@@ -835,34 +1400,57 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
         'phone_number': phone_number,
         'address1': address1,
         'address2': address2,
+        'email': email,
         'zip': zip,
         'city': city,
+        'barangay': barangay,
         'location': location,
+        'area': area,
         'income': income,
         'loan_amount_requested': loan_amount_requested,
         'submitted_on_uno_app': submitted_on_uno_app.toString(),
         'need_to_follow_up': need_to_follow_up.toString(),
         'customer_type': customer_type,
+        'location_type': location_type,
+        'activity': activity,
         'interest': interest,
         'business_name': business_name,
         'tenor': tenor,
-        'location_type': location_type,
-        'activity': activity,
         'document_type': document_type,
+        'kyc_id_type': selectedGId,
+        'kyc_id_number': externalId,
       };
-print(mappedData);
+      setState(() {
+        _isLoading = true;
+      });
       try {
         var url = Uri.parse('http://167.88.160.87/api/leads/');
 
-        http.Response response = await http.post(
-          url,
-          body: mappedData,
-          headers: {
-            'Authorization': 'Bearer $token',
-          },
-        );
-
+        var request = http.MultipartRequest('POST', url)
+          ..headers['Authorization'] = 'Bearer $token'
+          ..fields.addAll(mappedData);
+        if (_image != null) {
+          request.files.add(await http.MultipartFile.fromPath(
+            'kyc_document',
+            _image!.path,
+          ));
+        }
+        http.Response response =
+            await http.Response.fromStream(await request.send());
         if (response.statusCode == 201) {
+          // final data = json.decode(response.body);
+          // Navigator.pushReplacement(
+          //   context,
+          //   MaterialPageRoute(
+          //     builder: (context) => Loancalculation(
+          //       id: data['id'],
+          //       loanAmountRequested: data['loan_amount_requested'],
+          //       tenorDescription: data['tenor_description'],
+          //       monthlyInstallment: data['monthly_installment'],
+          //       interest: data['interest'],
+          //     ),
+          //   ),
+          // );
           json.decode(response.body);
           showDialog(
             context: context,
@@ -887,27 +1475,23 @@ print(mappedData);
                 ],
               );
             },
-          ).then((value) {
-            // Clear fields when dialog is dismissed
-            clearAllFields();
-          });
+          );
         } else if (response.statusCode == 401) {
           setState(() {
             _isLoading = false;
           });
-          Map<String, dynamic> mappedData = {
-            'refresh': refresh,
-          };
+          // Refresh token
+          Map<String, dynamic> refreshData = {'refresh': refresh};
           final response2 = await http.post(
             Uri.parse('http://167.88.160.87/api/users/token-refresh/'),
-            body: mappedData,
+            body: refreshData,
           );
           final data = json.decode(response2.body);
           SharedPreferences prefs = await SharedPreferences.getInstance();
           await prefs.setBool('isLoggedIn', true);
           await prefs.setString('accessToken', data['access']);
           await prefs.setString('refreshToken', data['refresh']);
-          leadSubmit();
+          leadSubmit(); // Retry the submission
         } else {
           // Handle API errors
           ScaffoldMessenger.of(context).showSnackBar(
@@ -936,37 +1520,6 @@ print(mappedData);
       _isLoading = false;
     });
   }
-void clearbusinessname()
-{
-  _businessNameController.clear();
-  _searchController.clear();
-  _selectedCompany=null;
-}
-  void clearAllFields() {
-    _fname.clear();
-    _mname.clear();
-    _lname.clear();
-    _phoneNumber.clear();
-    _address1.clear();
-    _address2.clear();
-    _zip.clear();
-    _location.clear();
-    _income.clear();
-    _loanamount.clear();
-    _businessNameController.clear();
-
-    // Reset selected values
-    setState(() {
-      _selectedCity = null;
-      _selectedCustType = null;
-      _selectedPricing = null;
-      _selectedTenor = null;
-      _selectedCompany = null;
-    });
-
-    // Reset the form state
-    _formKey.currentState?.reset();
-  }
 
   Widget _buildTextField(
     TextEditingController controller,
@@ -979,7 +1532,7 @@ void clearbusinessname()
     bool isPhoneNumber = false,
     bool isAlphabetic = false,
     bool isBlankAlphabetic = false,
-    bool isNumeric = true,
+    bool isNumeric = false,
     bool isZipNumber = false,
     bool isRequired = true, // Add a flag to make the field optional
     bool allowSpaces = false, // New flag to allow spaces
@@ -991,63 +1544,99 @@ void clearbusinessname()
           ? TextInputType.phone
           : isEmail
               ? TextInputType.emailAddress
-              : isNumeric
+              : isNumeric || isZipNumber
                   ? TextInputType.number
-                  : isZipNumber
-                      ? TextInputType.number
-                      : TextInputType.text,
+                  : TextInputType.text,
       inputFormatters: [
-        if (isPhoneNumber) ...[
+        if (isNumeric) NumericCommaInputFormatter(),
+        if (isZipNumber) ...[
           FilteringTextInputFormatter.digitsOnly,
-          LengthLimitingTextInputFormatter(12), // Limit to 12 digits
+          LengthLimitingTextInputFormatter(4), // Limit to 4 digits
         ],
+        if (isPhoneNumber)
+          LengthLimitingTextInputFormatter(12), // Limit to 12 digits
         if (isAlphabetic)
           FilteringTextInputFormatter.allow(
             allowSpaces
                 ? RegExp(r'^[a-zA-Z\s]+$') // Allow alphabets and spaces
                 : RegExp(r'^[a-zA-Z]+$'), // Allow alphabets only (no spaces)
           ),
-
-        if (isBlankAlphabetic)
-          FilteringTextInputFormatter.allow(
-            RegExp(r'^[a-zA-Z]*$'), // Allow only alphabets or empty input
-          ),
-
-        if (isNumeric)
-          FilteringTextInputFormatter.digitsOnly, // Allow digits only
-        if (!isPhoneNumber && !isAlphabetic && !isNumeric)
-          FilteringTextInputFormatter.deny(
-            allowSpaces
-                ? RegExp(r'^\s+$') // Deny consecutive spaces only
-                : RegExp(r'\s'), // Deny spaces globally
-          ),
       ],
       validator: (value) {
-        if (isRequired && (value == null || value.isEmpty)) {
+        if (isRequired && (value == null || value.trim().isEmpty)) {
           return validationMessage;
         }
 
-        if (isAlphabetic) {
-          if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value!)) {
-            return allowSpaces
-                ? 'Only alphabets and spaces are allowed'
-                : 'Only alphabets are allowed';
+        if (isNumeric && value != null && value.isNotEmpty) {
+          final cleanedValue = value.replaceAll(',', '');
+          if (!RegExp(r'^\d+$').hasMatch(cleanedValue)) {
+            return 'Please enter a valid number';
           }
         }
 
-        if (isPhoneNumber) {
-          if (value == null || value.isEmpty) {
-            return validationMessage;
+        if (isBlankAlphabetic && value != null && value.isNotEmpty) {
+          if (!RegExp(r'^[a-zA-Z]*$').hasMatch(value)) {
+            return 'Only alphabets are allowed';
           }
-          if (value.length != 12) {
-            return 'Phone number must be exactly 12 digits';
-          }
-          if (!RegExp(r'^\d+$').hasMatch(value)) {
-            return 'Phone number must contain only digits';
-          }
-          if (!value.startsWith('63')) {
-            return 'Phone number must start with "63"';
-          }
+        }
+
+        return null;
+      },
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: WidgetSupport.inputLabel(),
+        suffixIcon: Padding(
+          padding: const EdgeInsets.all(0),
+          child: Icon(
+            icon,
+            color: Colors.purple,
+            size: 15,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildKydIdTextField(
+    TextEditingController controller,
+    String hintText,
+    String validationMessage,
+    String validationKey, {
+    IconData icon = FontAwesomeIcons.solidCircleUser,
+    bool obscureText = false,
+    bool isEmail = false,
+    bool isPhoneNumber = false,
+    bool isAlphabetic = false,
+    bool isNumeric = false,
+    bool isZipNumber = false,
+    bool isRequired = true, // Add a flag to make the field optional
+    bool allowSpaces = false,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: isPhoneNumber
+          ? TextInputType.phone
+          : isEmail
+              ? TextInputType.emailAddress
+              : isNumeric || isZipNumber
+                  ? TextInputType.number
+                  : TextInputType.text,
+      inputFormatters: [
+        if (isNumeric) NumericCommaInputFormatter(),
+        if (isZipNumber) FilteringTextInputFormatter.digitsOnly,
+        if (isPhoneNumber)
+          LengthLimitingTextInputFormatter(12), // Limit to 12 digits
+        if (isAlphabetic)
+          FilteringTextInputFormatter.allow(
+            allowSpaces
+                ? RegExp(r'^[a-zA-Z\s]+$') // Allow alphabets and spaces
+                : RegExp(r'^[a-zA-Z]+$'), // Allow alphabets only (no spaces)
+          ),
+      ],
+      validator: (_selectedKycId) {
+        if (_selectedKycId == "" && _selectedGId != null) {
+          return 'Please Enter Id'; // Validation message if KYC ID is selected but no image uploaded
         }
 
         return null;
@@ -1087,8 +1676,9 @@ void clearbusinessname()
           _selectedCustType = _CustomerType.entries
               .firstWhere((entry) => entry.value == newValue)
               .key;
-         clearbusinessname();
+          clearbusinessname();
         });
+        FocusScope.of(context).requestFocus(FocusNode());
       },
       validator: (value) {
         if (value == null || value.isEmpty) {
@@ -1104,6 +1694,8 @@ void clearbusinessname()
       },
     );
   }
+
+
 
   Widget _buildTenorDropdownField() {
     return DropdownSearch<String>(
@@ -1128,6 +1720,7 @@ void clearbusinessname()
               _Tenor.firstWhere((e) => e['description'] == newValue)['id']
                   .toString();
         });
+        FocusScope.of(context).requestFocus(FocusNode());
       },
       validator: (value) {
         if (value == null || value.isEmpty) {
@@ -1138,6 +1731,49 @@ void clearbusinessname()
       dropdownBuilder: (BuildContext context, String? selectedItem) {
         return Text(
           selectedItem ?? "Select Tenor",
+          style: WidgetSupport.dropDownText(),
+        );
+      },
+    );
+  }
+
+  Widget _buildBarangayDropdownField() {
+    return DropdownSearch<String>(
+      popupProps: PopupProps.menu(
+        showSearchBox: false,
+        fit: FlexFit.loose,
+      ),
+      items: _barangay.map((e) => e['barangay_name'].toString()).toList(),
+      dropdownDecoratorProps: DropDownDecoratorProps(
+        dropdownSearchDecoration: InputDecoration(
+          hintText: "Select Barangay",
+          hintStyle: WidgetSupport.inputLabel(),
+        ),
+      ),
+      selectedItem: _barangay.isNotEmpty
+          ? _barangay.firstWhere(
+              (e) => e['id'] == _selectedBarangayType,
+              orElse: () => {'barangay_name': "Select Barangay"},
+            )['barangay_name']
+          : "Select Barangay",
+      onChanged: (String? newValue) {
+        setState(() {
+          final selectedBarangay = _barangay.firstWhere(
+            (e) => e['barangay_name'] == newValue,
+          );
+          _selectedBarangayType = selectedBarangay['id']?.toString();
+        });
+        FocusScope.of(context).requestFocus(FocusNode());
+      },
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please select Barangay';
+        }
+        return null;
+      },
+      dropdownBuilder: (BuildContext context, String? selectedItem) {
+        return Text(
+          selectedItem ?? "Select Barangay",
           style: WidgetSupport.dropDownText(),
         );
       },
@@ -1172,6 +1808,7 @@ void clearbusinessname()
               .firstWhere((entry) => entry.value == newValue)
               .key;
         });
+        FocusScope.of(context).requestFocus(FocusNode());
       },
       validator: (value) {
         if (value == null || value.isEmpty) {
@@ -1188,38 +1825,162 @@ void clearbusinessname()
     );
   }
 
-  Widget _buildCityDropdownField() {
+
+  void clearbusinessname() {
+    _businessNameController.clear();
+    _searchController.clear();
+    _selectedCompany = null;
+  }
+
+  Widget _buildDropdownField() {
     return DropdownSearch<String>(
       popupProps: PopupProps.menu(
         showSearchBox: false, // Disable the search box
         fit: FlexFit.loose,
       ),
-      items: _city.values.toList(),
+      items: _gIdOptions.values.toList(),
       dropdownDecoratorProps: DropDownDecoratorProps(
         dropdownSearchDecoration: InputDecoration(
-          hintText: "Select City",
+          hintText: "Select a KYC ID",
           hintStyle: WidgetSupport.inputLabel(),
         ),
       ),
-      selectedItem: _selectedCity != null ? _city[_selectedCity] : null,
+      selectedItem: _selectedGId != null ? _gIdOptions[_selectedGId] : null,
       onChanged: (String? newValue) {
         setState(() {
-          _selectedCity =
-              _city.entries.firstWhere((entry) => entry.value == newValue).key;
+          _selectedGId = _gIdOptions.entries
+              .firstWhere((entry) => entry.value == newValue)
+              .key;
+          _selectedKycId == true;
         });
+        FocusScope.of(context).requestFocus(FocusNode());
       },
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please Select City';
-        }
-        return null;
-      },
-      dropdownBuilder: (BuildContext context, String? selectedItem) {
+      dropdownBuilder: (BuildContext context, String? _selectedGId) {
         return Text(
-          selectedItem ?? "Select City",
+          _selectedGId ?? "Select KYC ID",
           style: WidgetSupport.dropDownText(),
         );
       },
+    );
+  }
+
+  File? _image;
+
+  Widget _buildImageUploadField(
+      TextEditingController controller, String hintText) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: controller,
+          readOnly: true,
+          decoration: InputDecoration(
+            hintText: hintText,
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.upload_file),
+              onPressed: () async {
+                // Show dialog to choose between camera or gallery
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    return AlertDialog(
+                      title: const Text("Select Image Source"),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () async {
+                            final ImagePicker picker = ImagePicker();
+                            final XFile? image = await picker.pickImage(
+                                source: ImageSource.camera); // Open camera
+                            if (image != null) {
+                              setState(() {
+                                _image =
+                                    File(image.path); // Save the selected image
+                                controller.text = image
+                                    .path; // Update the controller with the image path
+                              });
+                            }
+                            Navigator.of(context).pop(); // Close dialog
+                          },
+                          child: const Text("Camera"),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            final ImagePicker picker = ImagePicker();
+                            final XFile? image = await picker.pickImage(
+                                source: ImageSource.gallery); // Open gallery
+                            if (image != null) {
+                              setState(() {
+                                _image =
+                                    File(image.path); // Save the selected image
+                                controller.text = image
+                                    .path; // Update the controller with the image path
+                              });
+                            }
+                            Navigator.of(context).pop(); // Close dialog
+                          },
+                          child: const Text("Gallery"),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                color: Colors.black45,
+              ),
+            ),
+          ),
+          validator: (_selectedKycId) {
+            if (_selectedGId != null && _image == null) {
+              return 'Please upload an image'; // Validation message if KYC ID is selected but no image uploaded
+            }
+            return null;
+          },
+        ),
+        if (_image != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 16.0),
+            child: ClipOval(
+              child: Image.file(
+                _image!,
+                height: 110,
+                width: 110,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class NumericCommaInputFormatter extends TextInputFormatter {
+  final NumberFormat _formatter = NumberFormat('#,##0', 'en_US');
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) {
+      return newValue;
+    }
+    // Remove existing commas
+    final cleanedValue = newValue.text.replaceAll(',', '');
+    if (cleanedValue.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    // Format number with commas
+    final number = int.tryParse(cleanedValue) ?? 0;
+    final formattedValue = _formatter.format(number);
+
+    // Update the selection to match the formatted value
+    return TextEditingValue(
+      text: formattedValue,
+      selection: TextSelection.collapsed(offset: formattedValue.length),
     );
   }
 }
