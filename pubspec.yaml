@@ -56,6 +56,14 @@ dependencies:
   fluttertoast: ^8.2.10
   google_maps_flutter: ^2.2.0
   geolocator: ^10.0.0
+  flutter_bloc: ^8.0.0
+  camera: ^0.10.0
+  path_provider: ^2.0.11
+  hyperkyc_flutter: ^0.38.0
+  flutter_map: ^6.2.1
+  latlong2: ^0.9.1
+  flutter_map_location_marker: ^8.0.5
+
 dev_dependencies:
 flutter_icons:
   android: true

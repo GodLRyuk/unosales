@@ -7,7 +7,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/FSAModule/frcompanyleaddashboard.dart';
+import 'package:unosfa/pages/FSAModule/fsacompanyleaddashboard.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
 import 'package:unosfa/pages/FRModule/createnewlead.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';

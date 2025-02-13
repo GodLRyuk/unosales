@@ -1,42 +1,41 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:gradient_floating_button/gradient_floating_button.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/FSAModule/frcreatcompantlead.dart';
-import 'package:unosfa/pages/FSAModule/frsingleleaddetail.dart';
+import 'package:unosfa/pages/FSAModule/fsacreatenewlead.dart';
+import 'package:unosfa/pages/FSAModule/fsacustomersingleleaddetail.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
-import 'package:gradient_floating_button/gradient_floating_button.dart';
 
-class FsaCompanyLeadDashBoard extends StatefulWidget {
+class FsaLeadDashBoard extends StatefulWidget {
   final String searchQuery;
-  const FsaCompanyLeadDashBoard({super.key, required this.searchQuery});
+  const FsaLeadDashBoard({super.key, required this.searchQuery});
 
   @override
-  State<FsaCompanyLeadDashBoard> createState() =>
-      _FsaCompanyLeadDashBoardState();
+  State<FsaLeadDashBoard> createState() => _FsaLeadDashBoardState();
 }
 
-class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
+class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
   final _searchFilter = TextEditingController();
+  final _toDate = TextEditingController();
+  final _fromDate = TextEditingController();
+  final _scrollController = ScrollController(); // Scroll controller
   List<Map<String, String>> leads = [];
   List<Map<String, String>> filteredLeads = [];
-  String filterText = '';
   bool isLoading = true;
-  bool areDateFieldsVisible = false;
+  bool isFetchingMore = false; // Loader for lazy loading
+  int currentPage = 1; // Pagination page
+  bool hasMoreData = true; // Flag to check if more data is available
+  bool areDateFieldsVisible =
+      false; // Boolean to control visibility of date fields
   DateTime? selectedFromDate;
   DateTime? selectedToDate;
-  final _scrollController = ScrollController();
-  bool isFetchingMore = false;
-  int currentPage = 1;
-  bool hasMoreData = true;
 
   @override
   void initState() {
     super.initState();
-    selectedFromDate = DateTime.now();
-    selectedToDate = DateTime.now();
-    fetchLeads(); // Fetch leads on initialization
+    fetchLeads(); // Fetch initial data
     _scrollController.addListener(_onScroll); // Attach scroll listener
   }
 
@@ -46,7 +45,7 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
     super.dispose();
   }
 
-// Fetch leads from API
+  // Fetch leads from API
   Future<void> fetchLeads({bool isLoadMore = false}) async {
     if (isLoadMore) {
       setState(() {
@@ -57,17 +56,18 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
         isLoading = true;
       });
     }
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
     String apiUrl =
-        'http://167.88.160.87/api/leads/company-leads/?search=${widget.searchQuery}&ordering=-created_at';
+        'http://167.88.160.87/api/leads/?search=${widget.searchQuery}&ordering=-created_at&page=$currentPage';
 
     try {
       final response = await http.get(
         Uri.parse(apiUrl),
         headers: {'Authorization': 'Bearer $token'},
       );
+      print(response.statusCode);
+
       if (response.statusCode == 200) {
         Map<String, dynamic> data = json.decode(response.body);
         List<dynamic> leadsData = data['results'] ?? [];
@@ -75,16 +75,19 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
         setState(() {
           if (isLoadMore) {
             leads.addAll(leadsData.map((item) => {
-                  'name': '${item['company_name'] ?? ''}'.trim(),
-                  'phone': item['contact_person_mobile_no']?.toString() ?? '',
+                  'name':
+                      '${item['first_name'] ?? ''} ${item['middle_name'] ?? ''} ${item['last_name'] ?? ''}'
+                          .trim(),
+                  'phone': item['phone_number']?.toString() ?? '',
                   'id': item['id']?.toString() ?? '',
                 }));
           } else {
             leads = leadsData
                 .map((item) => {
-                      'name': '${item['company_name'] ?? ''}'.trim(),
-                      'phone':
-                          item['contact_person_mobile_no']?.toString() ?? '',
+                      'name':
+                          '${item['first_name'] ?? ''} ${item['middle_name'] ?? ''} ${item['last_name'] ?? ''}'
+                              .trim(),
+                      'phone': item['phone_number']?.toString() ?? '',
                       'id': item['id']?.toString() ?? '',
                     })
                 .toList();
@@ -114,7 +117,7 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
     }
   }
 
-// Scroll listener
+  // Scroll listener
   void _onScroll() {
     if (_scrollController.position.pixels ==
             _scrollController.position.maxScrollExtent &&
@@ -128,19 +131,18 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
   Future<void> fetchFilteredLeads() async {
     String searchQuery = '';
     if (_searchFilter.text.isNotEmpty) {
-      searchQuery = '${_searchFilter.text}';
+      searchQuery = '?phone_number=${_searchFilter.text}';
     }
-    // if (_toDate.text.isNotEmpty && _fromDate.text.isNotEmpty) {
-    //   searchQuery += (searchQuery.isNotEmpty ? '&' : '?') +
-    //       'created_at_from=${_fromDate.text}&created_at_to=${_toDate.text}T23:59:59';
-    // }
+    if (_toDate.text.isNotEmpty && _fromDate.text.isNotEmpty) {
+      searchQuery += (searchQuery.isNotEmpty ? '&' : '?') +
+          'created_at_from=${_fromDate.text}&created_at_to=${_toDate.text}T23:59:59';
+    }
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
     String? refresh = prefs.getString('refreshToken');
     try {
       final response = await http.get(
-        Uri.parse(
-            'http://167.88.160.87/api/leads/company-leads/?search=$searchQuery&ordering=-created_at'),
+        Uri.parse('http://167.88.160.87/api/leads/$searchQuery'),
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -151,17 +153,19 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
         setState(() {
           leads = leadsData.map((item) {
             return {
-              'name': '${item['company_name']}'.trim(),
-              'phone': item['contact_person_mobile_no']?.toString() ?? '',
+              'name':
+                  '${item['first_name']} ${item['middle_name']} ${item['last_name']}'
+                      .trim(),
+              'phone': item['phone_number']?.toString() ?? '',
               'id': item['id']?.toString() ?? '',
             };
           }).toList();
           filteredLeads = List.from(leads);
-          // Check if there's more data
           hasMoreData = data['next'] != null;
 
           isLoading = false;
           isFetchingMore = false;
+
         });
       } else if (response.statusCode == 401) {
         final response2 = await http.post(
@@ -187,6 +191,19 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
     }
   }
 
+  // Method to filter leads by phone number
+  // void _filterLeads(String query) {
+  //   setState(() {
+  //     filterText = query;
+  //     if (query.isEmpty) {
+  //       filteredLeads = List.from(leads);
+  //     } else {
+  //       filteredLeads =
+  //           leads.where((lead) => lead['phone']!.contains(query)).toList();
+  //     }
+  //   });
+  // }
+
   // Format the date string
   String getFormattedFromDate(DateTime? date) {
     if (date == null) {
@@ -209,7 +226,6 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
     });
   }
 
-  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -270,7 +286,7 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
                         TextField(
                           controller: _searchFilter,
                           decoration: InputDecoration(
-                            labelText: 'Filter by Comapny Number',
+                            labelText: 'Filter by Phone Number',
                             border: UnderlineInputBorder(
                               borderSide: BorderSide(color: Colors.grey),
                             ),
@@ -282,6 +298,68 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
                           ),
                           style: TextStyle(height: 1),
                           // onChanged: _filterLeads, // Uncomment if needed
+                        ),
+
+                        // Date fields visibility control
+                        if (areDateFieldsVisible)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              SizedBox(
+                                width: 150,
+                                child: TextField(
+                                  controller: _fromDate,
+                                  readOnly: true,
+                                  onTap: () => _selectFromDate(),
+                                  decoration: InputDecoration(
+                                    labelText: "From Date",
+                                    hintText: selectedFromDate == null
+                                        ? 'Select Date'
+                                        : getFormattedFromDate(
+                                            selectedFromDate),
+                                    enabledBorder: UnderlineInputBorder(
+                                      borderSide:
+                                          BorderSide(color: Colors.grey),
+                                    ),
+                                    focusedBorder: UnderlineInputBorder(
+                                      borderSide:
+                                          BorderSide(color: Color(0xFF640D78)),
+                                    ),
+                                    suffixIcon:
+                                        Icon(Icons.calendar_month_outlined),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: 10),
+                              SizedBox(
+                                width: 150,
+                                child: TextField(
+                                  controller: _toDate,
+                                  readOnly: true,
+                                  onTap: () => _selectToDate(),
+                                  decoration: InputDecoration(
+                                    labelText: "To Date",
+                                    hintText: selectedToDate == null
+                                        ? 'Select Date'
+                                        : getFormattedToDate(selectedToDate),
+                                    enabledBorder: UnderlineInputBorder(
+                                      borderSide:
+                                          BorderSide(color: Colors.grey),
+                                    ),
+                                    focusedBorder: UnderlineInputBorder(
+                                      borderSide:
+                                          BorderSide(color: Color(0xFF640D78)),
+                                    ),
+                                    suffixIcon:
+                                        Icon(Icons.calendar_month_outlined),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                        SizedBox(
+                          height: 10,
                         ),
 
                         // Search button for applying filters
@@ -359,7 +437,7 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) =>
-                                                  FsaSingleLead(
+                                                  CustomerSingleLead(
                                                       leadId: leadId),
                                             ),
                                           );
@@ -444,7 +522,7 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => FsaCompanyLeadGenerate(),
+                      builder: (context) => FsaLeadGenerate(edit: '',),
                     ),
                   );
                 },
@@ -467,6 +545,41 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
     );
   }
 
+  // Show Date Picker for From Date
+  Future<void> _selectFromDate() async {
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: selectedFromDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (pickedDate != null && pickedDate != selectedFromDate) {
+      setState(() {
+        selectedFromDate = pickedDate;
+        _fromDate.text =
+            getFormattedFromDate(selectedFromDate); // Update the text field
+      });
+    }
+  }
+
+// Show Date Picker for To Date
+  Future<void> _selectToDate() async {
+    DateTime? pickedDateTo = await showDatePicker(
+      context: context,
+      initialDate: selectedToDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (pickedDateTo != null && pickedDateTo != selectedToDate) {
+      setState(() {
+        selectedToDate = pickedDateTo;
+        _toDate.text =
+            getFormattedToDate(selectedToDate); // Update the text field
+      });
+    }
+  }
+
+  // Handle Refresh
 }
 
 class LeadDetailPage extends StatelessWidget {

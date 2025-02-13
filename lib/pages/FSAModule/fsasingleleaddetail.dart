@@ -2,19 +2,19 @@ import 'dart:convert'; // for json.decode
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/FSAModule/frleaddashboard.dart';
+import 'package:unosfa/pages/FSAModule/fsacompanyleaddashboard.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 
-class CustomerSingleLead extends StatefulWidget {
+class FsaSingleLead extends StatefulWidget {
   final String leadId; // Lead ID passed from the previous screen
 
-  const CustomerSingleLead({super.key, required this.leadId});
+  const FsaSingleLead({super.key, required this.leadId});
 
   @override
-  State<CustomerSingleLead> createState() => _CustomerSingleLeadState();
+  State<FsaSingleLead> createState() => _FsaSingleLeadState();
 }
 
-class _CustomerSingleLeadState extends State<CustomerSingleLead> {
+class _FsaSingleLeadState extends State<FsaSingleLead> {
   bool isLoading = true;
   Map<String, dynamic> leadDetails = {}; // To store the lead details
 
@@ -26,7 +26,7 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
     try {
       final response = await http.get(
         Uri.parse(
-            'http://167.88.160.87/api/leads/${widget.leadId}/'), // Using leadId in the API URL
+            'http://167.88.160.87/api/leads/company-leads/${widget.leadId}/'), // Using leadId in the API URL
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -57,9 +57,9 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
       }
     } catch (e) {
       print('Error fetching lead details: $e');
-      if (mounted) {
-        setState(() => isLoading = false);
-      }
+      setState(() {
+        isLoading = false; // Stop loading on error
+      });
     }
   }
 
@@ -107,7 +107,7 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                 Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => FsaLeadDashBoard(
+                        builder: (context) => FsaCompanyLeadDashBoard(
                               searchQuery: '',
                             ))); // Go back to the previous screen
               },
@@ -127,7 +127,7 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                     padding: const EdgeInsets.all(16.0),
                     child: Center(
                       child: Text(
-                        'Lead Details', // The text you want to display
+                        'Comapny Lead Details', // The text you want to display
                         style: WidgetSupport.inputLabel().copyWith(
                           fontSize: 20, // Adjust the font size as needed
                           fontWeight: FontWeight
@@ -166,7 +166,7 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                   size: 24, // Set the icon size
                                 ),
                                 Text(
-                                  "Personal Information".toUpperCase(),
+                                  "Company Information".toUpperCase(),
                                   style: WidgetSupport.inputLabel().copyWith(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w500,
@@ -188,13 +188,13 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Name:',
+                                    'Comapny Name:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['first_name'] ?? ''} ${leadDetails['middle_name'] ?? ''} ${leadDetails['last_name'] ?? ''}',
+                                    '${leadDetails['company_name'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
@@ -208,13 +208,13 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Phone:',
+                                    'Comapny Type:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['phone_number'] ?? ''}',
+                                    '${leadDetails['type_name'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
@@ -227,15 +227,13 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Customer Type:',
+                                    'Number Of Employees:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    leadDetails['customer_type'] == 'salaried'
-                                        ? "Salaried"
-                                        : "Self Employed",
+                                    '${leadDetails['number_of_employees'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
@@ -248,13 +246,13 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Income:',
+                                    'Operating Since:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['income'] ?? ''}',
+                                    '${leadDetails['operating_since'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
@@ -267,13 +265,13 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Loan Requested:',
+                                    'Address 1:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['loan_amount_requested'] ?? ''}',
+                                    '${leadDetails['address_line_1'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
@@ -286,13 +284,13 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Interest:',
+                                    'Address 2:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['interest'] ?? ''}%',
+                                    '${leadDetails['address_line_1'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
@@ -305,13 +303,30 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Monthly Installment:',
+                                    'Zip Code:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['monthly_installment'] ?? ''}',
+                                    '${leadDetails['zip_code'] ?? ''}',
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'City:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['city_name'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
@@ -354,7 +369,7 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                   size: 24, // Set the icon size
                                 ),
                                 Text(
-                                  "Company Information".toUpperCase(),
+                                  "Contact Person Information".toUpperCase(),
                                   style: WidgetSupport.inputLabel().copyWith(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w500,
@@ -376,13 +391,13 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Address 1:',
+                                    'Contact Person Frist Name:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['address1'] ?? ''}',
+                                    '${leadDetails['contact_person_first_name'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
@@ -397,13 +412,13 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Address 2:',
+                                    'Contact Person Last Name:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['address2'] ?? ''}',
+                                    '${leadDetails['contact_person_last_name'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
@@ -418,13 +433,13 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'City:',
+                                    'Phone Number:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['city_name'] ?? ''}',
+                                    '${leadDetails['contact_person_mobile_no'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
@@ -439,37 +454,23 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Location:',
+                                    'Email:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  Text('${leadDetails['location'] ?? ''}',
+                                  Text('${leadDetails['email'] ?? ''}',
                                       style: WidgetSupport.inputLabel()),
                                 ],
                               ),
                               const SizedBox(height: 8),
-
-                              // ZIP
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('ZIP:',
-                                      style: WidgetSupport.inputLabel()),
-                                  Text('${leadDetails['zip'] ?? ''}',
-                                      style: WidgetSupport.inputLabel()),
-                                ],
-                              ),
                             ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 5),
 
-                  // Company Information Section
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -499,7 +500,7 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                   size: 24, // Set the icon size
                                 ),
                                 Text(
-                                  "Address Information".toUpperCase(),
+                                  "KYC Information".toUpperCase(),
                                   style: WidgetSupport.inputLabel().copyWith(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w500,
@@ -515,151 +516,79 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Address 1
-                              leadDetails['company_name'] != null &&
-                                      leadDetails['company_name']!.isNotEmpty
-                                  ? Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'Company Name:',
-                                          style: WidgetSupport.inputLabel(),
-                                        ),
-                                        MediaQuery.of(context).size.width < 600
-                                            ? Expanded(
-                                                child: Text(
-                                                  '${leadDetails['company_name'] ?? ''}', // Ensure leadDetails is null-safe
-                                                  style: WidgetSupport
-                                                      .inputLabel(),
-                                                  softWrap: true,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              )
-                                            : Text(
-                                                '${leadDetails['company_name'] ?? ''}', // Ensure leadDetails is null-safe
-                                                style:
-                                                    WidgetSupport.inputLabel(),
-                                                softWrap: true,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                      ],
-                                    )
-                                  : SizedBox(),
-                              const SizedBox(height: 8), // Space between rows
-
-                              // Address 2
-                              leadDetails['business_name'] != null &&
-                                      leadDetails['business_name']!.isNotEmpty
-                                  ? Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'Business Name:',
-                                          style: WidgetSupport.inputLabel(),
-                                          softWrap: true,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        Text(
-                                          '${leadDetails['business_name']}',
-                                          style: WidgetSupport.inputLabel(),
-                                        ),
-                                      ],
-                                    )
-                                  : SizedBox(),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-
-                  // Loan Information Section
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: Color(0xFF640D78),
-                                width: 1,
-                              ),
-                            ),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.only(
-                                bottom:
-                                    8.0), // Add padding below the icon and text
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons
-                                      .monetization_on_outlined, // You can replace this with any other icon you prefer
-                                  color: Color(
-                                      0xFF640D78), // Match the color with your border
-                                  size: 24, // Set the icon size
-                                ),
-                                Text(
-                                  "Loan Information".toUpperCase(),
-                                  style: WidgetSupport.inputLabel().copyWith(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(0.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Address 1
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Tenor:',
+                                    'KYC ID:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['tenor_description'] ?? ''}',
+                                    leadDetails['kyc_id_type'].toUpperCase(),
                                     style: WidgetSupport.inputLabel(),
-                                    softWrap: true,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 8), // Space between rows
-
-                              // Address 2
+                              const SizedBox(height: 8),
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Location Type',
+                                    'ID Number:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['location_type_description'] ?? ''}',
+                                    '${leadDetails['kyc_id_number'].toUpperCase() ?? ''}',
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'KYC Document:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
+                                  leadDetails['kyc_document'] != null &&
+                                          leadDetails['kyc_document'].isNotEmpty
+                                      ? Image.network(
+                                          leadDetails[
+                                              'kyc_document'], // If it's a URL
+                                          height:
+                                              50, // Adjust the height as needed
+                                          width:
+                                              50, // Adjust the width as needed
+                                          fit: BoxFit
+                                              .cover, // Adjust the fit as needed
+                                        )
+                                      : leadDetails['kyc_document'] is String &&
+                                              leadDetails['kyc_document']
+                                                  .startsWith('assets/')
+                                          ? Image.asset(
+                                              leadDetails[
+                                                  'kyc_document'], // If it's a local asset path
+                                              height:
+                                                  50, // Adjust the height as needed
+                                              width:
+                                                  50, // Adjust the width as needed
+                                              fit: BoxFit
+                                                  .cover, // Adjust the fit as needed
+                                            )
+                                          : Text(
+                                              '${leadDetails['kyc_document'].toUpperCase() ?? ''}',
+                                              style: WidgetSupport.inputLabel(),
+                                            ),
                                 ],
                               ),
                             ],

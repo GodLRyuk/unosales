@@ -31,7 +31,6 @@ class _SingleLeadState extends State<SingleLead> {
           'Authorization': 'Bearer $token',
         },
       );
-      print('http://167.88.160.87/api/leads/${widget.leadId}/');
       if (response.statusCode == 200) {
         // Parse the response body as JSON
         setState(() {

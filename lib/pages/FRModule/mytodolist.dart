@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unosfa/pages/FRModule/leadroughttracking.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
-import 'package:unosfa/pages/FRModule/singleleaddetail.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 
 class MyTodoList extends StatefulWidget {
@@ -213,7 +213,8 @@ class _MyTodoListState extends State<MyTodoList> {
       areDateFieldsVisible = !areDateFieldsVisible;
     });
   }
- @override
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -423,11 +424,9 @@ class _MyTodoListState extends State<MyTodoList> {
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (context) =>
-                                                  LeadRouteTracking(
-                                                      leadId: leadId),
-                                            ),
-                                          );
+                                              builder: (context) => OSMRouteTracking(leadId: leadId,),
+                                              ),
+                                            );
                                         },
                                         child: Container(
                                           margin: const EdgeInsets.symmetric(

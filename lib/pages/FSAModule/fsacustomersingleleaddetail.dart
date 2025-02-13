@@ -2,19 +2,19 @@ import 'dart:convert'; // for json.decode
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/FSAModule/frcompanyleaddashboard.dart';
+import 'package:unosfa/pages/FSAModule/fsaleaddashboard.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 
-class FsaSingleLead extends StatefulWidget {
+class CustomerSingleLead extends StatefulWidget {
   final String leadId; // Lead ID passed from the previous screen
 
-  const FsaSingleLead({super.key, required this.leadId});
+  const CustomerSingleLead({super.key, required this.leadId});
 
   @override
-  State<FsaSingleLead> createState() => _FsaSingleLeadState();
+  State<CustomerSingleLead> createState() => _CustomerSingleLeadState();
 }
 
-class _FsaSingleLeadState extends State<FsaSingleLead> {
+class _CustomerSingleLeadState extends State<CustomerSingleLead> {
   bool isLoading = true;
   Map<String, dynamic> leadDetails = {}; // To store the lead details
 
@@ -26,7 +26,7 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
     try {
       final response = await http.get(
         Uri.parse(
-            'http://167.88.160.87/api/leads/company-leads/${widget.leadId}/'), // Using leadId in the API URL
+            'http://167.88.160.87/api/leads/${widget.leadId}/'), // Using leadId in the API URL
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -57,9 +57,9 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
       }
     } catch (e) {
       print('Error fetching lead details: $e');
-      setState(() {
-        isLoading = false; // Stop loading on error
-      });
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
@@ -107,7 +107,7 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                 Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => FsaCompanyLeadDashBoard(
+                        builder: (context) => FsaLeadDashBoard(
                               searchQuery: '',
                             ))); // Go back to the previous screen
               },
@@ -127,7 +127,7 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                     padding: const EdgeInsets.all(16.0),
                     child: Center(
                       child: Text(
-                        'Comapny Lead Details', // The text you want to display
+                        'Lead Details', // The text you want to display
                         style: WidgetSupport.inputLabel().copyWith(
                           fontSize: 20, // Adjust the font size as needed
                           fontWeight: FontWeight
@@ -166,7 +166,7 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                                   size: 24, // Set the icon size
                                 ),
                                 Text(
-                                  "Company Information".toUpperCase(),
+                                  "Personal Information".toUpperCase(),
                                   style: WidgetSupport.inputLabel().copyWith(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w500,
@@ -188,13 +188,13 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Comapny Name:',
+                                    'Name:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['company_name'] ?? ''}',
+                                    '${leadDetails['first_name'] ?? ''} ${leadDetails['middle_name'] ?? ''} ${leadDetails['last_name'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
@@ -208,13 +208,13 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Comapny Type:',
+                                    'Phone:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['type_name'] ?? ''}',
+                                    '${leadDetails['phone_number'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
@@ -227,13 +227,15 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Number Of Employees:',
+                                    'Customer Type:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['number_of_employees'] ?? ''}',
+                                    leadDetails['customer_type'] == 'salaried'
+                                        ? "Salaried"
+                                        : "Self Employed",
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
@@ -246,13 +248,13 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Operating Since:',
+                                    'Income:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['operating_since'] ?? ''}',
+                                    '${leadDetails['income'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
@@ -265,13 +267,13 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Address 1:',
+                                    'Loan Requested:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['address_line_1'] ?? ''}',
+                                    '${leadDetails['loan_amount_requested'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
@@ -284,13 +286,13 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Address 2:',
+                                    'Interest:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['address_line_1'] ?? ''}',
+                                    '${leadDetails['interest'] ?? ''}%',
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
@@ -303,30 +305,13 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Zip Code:',
+                                    'Monthly Installment:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['zip_code'] ?? ''}',
-                                    style: WidgetSupport.inputLabel(),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'City:',
-                                    style: WidgetSupport.inputLabel(),
-                                    softWrap: true,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  Text(
-                                    '${leadDetails['city_name'] ?? ''}',
+                                    '${leadDetails['monthly_installment'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
@@ -369,7 +354,7 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                                   size: 24, // Set the icon size
                                 ),
                                 Text(
-                                  "Contact Person Information".toUpperCase(),
+                                  "Company Information".toUpperCase(),
                                   style: WidgetSupport.inputLabel().copyWith(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w500,
@@ -391,13 +376,13 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Contact Person Frist Name:',
+                                    'Address 1:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['contact_person_first_name'] ?? ''}',
+                                    '${leadDetails['address1'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
@@ -412,13 +397,13 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Contact Person Last Name:',
+                                    'Address 2:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['contact_person_last_name'] ?? ''}',
+                                    '${leadDetails['address2'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
@@ -433,13 +418,13 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Phone Number:',
+                                    'City:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['contact_person_mobile_no'] ?? ''}',
+                                    '${leadDetails['city_name'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
@@ -454,23 +439,37 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Email:',
+                                    'Location:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  Text('${leadDetails['email'] ?? ''}',
+                                  Text('${leadDetails['location'] ?? ''}',
                                       style: WidgetSupport.inputLabel()),
                                 ],
                               ),
                               const SizedBox(height: 8),
+
+                              // ZIP
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('ZIP:',
+                                      style: WidgetSupport.inputLabel()),
+                                  Text('${leadDetails['zip'] ?? ''}',
+                                      style: WidgetSupport.inputLabel()),
+                                ],
+                              ),
                             ],
                           ),
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(height: 5),
 
+                  // Company Information Section
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -500,7 +499,7 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                                   size: 24, // Set the icon size
                                 ),
                                 Text(
-                                  "KYC Information".toUpperCase(),
+                                  "Address Information".toUpperCase(),
                                   style: WidgetSupport.inputLabel().copyWith(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w500,
@@ -516,79 +515,151 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Address 1
+                              leadDetails['company_name'] != null &&
+                                      leadDetails['company_name']!.isNotEmpty
+                                  ? Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Company Name:',
+                                          style: WidgetSupport.inputLabel(),
+                                        ),
+                                        MediaQuery.of(context).size.width < 600
+                                            ? Expanded(
+                                                child: Text(
+                                                  '${leadDetails['company_name'] ?? ''}', // Ensure leadDetails is null-safe
+                                                  style: WidgetSupport
+                                                      .inputLabel(),
+                                                  softWrap: true,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              )
+                                            : Text(
+                                                '${leadDetails['company_name'] ?? ''}', // Ensure leadDetails is null-safe
+                                                style:
+                                                    WidgetSupport.inputLabel(),
+                                                softWrap: true,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                      ],
+                                    )
+                                  : SizedBox(),
+                              const SizedBox(height: 8), // Space between rows
+
+                              // Address 2
+                              leadDetails['business_name'] != null &&
+                                      leadDetails['business_name']!.isNotEmpty
+                                  ? Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Business Name:',
+                                          style: WidgetSupport.inputLabel(),
+                                          softWrap: true,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          '${leadDetails['business_name']}',
+                                          style: WidgetSupport.inputLabel(),
+                                        ),
+                                      ],
+                                    )
+                                  : SizedBox(),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+
+                  // Loan Information Section
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: Color(0xFF640D78),
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.only(
+                                bottom:
+                                    8.0), // Add padding below the icon and text
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons
+                                      .monetization_on_outlined, // You can replace this with any other icon you prefer
+                                  color: Color(
+                                      0xFF640D78), // Match the color with your border
+                                  size: 24, // Set the icon size
+                                ),
+                                Text(
+                                  "Loan Information".toUpperCase(),
+                                  style: WidgetSupport.inputLabel().copyWith(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(0.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Address 1
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'KYC ID:',
+                                    'Tenor:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    leadDetails['kyc_id_type'].toUpperCase(),
+                                    '${leadDetails['tenor_description'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 8), // Space between rows
+
+                              // Address 2
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'ID Number:',
+                                    'Location Type',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['kyc_id_number'].toUpperCase() ?? ''}',
-                                    style: WidgetSupport.inputLabel(),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'KYC Document:',
+                                    '${leadDetails['location_type_description'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  leadDetails['kyc_document'] != null &&
-                                          leadDetails['kyc_document'].isNotEmpty
-                                      ? Image.network(
-                                          leadDetails[
-                                              'kyc_document'], // If it's a URL
-                                          height:
-                                              50, // Adjust the height as needed
-                                          width:
-                                              50, // Adjust the width as needed
-                                          fit: BoxFit
-                                              .cover, // Adjust the fit as needed
-                                        )
-                                      : leadDetails['kyc_document'] is String &&
-                                              leadDetails['kyc_document']
-                                                  .startsWith('assets/')
-                                          ? Image.asset(
-                                              leadDetails[
-                                                  'kyc_document'], // If it's a local asset path
-                                              height:
-                                                  50, // Adjust the height as needed
-                                              width:
-                                                  50, // Adjust the width as needed
-                                              fit: BoxFit
-                                                  .cover, // Adjust the fit as needed
-                                            )
-                                          : Text(
-                                              '${leadDetails['kyc_document'].toUpperCase() ?? ''}',
-                                              style: WidgetSupport.inputLabel(),
-                                            ),
                                 ],
                               ),
                             ],

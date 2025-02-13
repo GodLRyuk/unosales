@@ -56,6 +56,10 @@ class _LeadGenerateState extends State<LeadGenerate> {
   String? _selectedGId;
   bool _selectedKycId = false;
   bool _isCityFieldFocused = false;
+  final _otherCompanyController = TextEditingController();
+  String _customCompanyName = "";
+  bool _showOtherCompanyField = false;
+  String? _cityError;
 
   final Map<String, String> _gIdOptions = {
     'passport': 'Philippines Passport',
@@ -115,7 +119,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
     String? refresh = prefs.getString('refreshToken');
     try {
       final response = await http.get(
-        Uri.parse('http://167.88.160.87/api/leads/companies/?page_size=100'),
+        Uri.parse('http://167.88.160.87/api/leads/companies/?page_size=10'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
@@ -128,12 +132,15 @@ class _LeadGenerateState extends State<LeadGenerate> {
             fetchedData[item['id'].toString()] =
                 item['company_name'].toString();
           }
+
           setState(() {
             _ComIdOptions = fetchedData;
-            // Initially, show all companies in the list
             _filteredCompanies = fetchedData.entries
                 .map((e) => {'id': e.key, 'company_name': e.value})
                 .toList();
+
+            // Append "Others" option
+            _filteredCompanies.add({'id': 'others', 'company_name': 'Others'});
           });
         }
       } else if (response.statusCode == 401) {
@@ -142,8 +149,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
           'refresh': refresh,
         };
         final response2 = await http.post(
-          Uri.parse(
-              'http://167.88.160.87/api/users/token-refresh/'), // Using leadId in the API URL
+          Uri.parse('http://167.88.160.87/api/users/token-refresh/'),
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -159,7 +165,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
     }
   }
 
-  // Search for companies based on the query
   Future<void> _searchCompany(String query) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     if (query.isEmpty) {
@@ -167,6 +172,9 @@ class _LeadGenerateState extends State<LeadGenerate> {
         _filteredCompanies = _ComIdOptions.entries
             .map((e) => {'id': e.key, 'company_name': e.value})
             .toList();
+
+        // Append "Others" option
+        _filteredCompanies.add({'id': 'others', 'company_name': 'Others'});
       });
       return;
     }
@@ -188,6 +196,9 @@ class _LeadGenerateState extends State<LeadGenerate> {
                       'company_name': e['company_name'].toString(),
                     })
                 .toList();
+
+            // Append "Others" option
+            _filteredCompanies.add({'id': 'others', 'company_name': 'Others'});
           });
         }
       } else if (response.statusCode == 401) {
@@ -196,8 +207,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
           'refresh': refresh,
         };
         final response2 = await http.post(
-          Uri.parse(
-              'http://167.88.160.87/api/users/token-refresh/'), // Using leadId in the API URL
+          Uri.parse('http://167.88.160.87/api/users/token-refresh/'),
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -218,7 +228,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
     String? token = prefs.getString('accessToken');
     return {'Authorization': 'Bearer $token'};
   }
-
 
   Future<void> _loadLocationData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -926,6 +935,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
                               padding: EdgeInsets.all(0.0),
                               child: Column(
                                 children: [
+                                  // TextField for searching companies
                                   Focus(
                                     onFocusChange: (hasFocus) {
                                       setState(() {
@@ -939,6 +949,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
                                         suffixIcon: IconButton(
                                           icon: Icon(Icons.search),
                                           onPressed: () {
+                                            // Trigger the search when the search icon is pressed
                                             _searchCompany(
                                                 _searchController.text);
                                           },
@@ -946,6 +957,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
                                       ),
                                       onChanged: (query) {
                                         if (query.isEmpty) {
+                                          // Reset to showing all companies if the input is cleared
                                           setState(() {
                                             _filteredCompanies = _ComIdOptions
                                                 .entries
@@ -984,6 +996,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
                                                   _filteredCompanies[index]
                                                       ['company_name']!),
                                               onTap: () {
+                                                // Set the selected company
                                                 setState(() {
                                                   _selectedCompany =
                                                       _filteredCompanies[index]
@@ -992,12 +1005,10 @@ class _LeadGenerateState extends State<LeadGenerate> {
                                                       _filteredCompanies[index]
                                                           ['company_name']!;
                                                   _isFieldFocused = false;
+                                                  _showOtherCompanyField =
+                                                      _selectedCompany ==
+                                                          'others';
                                                 });
-
-                                                print(
-                                                    "Selected Company ID: $_selectedCompany");
-                                                print(
-                                                    "Selected Company Name: ${_searchController.text}");
                                               },
                                             );
                                           },
@@ -1009,6 +1020,32 @@ class _LeadGenerateState extends State<LeadGenerate> {
                               ),
                             SizedBox(
                               height: MediaQuery.of(context).size.height * 0.03,
+                            ),
+                          ],
+                          if (_showOtherCompanyField) ...[
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 0.0),
+                              child: TextFormField(
+                                controller: _otherCompanyController,
+                                decoration: InputDecoration(
+                                  hintText: "Enter company name",
+                                ),
+                                validator: (value) {
+                                  if (value == null ||
+                                      value.isEmpty ||
+                                      _selectedCompany == 'others') {
+                                    return 'Company name is required';
+                                  }
+                                  return null;
+                                },
+                                onChanged: (value) {
+                                  _customCompanyName = value;
+                                },
+                              ),
+                            ),
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.04,
                             ),
                           ],
                           if (_selectedCustType == 'self_employed') ...[
@@ -1043,7 +1080,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
                             isEmail: false,
                             isNumeric: false,
                             icon: FontAwesomeIcons.mapLocationDot,
-                            isRequired: false,
+                            isRequired: true,
                             allowSpaces: true,
                           ),
                           SizedBox(
@@ -1077,6 +1114,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
                                     controller: _citysearchController,
                                     decoration: InputDecoration(
                                       hintText: "Search City",
+                                      errorText: _cityError,
                                       suffixIcon: IconButton(
                                         icon: Icon(Icons.search),
                                         onPressed: () {
@@ -1194,7 +1232,10 @@ class _LeadGenerateState extends State<LeadGenerate> {
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
-                          _buildBarangayDropdownField(),
+                          _buildBarangayDropdownField(
+                            "Select Barangay",
+                            isRequired: false,
+                          ),
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
@@ -1305,9 +1346,17 @@ class _LeadGenerateState extends State<LeadGenerate> {
                               children: [
                                 ElevatedButton(
                                   onPressed: () {
-                                    if (_formKey.currentState!.validate()) {
-                                      leadSubmit();
-                                    }
+                                   setState(() {
+                                      if (_citysearchController.text.isEmpty) {
+                                        _cityError =
+                                            "City name is required"; 
+                                      } else {
+                                        _cityError = null;
+                                      }
+                                       if (_formKey.currentState!.validate()) {
+                                          leadSubmit();
+                                        }
+                                   });
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.transparent,
@@ -1383,6 +1432,9 @@ class _LeadGenerateState extends State<LeadGenerate> {
       String tenor = _selectedTenor!;
       String document_type = "";
       // String document_type = _selectedDocument!;
+      String finalOtherCompanyName = _selectedCompany == 'others'
+          ? _otherCompanyController.text.trim()
+          : (_selectedCompany ?? '');
       String company =
           _selectedCompany?.isNotEmpty ?? false ? _selectedCompany! : '';
       SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -1419,6 +1471,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
         'document_type': document_type,
         'kyc_id_type': selectedGId,
         'kyc_id_number': externalId,
+        'others_company': finalOtherCompanyName
       };
       setState(() {
         _isLoading = true;
@@ -1695,8 +1748,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
     );
   }
 
-
-
   Widget _buildTenorDropdownField() {
     return DropdownSearch<String>(
       popupProps: PopupProps.menu(
@@ -1737,7 +1788,12 @@ class _LeadGenerateState extends State<LeadGenerate> {
     );
   }
 
-  Widget _buildBarangayDropdownField() {
+   Widget _buildBarangayDropdownField(
+    String validationMessage,
+    {
+      bool isRequired = true,
+    }
+  ) {
     return DropdownSearch<String>(
       popupProps: PopupProps.menu(
         showSearchBox: false,
@@ -1747,6 +1803,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
       dropdownDecoratorProps: DropDownDecoratorProps(
         dropdownSearchDecoration: InputDecoration(
           hintText: "Select Barangay",
+          errorText: "Please Select Barangay",
           hintStyle: WidgetSupport.inputLabel(),
         ),
       ),
@@ -1824,7 +1881,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
       },
     );
   }
-
 
   void clearbusinessname() {
     _businessNameController.clear();

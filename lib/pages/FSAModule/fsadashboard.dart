@@ -4,8 +4,8 @@ import 'package:circle_progress_bar/circle_progress_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/FSAModule/frcompanyleaddashboard.dart';
-import 'package:unosfa/pages/FSAModule/frleaddashboard.dart';
+import 'package:unosfa/pages/FSAModule/fsacompanyleaddashboard.dart';
+import 'package:unosfa/pages/FSAModule/fsaleaddashboard.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -380,7 +380,7 @@ class _FsadashboardState extends State<Fsadashboard> {
             child: Padding(
               padding: EdgeInsets.only(
                   top: MediaQuery.of(context).size.width > 600 ? 38 : 30,
-                  bottom: 10),
+                  bottom: 1),
               child: Column(
                 children: [
                   Padding(
@@ -1303,7 +1303,7 @@ double screenWidth = MediaQuery.of(context).size.width;
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           GestureDetector(
             onTap: () async {

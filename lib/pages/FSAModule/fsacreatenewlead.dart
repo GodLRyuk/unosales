@@ -8,8 +8,8 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/FSAModule/frleaddashboard.dart';
-import 'package:unosfa/pages/FSAModule/frloancalculation.dart';
+import 'package:unosfa/pages/FSAModule/fsaleaddashboard.dart';
+import 'package:unosfa/pages/FSAModule/fsaloancalculation.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:intl/intl.dart';
 
@@ -66,7 +66,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
   final _imageController = TextEditingController();
   bool _selectedKycId = false;
   bool _showOtherCompanyField = false;
-
+  String? _cityError;
   @override
   void initState() {
     super.initState();
@@ -1045,25 +1045,31 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                               height: MediaQuery.of(context).size.height * 0.03,
                             ),
                           ],
-                          if (_showOtherCompanyField)...[
+                          if (_showOtherCompanyField) ...[
                             Padding(
                               padding:
                                   const EdgeInsets.symmetric(vertical: 0.0),
-                              child: TextField(
+                              child: TextFormField(
                                 controller: _otherCompanyController,
                                 decoration: InputDecoration(
                                   hintText: "Enter company name",
                                 ),
+                                validator: (value) {
+                                  if (value == null ||
+                                      value.isEmpty ||
+                                      _selectedCompany == 'others') {
+                                    return 'Company name is required';
+                                  }
+                                  return null;
+                                },
                                 onChanged: (value) {
-                                  setState(() {
-                                    _customCompanyName = value;
-                                  });
+                                  _customCompanyName = value;
                                 },
                               ),
                             ),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.04,
-                          ),
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.04,
+                            ),
                           ],
                           if (_selectedCustType == 'self_employed') ...[
                             TextField(
@@ -1097,7 +1103,6 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                             isEmail: true,
                             isNumeric: false,
                             icon: FontAwesomeIcons.mapLocationDot,
-                            isRequired: false,
                             allowSpaces: true,
                           ),
                           SizedBox(
@@ -1133,6 +1138,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                                     controller: _citysearchController,
                                     decoration: InputDecoration(
                                       hintText: "Search City",
+                                      errorText: _cityError,
                                       suffixIcon: IconButton(
                                         icon: Icon(Icons.search),
                                         onPressed: () {
@@ -1154,8 +1160,6 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                                               .toList();
                                         });
                                       }
-
-                                      // _filterCity(query);
                                     },
                                   ),
                                 ),
@@ -1211,7 +1215,10 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
-                          _buildBarangayDropdownField(),
+                          _buildBarangayDropdownField(
+                            "Select Barangay",
+                            isRequired: false,
+                          ),
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
@@ -1321,9 +1328,17 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                               children: [
                                 ElevatedButton(
                                   onPressed: () {
-                                    if (_formKey.currentState!.validate()) {
-                                      leadSubmit();
-                                    }
+                                    setState(() {
+                                      if (_citysearchController.text.isEmpty) {
+                                        _cityError =
+                                            "City name is required"; 
+                                      } else {
+                                        _cityError = null;
+                                      }
+                                       if (_formKey.currentState!.validate()) {
+                                          leadSubmit();
+                                        }
+                                    });
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.transparent,
@@ -1375,9 +1390,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
     setState(() {
       _isLoading = true;
     });
-    String finalOtherCompanyName = _selectedCompany == 'others'
-        ? _otherCompanyController.text.trim()
-        : (_selectedCompany ?? '');
+
     // Check if the form is valid
     String middle_name = _mname.text.trim();
     if (_formKey.currentState!.validate()) {
@@ -1406,15 +1419,17 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
           : '';
       String tenor = _selectedTenor!;
       String document_type = _selectedDocument!;
-
-      String? company = finalOtherCompanyName.isNotEmpty ? "" : _selectedCompany;
+      String finalOtherCompanyName = _selectedCompany == 'others'
+          ? _otherCompanyController.text.trim()
+          : (_selectedCompany ?? '');
+      String? company =
+          finalOtherCompanyName.isNotEmpty ? "" : _selectedCompany;
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('accessToken');
       String? refresh = prefs.getString('refreshToken');
       String barangay = _selectedBarangayType!;
       String disposition_code = "";
       String sub_disposition_code = "";
-      
 
       // Map the collected data to be sent in the request body
       Map<String, dynamic> mappedData = {
@@ -1724,7 +1739,12 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
     );
   }
 
-  Widget _buildBarangayDropdownField() {
+  Widget _buildBarangayDropdownField(
+    String validationMessage,
+    {
+      bool isRequired = true,
+    }
+  ) {
     return DropdownSearch<String>(
       popupProps: PopupProps.menu(
         showSearchBox: false,
@@ -1734,6 +1754,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
       dropdownDecoratorProps: DropDownDecoratorProps(
         dropdownSearchDecoration: InputDecoration(
           hintText: "Select Barangay",
+          errorText: "Please Select Barangay",
           hintStyle: WidgetSupport.inputLabel(),
         ),
       ),
