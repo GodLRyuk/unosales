@@ -47,8 +47,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
     }
     try {
       final response = await http.get(
-        Uri.parse(
-            '${AppConfig.baseUrl}/api/leads/'), // Using leadId in the API URL
+        Uri.parse('${AppConfig.baseUrl}/api/leads/'), // Using leadId in the API URL
         headers: {
           'Authorization': 'Bearer $token',
         },

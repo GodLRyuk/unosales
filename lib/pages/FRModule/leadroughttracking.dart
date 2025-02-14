@@ -42,7 +42,7 @@ class _OSMRouteTrackingState extends State<OSMRouteTracking> {
     try {
       final response = await http.get(
         Uri.parse(
-            '${AppConfig.baseUrl}api/leads/${widget.leadId}/'), // Using leadId in the API URL
+            '${AppConfig.baseUrl}/api/leads/${widget.leadId}/'), // Using leadId in the API URL
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -61,7 +61,7 @@ class _OSMRouteTrackingState extends State<OSMRouteTracking> {
         };
         final response2 = await http.post(
           Uri.parse(
-              '${AppConfig.baseUrl}api/users/token-refresh/'), // Using leadId in the API URL
+              '${AppConfig.baseUrl}/api/users/token-refresh/'), // Using leadId in the API URL
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -316,13 +316,13 @@ class _OSMRouteTrackingState extends State<OSMRouteTracking> {
                       children: [
                         ElevatedButton(
                           onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    DriverMapView(destination: _destination),
-                              ),
-                            );
+                            // Navigator.push(
+                            //   context,
+                            //   MaterialPageRoute(
+                            //     builder: (context) =>
+                            //         DriverMapView(destination: _destination),
+                            //   ),
+                            // );
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,

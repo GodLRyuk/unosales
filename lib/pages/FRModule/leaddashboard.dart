@@ -60,8 +60,7 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
-    String apiUrl =
-        '${AppConfig.baseUrl}/api/leads/?search=${widget.searchQuery}&ordering=-created_at&page=$currentPage';
+    String apiUrl ='${AppConfig.baseUrl}/api/leads/?search=${widget.searchQuery}&ordering=-created_at&page=$currentPage';
 
     try {
       final response = await http.get(
