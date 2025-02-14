@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -10,6 +11,8 @@ import 'package:geocoding/geocoding.dart';
 import 'package:unosfa/pages/driver_map_view.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:unosfa/pages/config/config.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class OSMRouteTracking extends StatefulWidget {
   final String leadId;
@@ -79,6 +82,7 @@ class _OSMRouteTrackingState extends State<OSMRouteTracking> {
       }
     }
   }
+
   Future<void> getLatLngFromAddress(String address) async {
     try {
       List<Location> locations = await locationFromAddress(address);
@@ -114,7 +118,6 @@ class _OSMRouteTrackingState extends State<OSMRouteTracking> {
   }
 
   Future<void> _fetchRoute(LatLng destination) async {
-
     Position position = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
@@ -147,6 +150,77 @@ class _OSMRouteTrackingState extends State<OSMRouteTracking> {
     } catch (e) {
       print("Error fetching route: $e");
     }
+  }
+
+  final DatabaseReference _dbRef =
+      FirebaseDatabase.instance.ref("Lead Movement");
+  StreamSubscription<Position>? _positionStream;
+  bool isTracking = false;
+  List<Map<String, dynamic>> path = []; // Stores all locations
+
+  void startTracking() async {
+    List<String>? userInfo;
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() => userInfo = prefs.getStringList('userInfo'));
+    }
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Check if location services are enabled
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      print("Location services are disabled.");
+      return;
+    }
+
+    // Check permission
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        print("Location permission denied.");
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      print("Location permissions are permanently denied.");
+      return;
+    }
+
+    // Start tracking
+    setState(() => isTracking = true);
+    LocationSettings locationSettings = LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 10, // Update every 10 meters
+    );
+
+    _positionStream =
+        Geolocator.getPositionStream(locationSettings: locationSettings)
+            .listen((Position position) {
+      if (isTracking) {
+        // Create a new location entry
+        Map<String, dynamic> newLocation = {
+          'latitude': position.latitude,
+          'longitude': position.longitude,
+          'timestamp': DateTime.now().toIso8601String(),
+        };
+
+        // Add new location to the path list
+        path.add(newLocation);
+        String unm = userInfo?.isNotEmpty == true ? userInfo![0] : "UnknownUser";
+
+        // Store the full path in Firebase
+        _dbRef.child(unm).set(path);
+      }
+    });
+  }
+
+  void stopTracking() {
+    _positionStream?.cancel();
+    setState(() => isTracking = false);
+    print("Tracking Stopped");
   }
 
   @override
@@ -315,15 +389,9 @@ class _OSMRouteTrackingState extends State<OSMRouteTracking> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         ElevatedButton(
-                          onPressed: () {
-                            // Navigator.push(
-                            //   context,
-                            //   MaterialPageRoute(
-                            //     builder: (context) =>
-                            //         DriverMapView(destination: _destination),
-                            //   ),
-                            // );
-                          },
+                          onPressed: isTracking ? stopTracking : startTracking,
+                          child: Text(
+                              isTracking ? "Stop Tracking" : "Going For Lead"),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
@@ -335,10 +403,10 @@ class _OSMRouteTrackingState extends State<OSMRouteTracking> {
                               borderRadius: BorderRadius.circular(8.0),
                             ),
                           ),
-                          child: Text(
-                            "Going For Lead",
-                            style: WidgetSupport.LoginButtonTextColor(),
-                          ),
+                          // child: Text(
+                          //   "Going For Lead",
+                          //   style: WidgetSupport.LoginButtonTextColor(),
+                          // ),
                         ),
                       ],
                     ),

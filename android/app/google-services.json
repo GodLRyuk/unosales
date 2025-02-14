@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "119686059639",
+    "project_id": "unosales-4f48e",
+    "storage_bucket": "unosales-4f48e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:119686059639:android:5685d33eeea0c646201872",
+        "android_client_info": {
+          "package_name": "com.example.unosfa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA7pyvLDgtRz3-N6OsmHM_qdg8hTQauiho"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
