@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unosfa/pages/FSAModule/fsadashboard.dart';
-import 'package:unosfa/pages/generalscreens/notification.dart';
 import 'package:unosfa/pages/generalscreens/profile.dart';
 import 'package:unosfa/pages/generalscreens/setting.dart';
 import 'package:unosfa/pages/FRModule/salesdashboard.dart';

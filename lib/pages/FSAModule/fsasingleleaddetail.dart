@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unosfa/pages/FSAModule/fsacompanyleaddashboard.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
+import 'package:unosfa/pages/config/config.dart';
 
 class FsaSingleLead extends StatefulWidget {
   final String leadId; // Lead ID passed from the previous screen
@@ -26,7 +27,7 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
     try {
       final response = await http.get(
         Uri.parse(
-            'http://167.88.160.87/api/leads/company-leads/${widget.leadId}/'), // Using leadId in the API URL
+            '${AppConfig.baseUrl}api/leads/company-leads/${widget.leadId}/'), // Using leadId in the API URL
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -44,7 +45,7 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
         };
         final response2 = await http.post(
           Uri.parse(
-              'http://167.88.160.87/api/users/token-refresh/'), // Using leadId in the API URL
+              '${AppConfig.baseUrl}api/users/token-refresh/'), // Using leadId in the API URL
           body: mappedData,
         );
         final data = json.decode(response2.body);

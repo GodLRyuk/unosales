@@ -6,6 +6,7 @@ import 'package:unosfa/pages/generalscreens/login.dart';
 import 'package:unosfa/pages/generalscreens/registration.dart';
 import '../../widgetSupport/widgetstyle.dart';
 import 'package:http/http.dart' as http;
+import 'package:unosfa/pages/config/config.dart';
 
 class RegistrationOtpPage extends StatefulWidget {
   final String loginWith;
@@ -76,7 +77,7 @@ class RegistrationOtpPageState extends State<RegistrationOtpPage> {
   Future<void> _verifyOtp() async {
     if (_formKey.currentState?.validate() ?? false) {
       try {
-        var url = Uri.parse('http://167.88.160.87/api/agents/');
+        var url = Uri.parse('${AppConfig.baseUrl}api/agents/');
         var request = http.MultipartRequest('POST', url);
 
         // Add text fields

@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:unosfa/pages/config/config.dart';
 class DropdownState with ChangeNotifier {
   String? _selectedComId;
   Map<String, String> _ComIdOptions = {}; // To store fetched company data
@@ -35,7 +35,7 @@ class DropdownState with ChangeNotifier {
     String? token = prefs.getString('accessToken');
     try {
       final response = await http.get(
-        Uri.parse('http://167.88.160.87/api/leads/companies/?page_size=100'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/companies/?page_size=100'),
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -64,7 +64,7 @@ class DropdownState with ChangeNotifier {
   Future<void> searchCompanies(String searchText) async {
   SharedPreferences prefs = await SharedPreferences.getInstance();
   String? token = prefs.getString('accessToken');
-  String url = 'http://167.88.160.87/api/leads/companies/';
+  String url = '${AppConfig.baseUrl}/api/leads/companies/';
   if (searchText.isNotEmpty) {
     url += '?search=$searchText';
   }

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:unosfa/pages/generalscreens/forcepasswordchange.dart';
 import 'package:unosfa/pages/generalscreens/login.dart';
 import '../../widgetSupport/widgetstyle.dart';
+import 'package:unosfa/pages/config/config.dart';
 
 class Changepasswordotp extends StatefulWidget {
   final String newpassword;
@@ -81,7 +82,7 @@ class _ChangepasswordotpState extends State<Changepasswordotp> {
       _isLoading = true;
     });
       try {
-        var url = Uri.parse('http://167.88.160.87/api/users/change-password/');
+        var url = Uri.parse('${AppConfig.baseUrl}api/users/change-password/');
         Map<String, dynamic> mappedData = {
           'old_password': widget.oldpassword,
           'new_password': widget.newpassword,

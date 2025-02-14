@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
 import '../../widgetSupport/widgetstyle.dart';
 import 'package:http/http.dart' as http;
+import 'package:unosfa/pages/config/config.dart';
 
 class LoginOtp extends StatefulWidget {
   final String uname;
@@ -62,7 +63,7 @@ class _LoginOtpState extends State<LoginOtp> {
       setState(() {
         _isLoading = true;
       });
-      var url = Uri.parse('http://167.88.160.87/api/users/login/');
+      var url = Uri.parse('${AppConfig.baseUrl}api/users/login/');
       Map mapeddata = {
         'username': widget.uname,
         'password': widget.pwd,

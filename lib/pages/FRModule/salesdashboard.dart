@@ -7,11 +7,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unosfa/pages/FRModule/createnewlead.dart';
 import 'package:unosfa/pages/FRModule/leaddashboard.dart';
 import 'package:unosfa/pages/FRModule/mytodolist.dart';
-// import 'package:unosfa/pages/FRModule/mytodolist.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-
+import 'package:unosfa/pages/config/config.dart';
 class Salesdashboard extends StatefulWidget {
   // final String loginWith;
   const Salesdashboard({super.key});
@@ -49,7 +48,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
     try {
       final response = await http.get(
         Uri.parse(
-            'http://167.88.160.87/api/leads/'), // Using leadId in the API URL
+            '${AppConfig.baseUrl}/api/leads/'), // Using leadId in the API URL
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -65,7 +64,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
         };
         final response2 = await http.post(
           Uri.parse(
-              'http://167.88.160.87/api/users/token-refresh/'), // Using leadId in the API URL
+              '${AppConfig.baseUrl}/api/users/token-refresh/'), // Using leadId in the API URL
           body: mappedData,
         );
         final data = json.decode(response2.body);

@@ -1,13 +1,15 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unosfa/pages/FRModule/mytodolist.dart';
 import 'package:http/http.dart' as http;
+import 'package:geocoding/geocoding.dart';
+import 'package:unosfa/pages/driver_map_view.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
+import 'package:unosfa/pages/config/config.dart';
 
 class OSMRouteTracking extends StatefulWidget {
   final String leadId;
@@ -19,15 +21,16 @@ class OSMRouteTracking extends StatefulWidget {
 
 class _OSMRouteTrackingState extends State<OSMRouteTracking> {
   final MapController _mapController = MapController();
-  LatLng _currentPosition = LatLng(22.5726, 88.3639);
-  bool _isTracking = false;
+  LatLng _currentPosition = LatLng(0.0, 0.0);
+  LatLng _destination = LatLng(0.0, 0.0);
   List<LatLng> _routePoints = [];
-  
+  bool _isTracking = false;
+
   @override
   void initState() {
     super.initState();
     fetchLeadDetails();
-    _getCurrentLocation();
+    _fetchCurrentLocation();
   }
 
   bool isLoading = true;
@@ -39,7 +42,7 @@ class _OSMRouteTrackingState extends State<OSMRouteTracking> {
     try {
       final response = await http.get(
         Uri.parse(
-            'http://167.88.160.87/api/leads/${widget.leadId}/'), // Using leadId in the API URL
+            '${AppConfig.baseUrl}api/leads/${widget.leadId}/'), // Using leadId in the API URL
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -49,6 +52,8 @@ class _OSMRouteTrackingState extends State<OSMRouteTracking> {
         setState(() {
           leadDetails = json.decode(response.body);
           isLoading = false; // Data loaded
+          getLatLngFromAddress(
+              leadDetails['address1'] + leadDetails['address2']);
         });
       } else if (response.statusCode == 401) {
         Map<String, dynamic> mappedData = {
@@ -56,7 +61,7 @@ class _OSMRouteTrackingState extends State<OSMRouteTracking> {
         };
         final response2 = await http.post(
           Uri.parse(
-              'http://167.88.160.87/api/users/token-refresh/'), // Using leadId in the API URL
+              '${AppConfig.baseUrl}api/users/token-refresh/'), // Using leadId in the API URL
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -74,45 +79,74 @@ class _OSMRouteTrackingState extends State<OSMRouteTracking> {
       }
     }
   }
-
-  Future<void> _getCurrentLocation() async {
-    Position position = await Geolocator.getCurrentPosition();
-    setState(() {
-      _currentPosition = LatLng(position.latitude, position.longitude);
-    });
-    _fetchRoute();
-  }
-
-  void _fetchRoute() {
-    setState(() {
-      _routePoints = [
-        _currentPosition,
-        LatLng((22.581041577139537 + _currentPosition.latitude) / 2,
-            (88.43708952431639 + _currentPosition.longitude) / 2),
-            
-      ];
-    });
-    _mapController.move(_currentPosition, 14.0);
-  }
-
-  void _startTracking() {
-    setState(() {
-      _isTracking = true;
-    });
-
-    Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 5,
-      ),
-    ).listen((Position position) {
-      if (_isTracking) {
+  Future<void> getLatLngFromAddress(String address) async {
+    try {
+      List<Location> locations = await locationFromAddress(address);
+      if (locations.isNotEmpty) {
         setState(() {
-          _currentPosition = LatLng(position.latitude, position.longitude);
+          _destination =
+              LatLng(locations.first.latitude, locations.first.longitude);
         });
-        _mapController.move(_currentPosition, 16.0);
+
+        // Call route fetching function
+        _fetchRoute(_destination);
       }
+    } catch (e) {
+      print("Error: $e");
+    }
+  }
+
+  void _fetchCurrentLocation() async {
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+    await Future.delayed(Duration(seconds: 2));
+    LatLng newPosition = LatLng(position.latitude, position.longitude);
+
+    _updateCurrentPosition(newPosition);
+  }
+
+  void _updateCurrentPosition(LatLng newPosition) {
+    setState(() {
+      _currentPosition = newPosition;
     });
+    _mapController.move(newPosition, 8.5);
+  }
+
+  Future<void> _fetchRoute(LatLng destination) async {
+
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+    LatLng newPosition = LatLng(position.latitude, position.longitude);
+
+    final routeUrl = Uri.parse(
+        "https://router.project-osrm.org/route/v1/driving/${newPosition.longitude},${newPosition.latitude};${destination.longitude},${destination.latitude}?geometries=geojson");
+
+    try {
+      final response = await http.get(routeUrl);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List<dynamic> coordinates =
+            data['routes'][0]['geometry']['coordinates'];
+
+        List<LatLng> routePoints = coordinates
+            .map((point) =>
+                LatLng(point[1], point[0])) // Convert [lon, lat] to [lat, lon]
+            .toList();
+
+        setState(() {
+          _routePoints = routePoints;
+          _currentPosition = newPosition;
+          _destination = destination;
+        });
+      } else {
+        print("Failed to fetch route: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Error fetching route: $e");
+    }
   }
 
   @override
@@ -149,11 +183,11 @@ class _OSMRouteTrackingState extends State<OSMRouteTracking> {
               icon: Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () {
                 Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => MyTodoList(
-                              searchQuery: '',
-                            )));
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MyTodoList(searchQuery: ''),
+                  ),
+                );
               },
             ),
           ),
@@ -166,9 +200,11 @@ class _OSMRouteTrackingState extends State<OSMRouteTracking> {
             child: FlutterMap(
               mapController: _mapController,
               options: MapOptions(
-                center: _currentPosition,
-                zoom: 14,
-                onTap: (_, __) {},
+                center: _currentPosition, // This will be non-null
+                zoom: 15,
+                onMapReady: () {
+                  _mapController.move(_currentPosition, 15.0);
+                },
               ),
               children: [
                 TileLayer(
@@ -180,29 +216,42 @@ class _OSMRouteTrackingState extends State<OSMRouteTracking> {
                   polylines: [
                     Polyline(
                       points: _routePoints,
-                      color: Colors.red,
-                      strokeWidth: 5,
+                      color: Colors.red, // Change color for visibility
+                      strokeWidth: 4.0,
                     ),
                   ],
                 ),
                 MarkerLayer(
                   markers: [
                     Marker(
+                      width: 40.0,
+                      height: 40.0,
+                      point: _currentPosition,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              color: Colors.blue
+                                  .withOpacity(0.3), // Circle background
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          Icon(Icons.circle, color: Colors.blue, size: 20),
+                        ],
+                      ),
+                    ),
+                    Marker(
                       width: 30.0,
                       height: 30.0,
-                      point: _currentPosition,
-                      child: const Icon(Icons.directions_walk,
-                          color: Colors.blue, size: 40),
+                      point: _destination,
+                      child: const Icon(Icons.location_on,
+                          color: Colors.red, size: 40),
                     ),
-                    // Marker(
-                    //   width: 30.0,
-                    //   height: 30.0,
-                    //   point: widget.destination,
-                    //   child: const Icon(Icons.location_on, color: Colors.red, size: 40),
-                    // ),
                   ],
                 ),
-                CurrentLocationLayer(),
               ],
             ),
           ),
@@ -233,19 +282,22 @@ class _OSMRouteTrackingState extends State<OSMRouteTracking> {
                   ),
                   Text(
                     "Name: ${leadDetails['first_name']} ${leadDetails['middle_name']} ${leadDetails['last_name']}",
-                    style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                    style: TextStyle(fontSize: 16, color: Color(0xFF2C2B2B)),
                   ),
                   Text(
-                    "Phone Number: ${leadDetails['phone_number']} ",
-                    style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                    "Phone Number: +${leadDetails['phone_number']} ",
+                    style: TextStyle(fontSize: 16, color: Color(0xFF2C2B2B)),
                   ),
                   Text(
                     "Zip: ${leadDetails['zip']} ",
-                    style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                    style: TextStyle(fontSize: 16, color: Color(0xFF2C2B2B)),
                   ),
                   Text(
                     "Location: ${leadDetails['location']} ",
-                    style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                    style: TextStyle(fontSize: 16, color: Color(0xFF2C2B2B)),
+                  ),
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.01,
                   ),
                   Text(
                     "Destination:",
@@ -253,7 +305,7 @@ class _OSMRouteTrackingState extends State<OSMRouteTracking> {
                   ),
                   Text(
                     "Address: ${leadDetails['address1']} ${leadDetails['address2']}",
-                    style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                    style: TextStyle(fontSize: 16, color: Color(0xFF2C2B2B)),
                   ),
                   SizedBox(
                     height: MediaQuery.of(context).size.height * 0.02,
@@ -263,23 +315,21 @@ class _OSMRouteTrackingState extends State<OSMRouteTracking> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         ElevatedButton(
-                          onPressed: _startTracking,
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    DriverMapView(destination: _destination),
+                              ),
+                            );
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
                             padding: EdgeInsets.symmetric(
-                              horizontal: MediaQuery.of(context).orientation ==
-                                      Orientation.portrait
-                                  ? (MediaQuery.of(context).size.width < 600
-                                      ? MediaQuery.of(context).size.width *
-                                          0.00 // For phones in portrait
-                                      : MediaQuery.of(context).size.width *
-                                          0.03) // For tablets in portrait
-                                  : (MediaQuery.of(context).size.width < 600
-                                      ? MediaQuery.of(context).size.width *
-                                          0.03 // For phones in landscape
-                                      : MediaQuery.of(context).size.width *
-                                          0.02), // For tablets in landscape
+                              horizontal:
+                                  MediaQuery.of(context).size.width * 0.02,
                             ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8.0),

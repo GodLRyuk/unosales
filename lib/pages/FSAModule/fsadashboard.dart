@@ -9,6 +9,7 @@ import 'package:unosfa/pages/FSAModule/fsaleaddashboard.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:unosfa/pages/config/config.dart';
 
 class Fsadashboard extends StatefulWidget {
   // final String loginWith;
@@ -51,7 +52,7 @@ class _FsadashboardState extends State<Fsadashboard> {
     try {
       final response = await http.get(
         Uri.parse(
-            'http://167.88.160.87/api/leads/?ordering=-created_at'), // Using leadId in the API URL
+            '${AppConfig.baseUrl}api/leads/?ordering=-created_at'), // Using leadId in the API URL
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -67,7 +68,7 @@ class _FsadashboardState extends State<Fsadashboard> {
         };
         final response2 = await http.post(
           Uri.parse(
-              'http://167.88.160.87/api/users/token-refresh/'), // Using leadId in the API URL
+              '${AppConfig.baseUrl}api/users/token-refresh/'), // Using leadId in the API URL
           body: mappedData,
         );
         final data = json.decode(response2.body);

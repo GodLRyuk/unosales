@@ -11,6 +11,7 @@ import 'package:unosfa/pages/FSAModule/fsacompanyleaddashboard.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
 import 'package:unosfa/pages/FRModule/createnewlead.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
+import 'package:unosfa/pages/config/config.dart';
 
 class FsaCompanyLeadGenerate extends StatefulWidget {
   @override
@@ -90,7 +91,7 @@ class _FsaCompanyLeadGenerateState extends State<FsaCompanyLeadGenerate> {
     String? refresh = prefs.getString('refreshToken');
     try {
       final response = await http.get(
-        Uri.parse('http://167.88.160.87/api/leads/company-types/'),
+        Uri.parse('${AppConfig.baseUrl}api/leads/company-types/'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
@@ -118,7 +119,7 @@ class _FsaCompanyLeadGenerateState extends State<FsaCompanyLeadGenerate> {
         };
         final response2 = await http.post(
           Uri.parse(
-              'http://167.88.160.87/api/users/token-refresh/'), // Using leadId in the API URL
+              '${AppConfig.baseUrl}api/users/token-refresh/'), // Using leadId in the API URL
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -150,7 +151,7 @@ class _FsaCompanyLeadGenerateState extends State<FsaCompanyLeadGenerate> {
     try {
       final response = await http.get(
         Uri.parse(
-            'http://167.88.160.87/api/leads/company-types/?search=$query'),
+            '${AppConfig.baseUrl}api/leads/company-types/?search=$query'),
         headers: await _getAuthHeader(),
       );
       if (response.statusCode == 200) {
@@ -174,7 +175,7 @@ class _FsaCompanyLeadGenerateState extends State<FsaCompanyLeadGenerate> {
         };
         final response2 = await http.post(
           Uri.parse(
-              'http://167.88.160.87/api/users/token-refresh/'), // Using leadId in the API URL
+              '${AppConfig.baseUrl}api/users/token-refresh/'), // Using leadId in the API URL
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -579,7 +580,7 @@ class _FsaCompanyLeadGenerateState extends State<FsaCompanyLeadGenerate> {
     String? refresh = prefs.getString('refreshToken');
     try {
       final response = await http.get(
-        Uri.parse('http://167.88.160.87/api/leads/cities'),
+        Uri.parse('${AppConfig.baseUrl}api/leads/cities'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -602,7 +603,7 @@ class _FsaCompanyLeadGenerateState extends State<FsaCompanyLeadGenerate> {
         };
         final response2 = await http.post(
           Uri.parse(
-              'http://167.88.160.87/api/users/token-refresh/'), // Using leadId in the API URL
+              '${AppConfig.baseUrl}api/users/token-refresh/'), // Using leadId in the API URL
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -664,7 +665,7 @@ class _FsaCompanyLeadGenerateState extends State<FsaCompanyLeadGenerate> {
       };
 
       try {
-        var url = Uri.parse('http://167.88.160.87/api/leads/company-leads/');
+        var url = Uri.parse('${AppConfig.baseUrl}api/leads/company-leads/');
         var request = http.MultipartRequest('POST', url)
           ..headers['Authorization'] = 'Bearer $token'
           ..fields.addAll(mappedData);
@@ -712,7 +713,7 @@ class _FsaCompanyLeadGenerateState extends State<FsaCompanyLeadGenerate> {
 
           Map<String, dynamic> refreshData = {'refresh': refresh};
           final response2 = await http.post(
-            Uri.parse('http://167.88.160.87/api/users/token-refresh/'),
+            Uri.parse('${AppConfig.baseUrl}api/users/token-refresh/'),
             body: refreshData,
           );
           final data = json.decode(response2.body);

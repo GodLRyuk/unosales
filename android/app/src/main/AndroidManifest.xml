@@ -43,8 +43,14 @@
             android:value="2" />
     </application>
 
-    <!-- Required for processing text from other apps -->
+    <!-- Allow opening external URLs (Needed for OSM navigation) -->
     <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https"/>
+        </intent>
+        
+        <!-- Required for processing text from other apps -->
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

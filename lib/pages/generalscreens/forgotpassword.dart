@@ -4,6 +4,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:unosfa/pages/generalscreens/login.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:http/http.dart' as http;
+import 'package:unosfa/pages/config/config.dart';
 
 class ForgotPassword extends StatefulWidget {
   const ForgotPassword({super.key});
@@ -218,7 +219,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     // Send the POST request to the API
     try {
       final response = await http.post(
-        Uri.parse('http://167.88.160.87/api/users/forgot-password/'),
+        Uri.parse('${AppConfig.baseUrl}api/users/forgot-password/'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(data),
       );

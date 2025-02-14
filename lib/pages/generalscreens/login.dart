@@ -11,6 +11,7 @@ import 'package:unosfa/pages/otpscreens/login_otp.dart';
 import 'package:unosfa/pages/FRModule/salesdashboard.dart';
 import '../../widgetSupport/widgetstyle.dart';
 import 'package:http/http.dart' as http;
+import 'package:unosfa/pages/config/config.dart';
 
 class LoginPage extends StatefulWidget {
   final String loginWith;
@@ -289,7 +290,7 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     if (_formKey.currentState!.validate()) {
-      var url = Uri.parse('http://167.88.160.87/api/users/login/');
+      var url = Uri.parse('${AppConfig.baseUrl}api/users/login/');
       Map mapeddata = {
         'username': _usernameController.text,
         'password': _passwordController.text,

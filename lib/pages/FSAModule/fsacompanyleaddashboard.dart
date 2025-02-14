@@ -7,6 +7,7 @@ import 'package:unosfa/pages/FSAModule/fsasingleleaddetail.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:gradient_floating_button/gradient_floating_button.dart';
+import 'package:unosfa/pages/config/config.dart';
 
 class FsaCompanyLeadDashBoard extends StatefulWidget {
   final String searchQuery;
@@ -61,7 +62,7 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
     String apiUrl =
-        'http://167.88.160.87/api/leads/company-leads/?search=${widget.searchQuery}&ordering=-created_at';
+        '${AppConfig.baseUrl}api/leads/company-leads/?search=${widget.searchQuery}&ordering=-created_at';
 
     try {
       final response = await http.get(
@@ -140,7 +141,7 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
     try {
       final response = await http.get(
         Uri.parse(
-            'http://167.88.160.87/api/leads/company-leads/?search=$searchQuery&ordering=-created_at'),
+            '${AppConfig.baseUrl}api/leads/company-leads/?search=$searchQuery&ordering=-created_at'),
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -165,7 +166,7 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
         });
       } else if (response.statusCode == 401) {
         final response2 = await http.post(
-          Uri.parse('http://167.88.160.87/api/users/token-refresh/'),
+          Uri.parse('${AppConfig.baseUrl}api/users/token-refresh/'),
           body: {'refresh': refresh},
         );
         final data = json.decode(response2.body);

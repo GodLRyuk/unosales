@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
 import 'package:unosfa/pages/FRModule/singleleaddetail.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
-
+import 'package:unosfa/pages/config/config.dart';
 class LeadDashBoard extends StatefulWidget {
   final String searchQuery;
   const LeadDashBoard({super.key, required this.searchQuery});
@@ -61,7 +61,7 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
     String apiUrl =
-        'http://167.88.160.87/api/leads/?search=${widget.searchQuery}&ordering=-created_at&page=$currentPage';
+        '${AppConfig.baseUrl}/api/leads/?search=${widget.searchQuery}&ordering=-created_at&page=$currentPage';
 
     try {
       final response = await http.get(
@@ -143,7 +143,7 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
     String? refresh = prefs.getString('refreshToken');
     try {
       final response = await http.get(
-        Uri.parse('http://167.88.160.87/api/leads/$searchQuery'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/$searchQuery'),
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -169,7 +169,7 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
         });
       } else if (response.statusCode == 401) {
         final response2 = await http.post(
-          Uri.parse('http://167.88.160.87/api/users/token-refresh/'),
+          Uri.parse('${AppConfig.baseUrl}/api/users/token-refresh/'),
           body: {'refresh': refresh},
         );
         final data = json.decode(response2.body);
