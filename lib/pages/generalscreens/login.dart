@@ -290,7 +290,7 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     if (_formKey.currentState!.validate()) {
-      var url = Uri.parse('${AppConfig.baseUrl}api/users/login/');
+      var url = Uri.parse('${AppConfig.baseUrl}/api/users/login/');
       Map mapeddata = {
         'username': _usernameController.text,
         'password': _passwordController.text,

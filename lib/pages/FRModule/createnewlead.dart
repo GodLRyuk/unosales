@@ -57,7 +57,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
   bool _selectedKycId = false;
   bool _isCityFieldFocused = false;
   final _otherCompanyController = TextEditingController();
-  String _customCompanyName = "";
   bool _showOtherCompanyField = false;
   String? _cityError;
 
@@ -1040,7 +1039,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
                                   return null;
                                 },
                                 onChanged: (value) {
-                                  _customCompanyName = value;
                                 },
                               ),
                             ),

@@ -38,7 +38,6 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
   final _businessNameController = TextEditingController();
   final _area = TextEditingController();
   final _otherCompanyController = TextEditingController();
-  String _customCompanyName = "";
   bool _isLoading = false;
   late Map<String, String> _ComIdOptions; // Store the fetched companies
   late Map<String, String> _LocatinIdOptions; // Store the fetched location
@@ -1064,7 +1063,6 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                                   return null;
                                 },
                                 onChanged: (value) {
-                                  _customCompanyName = value;
                                 },
                               ),
                             ),

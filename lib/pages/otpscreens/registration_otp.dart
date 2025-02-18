@@ -77,7 +77,7 @@ class RegistrationOtpPageState extends State<RegistrationOtpPage> {
   Future<void> _verifyOtp() async {
     if (_formKey.currentState?.validate() ?? false) {
       try {
-        var url = Uri.parse('${AppConfig.baseUrl}api/agents/');
+        var url = Uri.parse('${AppConfig.baseUrl}/api/agents/');
         var request = http.MultipartRequest('POST', url);
 
         // Add text fields

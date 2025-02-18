@@ -63,7 +63,7 @@ class _LoginOtpState extends State<LoginOtp> {
       setState(() {
         _isLoading = true;
       });
-      var url = Uri.parse('${AppConfig.baseUrl}api/users/login/');
+      var url = Uri.parse('${AppConfig.baseUrl}/api/users/login/');
       Map mapeddata = {
         'username': widget.uname,
         'password': widget.pwd,
