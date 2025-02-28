@@ -60,7 +60,7 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
     String apiUrl =
-        '${AppConfig.baseUrl}api/leads/?search=${widget.searchQuery}&ordering=-created_at&page=$currentPage';
+        '${AppConfig.baseUrl}/api/leads/?search=${widget.searchQuery}&ordering=-created_at&page=$currentPage';
 
     try {
       final response = await http.get(
@@ -143,7 +143,7 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
     String? refresh = prefs.getString('refreshToken');
     try {
       final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}api/leads/$searchQuery'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/$searchQuery'),
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -170,7 +170,7 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
         });
       } else if (response.statusCode == 401) {
         final response2 = await http.post(
-          Uri.parse('${AppConfig.baseUrl}api/users/token-refresh/'),
+          Uri.parse('${AppConfig.baseUrl}/api/users/token-refresh/'),
           body: {'refresh': refresh},
         );
         final data = json.decode(response2.body);

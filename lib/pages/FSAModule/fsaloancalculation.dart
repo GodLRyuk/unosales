@@ -57,7 +57,7 @@ class _FsaLoancalculationState extends State<FsaLoancalculation> {
     String? refresh = prefs.getString('refreshToken');
     try {
       final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}api/leads/disposition-codes/'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/disposition-codes/'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -86,7 +86,7 @@ class _FsaLoancalculationState extends State<FsaLoancalculation> {
         };
         final response2 = await http.post(
           Uri.parse(
-              '${AppConfig.baseUrl}api/users/token-refresh/'), // Using leadId in the API URL
+              '${AppConfig.baseUrl}/api/users/token-refresh/'), // Using leadId in the API URL
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -110,7 +110,7 @@ class _FsaLoancalculationState extends State<FsaLoancalculation> {
     try {
       final response = await http.get(
         Uri.parse(
-            '${AppConfig.baseUrl}api/leads/disposition-codes/$locationId'),
+            '${AppConfig.baseUrl}/api/leads/disposition-codes/$locationId'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
@@ -140,7 +140,7 @@ class _FsaLoancalculationState extends State<FsaLoancalculation> {
         };
         final response2 = await http.post(
           Uri.parse(
-              '${AppConfig.baseUrl}api/users/token-refresh/'), // Using leadId in the API URL
+              '${AppConfig.baseUrl}/api/users/token-refresh/'), // Using leadId in the API URL
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -490,7 +490,7 @@ class _FsaLoancalculationState extends State<FsaLoancalculation> {
       };
 
       try {
-        var url = Uri.parse('${AppConfig.baseUrl}api/leads/${widget.id}/');
+        var url = Uri.parse('${AppConfig.baseUrl}/api/leads/${widget.id}/');
         http.Response response = await http.patch(
           url,
           body: json.encode(mappedData), // Convert data to JSON string
@@ -528,7 +528,7 @@ class _FsaLoancalculationState extends State<FsaLoancalculation> {
           Map<String, dynamic> refreshData = {'refresh': refresh};
 
           final response2 = await http.post(
-            Uri.parse('${AppConfig.baseUrl}api/users/token-refresh/'),
+            Uri.parse('${AppConfig.baseUrl}/api/users/token-refresh/'),
             body:
                 json.encode(refreshData), // Convert refresh data to JSON string
             headers: {'Content-Type': 'application/json'},

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:unosfa/pages/FSAModule/campaignlist.dart';
 
 class WidgetSupport {
   // ignore: non_constant_identifier_names
@@ -34,6 +35,23 @@ class WidgetSupport {
       fontSize: 15,
     );
   }
+
+  static TextStyle CampaignName() {
+    return const TextStyle(
+      fontFamily: "Mulish",
+      color: Color(0xFF640D78),
+      fontSize: 18,
+      fontWeight: FontWeight.w900,
+    );
+  }
+
+   static TextStyle campainDescription() {
+    return const TextStyle(
+      fontFamily: "Mulish",
+      fontSize: 15,
+    );
+  }
+
 
   static TextStyle smallText() {
     return const TextStyle(

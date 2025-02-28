@@ -119,7 +119,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
     String? refresh = prefs.getString('refreshToken');
     try {
       final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}api/leads/companies/?page_size=10'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/companies/?page_size=10'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
@@ -149,7 +149,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
           'refresh': refresh,
         };
         final response2 = await http.post(
-          Uri.parse('${AppConfig.baseUrl}api/users/token-refresh/'),
+          Uri.parse('${AppConfig.baseUrl}/api/users/token-refresh/'),
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -181,7 +181,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
 
     try {
       final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}api/leads/companies/?search=$query'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/companies/?search=$query'),
         headers: await _getAuthHeader(),
       );
       if (response.statusCode == 200) {
@@ -207,7 +207,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
           'refresh': refresh,
         };
         final response2 = await http.post(
-          Uri.parse('${AppConfig.baseUrl}api/users/token-refresh/'),
+          Uri.parse('${AppConfig.baseUrl}/api/users/token-refresh/'),
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -241,7 +241,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
     String? refresh = prefs.getString('refreshToken');
     try {
       final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}api/leads/location-types'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/location-types'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
@@ -268,7 +268,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
         };
         final response2 = await http.post(
           Uri.parse(
-              '${AppConfig.baseUrl}api/users/token-refresh/'), // Using leadId in the API URL
+              '${AppConfig.baseUrl}/api/users/token-refresh/'), // Using leadId in the API URL
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -291,7 +291,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
     String? refresh = prefs.getString('refreshToken');
     try {
       final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}api/leads/activities'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/activities'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -319,7 +319,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
         };
         final response2 = await http.post(
           Uri.parse(
-              '${AppConfig.baseUrl}api/users/token-refresh/'), // Using leadId in the API URL
+              '${AppConfig.baseUrl}/api/users/token-refresh/'), // Using leadId in the API URL
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -343,7 +343,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
     String? refresh = prefs.getString('refreshToken');
     try {
       final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}api/leads/tenors'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/tenors'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
@@ -370,7 +370,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
         };
         final response2 = await http.post(
           Uri.parse(
-              '${AppConfig.baseUrl}api/users/token-refresh/'), // Using leadId in the API URL
+              '${AppConfig.baseUrl}/api/users/token-refresh/'), // Using leadId in the API URL
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -394,7 +394,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
     String? refresh = prefs.getString('refreshToken');
     try {
       final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}api/leads/document-types'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/document-types'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -422,7 +422,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
         };
         final response2 = await http.post(
           Uri.parse(
-              '${AppConfig.baseUrl}api/users/token-refresh/'), // Using leadId in the API URL
+              '${AppConfig.baseUrl}/api/users/token-refresh/'), // Using leadId in the API URL
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -447,7 +447,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
     String? refresh = prefs.getString('refreshToken');
     try {
       final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}api/leads/cities/?page=2'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/cities/?page=2'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
@@ -469,7 +469,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
       } else if (response.statusCode == 401) {
         Map<String, dynamic> mappedData = {'refresh': refresh};
         final response2 = await http.post(
-          Uri.parse('${AppConfig.baseUrl}api/users/token-refresh/'),
+          Uri.parse('${AppConfig.baseUrl}/api/users/token-refresh/'),
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -499,7 +499,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
 
     try {
       final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}api/leads/cities/?search=$query'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/cities/?search=$query'),
         headers: await _getAuthHeader(),
       );
       if (response.statusCode == 200) {
@@ -524,7 +524,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
         };
         final response2 = await http.post(
           Uri.parse(
-              '${AppConfig.baseUrl}api/users/token-refresh/'), // Using leadId in the API URL
+              '${AppConfig.baseUrl}/api/users/token-refresh/'), // Using leadId in the API URL
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -548,7 +548,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
     String? refresh = prefs.getString('refreshToken');
     try {
       final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}api/leads/cities/${_selectedCity}'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/cities/${_selectedCity}'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
@@ -576,7 +576,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
         };
         final response2 = await http.post(
           Uri.parse(
-              '${AppConfig.baseUrl}api/users/token-refresh/'), // Using leadId in the API URL
+              '${AppConfig.baseUrl}/api/users/token-refresh/'), // Using leadId in the API URL
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -620,13 +620,13 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
     prefs.getString('refreshToken');
     try {
       final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}api/leads/${widget.edit}'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/${widget.edit}'),
         headers: {'Authorization': 'Bearer $token'},
       );
       final data = json.decode(response.body);
       final cityresponse = await http.get(
         Uri.parse(
-            '${AppConfig.baseUrl}api/leads/cities/?search=${data['city_name']}'),
+            '${AppConfig.baseUrl}/api/leads/cities/?search=${data['city_name']}'),
         headers: {'Authorization': 'Bearer $token'},
       );
       final Map<String, dynamic> data44 = json.decode(cityresponse.body);
@@ -651,7 +651,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
         });
       }
       final locationresponse = await http.get(
-        Uri.parse('${AppConfig.baseUrl}api/leads/location-types'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/location-types'),
         headers: {'Authorization': 'Bearer $token'},
       );
       final Map<String, dynamic> data2 = json.decode(locationresponse.body);
@@ -665,7 +665,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
       }
 
       final activityresponse = await http.get(
-        Uri.parse('${AppConfig.baseUrl}api/leads/activities'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/activities'),
         headers: {'Authorization': 'Bearer $token'},
       );
       final Map<String, dynamic> data3 = json.decode(activityresponse.body);
@@ -679,7 +679,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
       }
 
       final tenorsresponse = await http.get(
-        Uri.parse('${AppConfig.baseUrl}api/leads/tenors'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/tenors'),
         headers: {'Authorization': 'Bearer $token'},
       );
       final Map<String, dynamic> data4 = json.decode(tenorsresponse.body);
@@ -693,7 +693,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
       }
 
       final documentresponse = await http.get(
-        Uri.parse('${AppConfig.baseUrl}api/leads/document-types'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/document-types'),
         headers: {'Authorization': 'Bearer $token'},
       );
       final Map<String, dynamic> data5 = json.decode(documentresponse.body);
@@ -707,7 +707,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
       }
 
       final barangayresponse = await http.get(
-        Uri.parse('${AppConfig.baseUrl}api/leads/cities/${data['city']}'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/cities/${data['city']}'),
         headers: {'Authorization': 'Bearer $token'},
       );
       final Map<String, dynamic> data6 = json.decode(barangayresponse.body);
@@ -727,7 +727,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
         });
       }
       final companyResponse = await http.get(
-        Uri.parse('${AppConfig.baseUrl}api/leads/companies/?page_size=100'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/companies/?page_size=100'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -1462,7 +1462,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
       };
       if (widget.edit == "") {
         try {
-          var url = Uri.parse('${AppConfig.baseUrl}api/leads/');
+          var url = Uri.parse('${AppConfig.baseUrl}/api/leads/');
 
           http.Response response = await http.post(
             url,
@@ -1494,7 +1494,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
               'refresh': refresh,
             };
             final response2 = await http.post(
-              Uri.parse('${AppConfig.baseUrl}api/users/token-refresh/'),
+              Uri.parse('${AppConfig.baseUrl}/api/users/token-refresh/'),
               body: mappedData,
             );
             final data = json.decode(response2.body);
@@ -1521,7 +1521,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
         }
       } else {
         try {
-          var url = Uri.parse('${AppConfig.baseUrl}api/leads/${widget.edit}/');
+          var url = Uri.parse('${AppConfig.baseUrl}/api/leads/${widget.edit}/');
 
           http.Response response = await http.put(
             url,
@@ -1552,7 +1552,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
               'refresh': refresh,
             };
             final response2 = await http.post(
-              Uri.parse('${AppConfig.baseUrl}api/users/token-refresh/'),
+              Uri.parse('${AppConfig.baseUrl}/api/users/token-refresh/'),
               body: mappedData,
             );
             final data = json.decode(response2.body);

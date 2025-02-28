@@ -36,7 +36,7 @@ class MyApp extends StatelessWidget {
       ),
       debugShowCheckedModeBanner: false,
       home:  SplashScreen(),
-      //home:  SplashScreen(),
+      // home:  MapNavigationPage(),
       // routes: {
       //   '/entry': (context) => const EntryPage(),
       //   '/sales': (context) => const Salesdashboard(),

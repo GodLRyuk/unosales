@@ -1,53 +1,58 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/FSAModule/fsacreatcompantlead.dart';
-import 'package:unosfa/pages/FSAModule/fsasingleleaddetail.dart';
-import 'package:unosfa/pages/generalscreens/customNavigation.dart';
-import 'package:unosfa/widgetSupport/widgetstyle.dart';
-import 'package:gradient_floating_button/gradient_floating_button.dart';
+import 'package:unosfa/pages/FRModule/leadsByCampaign.dart';
 import 'package:unosfa/pages/config/config.dart';
+import 'package:unosfa/pages/generalscreens/customNavigation.dart';
+import 'package:unosfa/pages/FSAModule/leadsByCampaign.dart';
+import 'package:unosfa/widgetSupport/widgetstyle.dart';
+import 'package:intl/intl.dart';
+import 'dart:async';
 
-class FsaCompanyLeadDashBoard extends StatefulWidget {
-  final String searchQuery;
-  const FsaCompanyLeadDashBoard({super.key, required this.searchQuery});
-
+class FRCampaignlist extends StatefulWidget {
   @override
-  State<FsaCompanyLeadDashBoard> createState() =>
-      _FsaCompanyLeadDashBoardState();
+  State<FRCampaignlist> createState() => _FRCampaignlistState();
 }
 
-class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
+class _FRCampaignlistState extends State<FRCampaignlist> {
   final _searchFilter = TextEditingController();
-  List<Map<String, String>> leads = [];
+  final _toDate = TextEditingController();
+  final _fromDate = TextEditingController();
+  List<Map<String, String>> campaign = [];
   List<Map<String, String>> filteredLeads = [];
   String filterText = '';
   bool isLoading = true;
-  bool areDateFieldsVisible = false;
-  DateTime? selectedFromDate;
-  DateTime? selectedToDate;
+  bool areDateFieldsVisible =
+      false; // Boolean to control visibility of date fields
+  // DateTime? selectedFromDate;
+  // DateTime? selectedToDate;
   final _scrollController = ScrollController();
   bool isFetchingMore = false;
   int currentPage = 1;
   bool hasMoreData = true;
+  DateTime? startDate;
+  DateTime? endDate;
+  Duration totalDuration = Duration.zero;
+  Duration timeLeft = Duration.zero;
+  Timer? countdownTimer;
 
   @override
   void initState() {
     super.initState();
-    selectedFromDate = DateTime.now();
-    selectedToDate = DateTime.now();
     fetchLeads(); // Fetch leads on initialization
-    _scrollController.addListener(_onScroll); // Attach scroll listener
+    _scrollController.addListener(_onScroll);
+    _startCountdown();
   }
 
   @override
   void dispose() {
     _scrollController.dispose(); // Dispose the scroll controller
+    countdownTimer?.cancel();
     super.dispose();
   }
 
-// Fetch leads from API
+  // Method to fetch leads
   Future<void> fetchLeads({bool isLoadMore = false}) async {
     if (isLoadMore) {
       setState(() {
@@ -61,8 +66,7 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
-    String apiUrl =
-        '${AppConfig.baseUrl}/api/leads/company-leads/?search=${widget.searchQuery}&ordering=-created_at';
+    String apiUrl = '${AppConfig.baseUrl}/api/campaigns/';
 
     try {
       final response = await http.get(
@@ -75,24 +79,31 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
 
         setState(() {
           if (isLoadMore) {
-            leads.addAll(leadsData.map((item) => {
-                  'name': '${item['company_name'] ?? ''}'.trim(),
-                  'phone': item['contact_person_mobile_no']?.toString() ?? '',
+            campaign.addAll(leadsData.map((item) => {
+                  'name': '${item['name'] ?? ''}'.trim(),
+                  'description': item['description']?.toString() ?? '',
+                  'start_date': item['start_date']?.toString() ?? '',
+                  'end_date': item['end_date']?.toString() ?? '',
                   'id': item['id']?.toString() ?? '',
                 }));
           } else {
-            leads = leadsData
+            campaign = leadsData
                 .map((item) => {
-                      'name': '${item['company_name'] ?? ''}'.trim(),
-                      'phone':
-                          item['contact_person_mobile_no']?.toString() ?? '',
+                      'name': '${item['name'] ?? ''}'.trim(),
+                      'description': item['description']?.toString() ?? '',
+                      'start_date': item['start_date']?.toString() ?? '',
+                      'end_date': item['end_date']?.toString() ?? '',
                       'id': item['id']?.toString() ?? '',
                     })
                 .toList();
           }
 
-          filteredLeads = List.from(leads);
-
+          filteredLeads = List.from(campaign);
+          setState(() {
+            startDate = DateTime.parse(campaign[0]['start_date']!);
+            endDate = DateTime.parse(campaign[0]['end_date']!);
+            _updateCampaignDates();
+          });
           // Check if there's more data
           hasMoreData = data['next'] != null;
 
@@ -129,19 +140,18 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
   Future<void> fetchFilteredLeads() async {
     String searchQuery = '';
     if (_searchFilter.text.isNotEmpty) {
-      searchQuery = '${_searchFilter.text}';
+      searchQuery = '?phone_number=${_searchFilter.text}';
     }
-    // if (_toDate.text.isNotEmpty && _fromDate.text.isNotEmpty) {
-    //   searchQuery += (searchQuery.isNotEmpty ? '&' : '?') +
-    //       'created_at_from=${_fromDate.text}&created_at_to=${_toDate.text}T23:59:59';
-    // }
+    if (_toDate.text.isNotEmpty && _fromDate.text.isNotEmpty) {
+      searchQuery += (searchQuery.isNotEmpty ? '&' : '?') +
+          'created_at_from=${_fromDate.text}&created_at_to=${_toDate.text}T23:59:59';
+    }
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
     String? refresh = prefs.getString('refreshToken');
     try {
       final response = await http.get(
-        Uri.parse(
-            '${AppConfig.baseUrl}/api/leads/company-leads/?search=$searchQuery&ordering=-created_at'),
+        Uri.parse('${AppConfig.baseUrl}/api/leads/$searchQuery'),
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -150,15 +160,14 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
         Map<String, dynamic> data = json.decode(response.body);
         List<dynamic> leadsData = data['results'] ?? [];
         setState(() {
-          leads = leadsData.map((item) {
+          campaign = leadsData.map((item) {
             return {
-              'name': '${item['company_name']}'.trim(),
-              'phone': item['contact_person_mobile_no']?.toString() ?? '',
+              'name': '${item['name']}'.trim(),
+              'description': item['description']?.toString() ?? '',
               'id': item['id']?.toString() ?? '',
             };
           }).toList();
-          filteredLeads = List.from(leads);
-          // Check if there's more data
+          filteredLeads = List.from(campaign);
           hasMoreData = data['next'] != null;
 
           isLoading = false;
@@ -189,28 +198,65 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
   }
 
   // Format the date string
-  String getFormattedFromDate(DateTime? date) {
-    if (date == null) {
-      return 'Select Date';
+
+  void _updateCampaignDates() {
+    if (campaign.isNotEmpty) {
+      try {
+        DateTime fetchedStartDate = DateTime.parse(campaign[0]['start_date']!);
+        DateTime fetchedEndDate = DateTime.parse(campaign[0]['end_date']!);
+
+        setState(() {
+          startDate = fetchedStartDate;
+          endDate = fetchedEndDate;
+          totalDuration =
+              endDate!.difference(startDate!); // Calculate total duration
+        });
+        _startCountdown();
+      } catch (e) {
+        print("Error parsing dates: $e");
+      }
     }
-    return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
   }
 
-  String getFormattedToDate(DateTime? date1) {
-    if (date1 == null) {
-      return 'Select Date';
-    }
-    return "${date1.year}-${date1.month.toString().padLeft(2, '0')}-${date1.day.toString().padLeft(2, '0')}";
-  }
-
-  // Toggle visibility of the date fields
-  void _toggleDateFieldsVisibility() {
-    setState(() {
-      areDateFieldsVisible = !areDateFieldsVisible;
+  void _startCountdown() {
+    if (endDate == null) return;
+    countdownTimer?.cancel(); // Cancel previous timer if exists
+    countdownTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      final now = DateTime.now();
+      final remaining = endDate!.difference(now);
+      if (remaining.isNegative) {
+        timer.cancel();
+        setState(() {
+          timeLeft = Duration.zero;
+        });
+      } else {
+        setState(() {
+          timeLeft = remaining;
+        });
+      }
     });
   }
 
-  
+  String formatDuration(Duration duration) {
+    if (duration.inSeconds <= 0) return "Expired";
+
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+
+    // Check if the duration is more than 24 hours, if so, convert to days.
+    int days = duration.inDays;
+    int hours = duration.inHours.remainder(24);
+    int minutes = duration.inMinutes.remainder(60);
+    int seconds = duration.inSeconds.remainder(60);
+
+    if (days > 0) {
+      return "$days days   Hr:${twoDigits(hours)} Min:${twoDigits(minutes)} Sec:${twoDigits(seconds)}";
+    } else if (hours >= 24) {
+      return "$days days ${twoDigits(hours)}${twoDigits(minutes)}:${twoDigits(seconds)}";
+    } else {
+      return "${twoDigits(hours)}:${twoDigits(minutes)}:${twoDigits(seconds)}";
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -261,75 +307,6 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
               },
               child: Column(
                 children: [
-                  // Filter section
-                  Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // TextField for phone number filter
-                        TextField(
-                          controller: _searchFilter,
-                          decoration: InputDecoration(
-                            labelText: 'Filter by Comapny Number',
-                            border: UnderlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey),
-                            ),
-                            suffixIcon: IconButton(
-                              icon: Icon(Icons.filter_list),
-                              onPressed:
-                                  _toggleDateFieldsVisibility, // Toggle date fields visibility
-                            ),
-                          ),
-                          style: TextStyle(height: 1),
-                          // onChanged: _filterLeads, // Uncomment if needed
-                        ),
-
-                        // Search button for applying filters
-                        if (areDateFieldsVisible)
-                          Padding(
-                            padding: const EdgeInsets.all(10.0),
-                            child: Column(
-                              children: [
-                                SizedBox(
-                                  child: Container(
-                                    width: MediaQuery.of(context).size.width,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          Color(0xFFc433e0),
-                                          Color(0xFF9a37ae)
-                                        ], // Define your gradient colors
-                                        begin: Alignment
-                                            .topLeft, // Start from top-left
-                                        end: Alignment
-                                            .bottomRight, // End at bottom-right
-                                      ),
-                                    ),
-                                    child: ElevatedButton(
-                                      onPressed: () {
-                                        fetchFilteredLeads();
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        elevation: 0,
-                                      ),
-                                      child: Text(
-                                        "Search",
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 18), // Text style
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  // ListView.builder for displaying filtered leads
                   Expanded(
                     child: Container(
                       margin: const EdgeInsets.all(
@@ -337,7 +314,7 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
 
                       child: isLoading
                           ? const Center(child: CircularProgressIndicator())
-                          : leads.isEmpty
+                          : campaign.isEmpty
                               ? const Center(
                                   child: Text(
                                     'No Leads Found',
@@ -349,21 +326,19 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
                               : ListView.builder(
                                   controller:
                                       _scrollController, // Attach ScrollController
-                                  itemCount: leads.length +
+                                  itemCount: campaign.length +
                                       1, // Add one extra item for the loader
                                   itemBuilder: (context, index) {
-                                    if (index < leads.length) {
+                                    if (index < campaign.length) {
                                       return GestureDetector(
                                         onTap: () {
-                                          String leadId = leads[index]['id']!;
+                                          String campaignID = campaign[index]['id']!;
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (context) =>
-                                                  FsaSingleLead(
-                                                      leadId: leadId),
-                                            ),
-                                          );
+                                              builder: (context) => FRLeadListByCampaign(campaign: campaignID,),
+                                              ),
+                                            );
                                         },
                                         child: Container(
                                           margin: const EdgeInsets.symmetric(
@@ -390,25 +365,72 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
                                           child: ListTile(
                                             contentPadding:
                                                 const EdgeInsets.symmetric(
-                                                    horizontal: 15),
+                                                    horizontal: 0),
                                             leading: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
                                               children: [
-                                                Text(
-                                                  leads[index]['name']!
-                                                      .toUpperCase(),
-                                                  style: WidgetSupport.label(),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  leads[index]['phone']!,
-                                                  style: WidgetSupport
-                                                      .inputLabel(),
+                                                Image.asset(
+                                                  'images/campaign.jpg',
+                                                  height: 55,
+                                                  width: 80,
                                                 ),
                                               ],
+                                            ),
+                                            title: Container(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    children: [
+                                                      Text(
+                                                        campaign[index]['name']!
+                                                            .toUpperCase(),
+                                                        style: WidgetSupport
+                                                            .CampaignName(),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Row(
+                                                    children: [
+                                                      Icon(
+                                                        Icons
+                                                            .calendar_month_outlined,
+                                                        color:
+                                                            Color(0xFF640D78),
+                                                        size: 17,
+                                                      ),
+                                                      Text(
+                                                        DateFormat(
+                                                                'dd MMM yyyy')
+                                                            .format(DateTime
+                                                                .parse(campaign[
+                                                                        index][
+                                                                    'start_date']!)),
+                                                        style: WidgetSupport
+                                                            .inputLabel(),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 5),
+                                                  Text(
+                                                    "Campaign Expires In".toUpperCase(),
+                                                    style: TextStyle(
+                                                        fontSize: 15,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color:
+                                                            Color(0xFF640D78)),
+                                                  ),
+                                                  Text(
+                                                    "${formatDuration(timeLeft)}",
+                                                    style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.bold),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                             trailing: Icon(
                                               Icons.chevron_right,
@@ -432,58 +454,6 @@ class _FsaCompanyLeadDashBoardState extends State<FsaCompanyLeadDashBoard> {
                 ],
               ),
             ),
-            floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 50, // Adjust the width
-              height: 50, // Adjust the height
-              child: GradientFloatingButton().withLinearGradient(
-                onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => FsaCompanyLeadGenerate(),
-                    ),
-                  );
-                },
-                iconWidget: const Icon(
-                  Icons.add,
-                  color: Colors.white,
-                  size: 36, // Increase icon size if needed
-                ),
-                alignmentEnd: Alignment.topRight,
-                alignmentBegin: Alignment.bottomLeft,
-                colors: [
-                  Color(0xFF1f8bdf),
-                  Color(0xFF1f8bdf),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-}
-
-class LeadDetailPage extends StatelessWidget {
-  final String leadId;
-  const LeadDetailPage({super.key, required this.leadId});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Lead Details"),
-      ),
-      body: Center(
-        child: Text(
-            'Lead ID: $leadId'), // Here you can fetch and display the lead details
-      ),
     );
   }
 }

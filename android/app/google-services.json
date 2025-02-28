@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "119686059639",
-    "project_id": "unosales-4f48e",
-    "storage_bucket": "unosales-4f48e.firebasestorage.app"
+    "project_number": "440633793708",
+    "project_id": "unosalestest",
+    "storage_bucket": "unosalestest.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:119686059639:android:5685d33eeea0c646201872",
+        "mobilesdk_app_id": "1:440633793708:android:3d67ca3364688affd09309",
         "android_client_info": {
           "package_name": "com.example.unosfa"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyA7pyvLDgtRz3-N6OsmHM_qdg8hTQauiho"
+          "current_key": "AIzaSyDQpX0lIKmZl72Y994kDLb6_-joQa8hJLU"
         }
       ],
       "services": {

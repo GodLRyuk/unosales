@@ -4,6 +4,7 @@ import 'package:circle_progress_bar/circle_progress_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unosfa/pages/FRModule/campaignlist.dart';
 import 'package:unosfa/pages/FRModule/createnewlead.dart';
 import 'package:unosfa/pages/FRModule/leaddashboard.dart';
 import 'package:unosfa/pages/FRModule/mytodolist.dart';
@@ -1272,7 +1273,9 @@ class _SalesdashboardState extends State<Salesdashboard> {
           // My Leads Box - triggers Tooltip for Training
           GestureDetector(
             onTap: () async {
-              _CampaigntooltipKey.currentState?.ensureTooltipVisible();
+               Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => FRCampaignlist()));
+              // _CampaigntooltipKey.currentState?.ensureTooltipVisible();
             },
             child: Tooltip(
               key: _CampaigntooltipKey,

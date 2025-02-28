@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:gradient_floating_button/gradient_floating_button.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unosfa/pages/FSAModule/leadroughttracking.dart';
+import 'package:unosfa/pages/FSAModule/route_travel_by_agent.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:unosfa/pages/config/config.dart';
+
 class FSAMyTodoList extends StatefulWidget {
   final String searchQuery;
   const FSAMyTodoList({super.key, required this.searchQuery});
@@ -348,7 +351,6 @@ class _FSAMyTodoListState extends State<FSAMyTodoList> {
                         SizedBox(
                           height: 10,
                         ),
-
                         // Search button for applying filters
                         if (areDateFieldsVisible)
                           Padding(
@@ -423,9 +425,12 @@ class _FSAMyTodoListState extends State<FSAMyTodoList> {
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (context) => FSAOSMRouteTracking(leadId: leadId,),
+                                              builder: (context) =>
+                                                  FSAOSMRouteTracking(
+                                                leadId: leadId,
                                               ),
-                                            );
+                                            ),
+                                          );
                                         },
                                         child: Container(
                                           margin: const EdgeInsets.symmetric(
@@ -494,6 +499,43 @@ class _FSAMyTodoListState extends State<FSAMyTodoList> {
                 ],
               ),
             ),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 50, // Adjust the width
+              height: 50, // Adjust the height
+              child: GradientFloatingButton().withLinearGradient(
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AgentRouteTraveled(),
+                    ),
+                  );
+                },
+                iconWidget: ClipOval(
+                  // Makes the image circular
+                  child: Image.asset(
+                    'images/maps.gif', // Replace with your image path
+                    width: 50, // Make sure width & height match the button size
+                    height: 50,
+                    fit: BoxFit.cover, // Ensures the image fills the circle
+                  ),
+                ),
+                alignmentEnd: Alignment.topRight,
+                alignmentBegin: Alignment.bottomLeft,
+                colors: [
+                  Color(0xFF1f8bdf),
+                  Color(0xFF1f8bdf),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
