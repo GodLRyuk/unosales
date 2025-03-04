@@ -107,10 +107,12 @@ class _FRLeadListByCampaignState extends State<FRLeadListByCampaign> {
         throw Exception('Failed to load leads');
       }
     } catch (e) {
+      if (mounted) {
       setState(() {
         isLoading = false;
         isFetchingMore = false;
       });
+      }
       print('Error fetching leads: $e');
     }
   }

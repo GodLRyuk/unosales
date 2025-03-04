@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:geocoding/geocoding.dart';
 import 'package:unosfa/pages/FSAModule/mytodolist.dart';
 import 'package:unosfa/pages/config/config.dart';
+import 'package:unosfa/widgetSupport/widgetstyle.dart';
 
 class AgentRouteTraveled extends StatefulWidget {
   @override
@@ -17,15 +18,20 @@ class AgentRouteTraveled extends StatefulWidget {
 
 class _AgentRouteTraveledState extends State<AgentRouteTraveled> {
   final MapController _mapController = MapController();
-  LatLng _currentPosition = LatLng(22.5697375, 88.4311852);
+  // LatLng _currentPosition = LatLng(00.00, 00.00);
+  LatLng _currentPosition = LatLng(22.571084, 88.432457);
+
   List<LatLng> _destinations = [];
   List<LatLng> _routePoints = [];
+  List<String> _clientNames = [];
+  List<dynamic> allleadsdetails = [];
   bool isRouteLoading = false;
 
   @override
   void initState() {
     super.initState();
     fetchLeadDetails();
+    getCurrentLocation();
   }
 
   Map<String, dynamic> leadDetails = {};
@@ -43,24 +49,19 @@ class _AgentRouteTraveledState extends State<AgentRouteTraveled> {
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
         leadDetails = json.decode(response.body);
+        setState(() {
+          allleadsdetails =
+              data['results'] ?? []; // Ensure leads list is updated in UI
+        });
         List<dynamic> leads = data['results'] ?? [];
-
-        leads.addAll(leads.map((item) => {
-              'name':
-                  '${item['first_name'] ?? ''} ${item['middle_name'] ?? ''} ${item['last_name'] ?? ''}'
-                      .trim(),
-              'phone': item['phone_number']?.toString() ?? '',
-              'id': item['id']?.toString() ?? '',
-            }));
-        if (leads.isEmpty) {
-          print("No leads found.");
-          return;
-        }
-
         for (var lead in leads) {
           String address = "${lead['address1']} ${lead['address2']}".trim();
+          String ClientNAme =
+              "${lead['first_name']} ${lead['middle_name']} ${lead['last_name']}"
+                  .trim();
           if (address.isNotEmpty) {
             await getLatLngFromAddress(address);
+            _clientNames.add(ClientNAme);
           }
         }
 
@@ -122,32 +123,48 @@ class _AgentRouteTraveledState extends State<AgentRouteTraveled> {
     });
 
     try {
-      // Create OSRM API URL with multiple waypoints
-      String waypoints =
-          "${_currentPosition.longitude},${_currentPosition.latitude}";
-      for (var dest in _destinations) {
-        waypoints += ";${dest.longitude},${dest.latitude}";
-      }
+      const String apiKey =
+          "5b3ce3597851110001cf6248c69a4cac7d204ad08965cee4a6faa5e9"; // Replace with your API key
+
+      // Construct waypoints for ORS
+      List<List<double>> coordinates = [
+        [_currentPosition.longitude, _currentPosition.latitude], // Start point
+        ..._destinations
+            .map((dest) => [dest.longitude, dest.latitude])
+            .toList() // Destinations
+      ];
 
       final String url =
-          "https://router.project-osrm.org/route/v1/driving/$waypoints?geometries=geojson";
+          "https://api.openrouteservice.org/v2/directions/driving-car/geojson";
 
-      final response = await http.get(Uri.parse(url));
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          "Authorization": apiKey,
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({
+          "coordinates": coordinates,
+          "instructions": false, // Disable turn-by-turn instructions
+          "geometry": true, // Get road-following route geometry
+        }),
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        if (data['routes'].isNotEmpty) {
-          List<dynamic> coordinates =
-              data['routes'][0]['geometry']['coordinates'];
+        if (data['features'].isNotEmpty) {
+          List<dynamic> routeCoordinates =
+              data['features'][0]['geometry']['coordinates'];
 
           setState(() {
-            _routePoints =
-                coordinates.map((coord) => LatLng(coord[1], coord[0])).toList();
+            _routePoints = routeCoordinates
+                .map((coord) => LatLng(coord[1], coord[0])) // Convert to LatLng
+                .toList();
             isRouteLoading = false;
           });
         }
       } else {
-        print("Failed to load route");
+        print("Failed to load route: ${response.body}");
       }
     } catch (e) {
       print("Error fetching route: $e");
@@ -156,6 +173,21 @@ class _AgentRouteTraveledState extends State<AgentRouteTraveled> {
     setState(() {
       isRouteLoading = false;
     });
+  }
+
+  Future<void> getCurrentLocation() async {
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      setState(() {
+        _currentPosition = LatLng(22.571084, 88.432457);
+        print("Current Posi: $_currentPosition");
+      });
+      _mapController.move(_currentPosition, 15.0);
+    } catch (e) {
+      print("Error getting location: $e");
+    }
   }
 
   @override
@@ -199,12 +231,12 @@ class _AgentRouteTraveledState extends State<AgentRouteTraveled> {
       body: Column(
         children: [
           Expanded(
-            flex: 6,
+            flex: 7,
             child: FlutterMap(
-              mapController: _mapController,
+              // mapController: _mapController,
               options: MapOptions(
                 center: _currentPosition,
-                zoom: 13,
+                zoom: 11,
               ),
               children: [
                 TileLayer(
@@ -222,40 +254,157 @@ class _AgentRouteTraveledState extends State<AgentRouteTraveled> {
                   ],
                 ),
                 MarkerLayer(
-                  markers: [
-                    Marker(
-                      width: 40.0,
-                      height: 40.0,
-                      point: _currentPosition,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Container(
-                            width: 30,
-                            height: 30,
-                            decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.3),
-                              shape: BoxShape.circle,
+                  markers: _destinations.asMap().entries.map(
+                    (entry) {
+                      int index = entry.key;
+                      LatLng destination = entry.value;
+                      String clientName = _clientNames[
+                          index]; // Ensure you maintain a list of client names
+
+                      return Marker(
+                        width: MediaQuery.of(context).size.width * 1.0,
+                        height: 70.0,
+                        point: destination,
+                        child: Column(
+                          children: [
+                            Container(
+                              // padding: EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                                // boxShadow: [
+                                //   BoxShadow(
+                                //       color: Colors.white, blurRadius: 4),
+                                // ],
+                              ),
+                              child: Text(
+                                clientName.toUpperCase(),
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFFc433e0)),
+                              ),
                             ),
-                          ),
-                          Icon(Icons.circle, color: Colors.blue, size: 20),
-                        ],
-                      ),
-                    ),
-                    ..._destinations.asMap().entries.map(
-                      (entry) {
-                        // int index = entry.key + 1;
-                        LatLng destination = entry.value;
-                        return Marker(
-                            width: 40.0,
-                            height: 40.0,
-                            point: destination,
-                            child: Image.asset("images/icons8-location.gif"));
-                      },
-                    ).toList(),
-                  ],
+                            SizedBox(
+                                height: 4), // Spacing between text and marker
+                            Image.asset("images/icons8-location.gif",
+                                width: 40, height: 40),
+                          ],
+                        ),
+                      );
+                    },
+                  ).toList(),
                 ),
               ],
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: SingleChildScrollView(
+              child: Container(
+                width: MediaQuery.of(context).size.width,
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 5,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Leads Details:",
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 10),
+                    for (var lead in allleadsdetails) ...[
+                      Container(
+                        width: MediaQuery.of(context).size.width,
+                        margin: EdgeInsets.only(bottom: 16),
+                        padding: EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border(
+                            top: BorderSide(
+                                color: Color(0xFF640D78), width: 1.0),
+                            bottom: BorderSide(
+                                color: Color(0xFF640D78), width: 1.0),
+                            left: BorderSide(
+                                color: Color(0xFF640D78), width: 5.0),
+                            right: BorderSide(
+                                color: Color(0xFF640D78), width: 1.0),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  "Name:",
+                                  style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w500),
+                                ),
+                                Text(
+                                  " ${lead['first_name']} ${lead['middle_name'] ?? ''} ${lead['last_name']}"
+                                      .toUpperCase(),
+                                  style: TextStyle(
+                                      fontSize: 16, color: Color(0xFF2C2B2B)),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  "Phone Number:",
+                                  style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w500),
+                                ),
+                                Text(
+                                  " + ${lead['phone_number']}".toUpperCase(),
+                                  style: TextStyle(
+                                      fontSize: 16, color: Color(0xFF2C2B2B)),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  "Address:",
+                                  style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w500),
+                                ),
+                                Flexible(
+                                  child: Text(
+                                    "${lead['address1']} ${lead['address2']}",
+                                    style: TextStyle(
+                                        fontSize: 16, color: Color(0xFF2C2B2B)),
+                                    softWrap: true,
+                                    textAlign: TextAlign.end,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ]
+                  ],
+                ),
+              ),
             ),
           ),
         ],

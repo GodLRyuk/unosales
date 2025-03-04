@@ -528,106 +528,104 @@ class _FSAOSMRouteTrackingState extends State<FSAOSMRouteTracking> {
                       ],
                     ),
                   ),
-                  SingleChildScrollView(
-                    child: Expanded(
-                      flex: 4,
-                      child: Container(
-                        padding: const EdgeInsets.all(16.0),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(20),
-                            topRight: Radius.circular(20),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black26,
-                              blurRadius: 5,
-                              spreadRadius: 2,
-                            ),
-                          ],
+                  Expanded(
+                    flex: 4,
+                    child: Container(
+                      padding: const EdgeInsets.all(16.0),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          topRight: Radius.circular(20),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Lead Details:",
-                              style: TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              "Name: ${leadDetails['first_name']} ${leadDetails['middle_name']} ${leadDetails['last_name']}",
-                              style: TextStyle(
-                                  fontSize: 16, color: Color(0xFF2C2B2B)),
-                            ),
-                            Text(
-                              "Phone Number: +${leadDetails['phone_number']} ",
-                              style: TextStyle(
-                                  fontSize: 16, color: Color(0xFF2C2B2B)),
-                            ),
-                            Text(
-                              "Zip: ${leadDetails['zip']} ",
-                              style: TextStyle(
-                                  fontSize: 16, color: Color(0xFF2C2B2B)),
-                            ),
-                            Text(
-                              "Location: ${leadDetails['location']} ",
-                              style: TextStyle(
-                                  fontSize: 16, color: Color(0xFF2C2B2B)),
-                            ),
-                            SizedBox(
-                              height: MediaQuery.of(context).size.height * 0.01,
-                            ),
-                            Text(
-                              "Destination:",
-                              style: TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              "Address: ${leadDetails['address1']} ${leadDetails['address2']}",
-                              style: TextStyle(
-                                  fontSize: 16, color: Color(0xFF2C2B2B)),
-                            ),
-                            SizedBox(
-                              height: MediaQuery.of(context).size.height * 0.02,
-                            ),
-                            Container(
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      if (isTracking) {
-                                        stopTracking();
-                                      } else {
-                                        startTracking();
-                                        openGoogleMaps();
-                                      }
-                                    },
-                                    child: Text(
-                                      isTracking
-                                          ? "Stop Tracking"
-                                          : "Going For Lead",
-                                      style: WidgetSupport.LoginButtonTextColor(),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 5,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Lead Details:",
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            "Name: ${leadDetails['first_name']} ${leadDetails['middle_name']} ${leadDetails['last_name']}",
+                            style: TextStyle(
+                                fontSize: 16, color: Color(0xFF2C2B2B)),
+                          ),
+                          Text(
+                            "Phone Number: +${leadDetails['phone_number']} ",
+                            style: TextStyle(
+                                fontSize: 16, color: Color(0xFF2C2B2B)),
+                          ),
+                          Text(
+                            "Zip: ${leadDetails['zip']} ",
+                            style: TextStyle(
+                                fontSize: 16, color: Color(0xFF2C2B2B)),
+                          ),
+                          Text(
+                            "Location: ${leadDetails['location']} ",
+                            style: TextStyle(
+                                fontSize: 16, color: Color(0xFF2C2B2B)),
+                          ),
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.01,
+                          ),
+                          Text(
+                            "Destination:",
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            "Address: ${leadDetails['address1']} ${leadDetails['address2']}",
+                            style: TextStyle(
+                                fontSize: 16, color: Color(0xFF2C2B2B)),
+                          ),
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.02,
+                          ),
+                          Container(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                ElevatedButton(
+                                  onPressed: () {
+                                    if (isTracking) {
+                                      stopTracking();
+                                    } else {
+                                      startTracking();
+                                      openGoogleMaps();
+                                    }
+                                  },
+                                  child: Text(
+                                    isTracking
+                                        ? "Stop Tracking"
+                                        : "Going For Lead",
+                                    style: WidgetSupport.LoginButtonTextColor(),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    shadowColor: Colors.transparent,
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal:
+                                          MediaQuery.of(context).size.width *
+                                              0.02,
                                     ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.transparent,
-                                      padding: EdgeInsets.symmetric(
-                                        horizontal:
-                                            MediaQuery.of(context).size.width *
-                                                0.02,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8.0),
-                                      ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8.0),
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
