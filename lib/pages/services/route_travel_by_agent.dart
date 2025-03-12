@@ -7,9 +7,8 @@ import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:geocoding/geocoding.dart';
-import 'package:unosfa/pages/FSAModule/mytodolist.dart';
+import 'package:unosfa/pages/FRModule/mytodolist.dart';
 import 'package:unosfa/pages/config/config.dart';
-import 'package:unosfa/widgetSupport/widgetstyle.dart';
 
 class AgentRouteTraveled extends StatefulWidget {
   @override
@@ -17,9 +16,9 @@ class AgentRouteTraveled extends StatefulWidget {
 }
 
 class _AgentRouteTraveledState extends State<AgentRouteTraveled> {
-  final MapController _mapController = MapController();
-  // LatLng _currentPosition = LatLng(00.00, 00.00);
-  LatLng _currentPosition = LatLng(22.571084, 88.432457);
+  late MapController _mapController;
+  LatLng _currentPosition = LatLng(00.00, 00.00);
+  // LatLng _currentPosition = LatLng(22.571084, 88.432457);
 
   List<LatLng> _destinations = [];
   List<LatLng> _routePoints = [];
@@ -30,6 +29,7 @@ class _AgentRouteTraveledState extends State<AgentRouteTraveled> {
   @override
   void initState() {
     super.initState();
+    _mapController = MapController();
     fetchLeadDetails();
     getCurrentLocation();
   }
@@ -42,7 +42,7 @@ class _AgentRouteTraveledState extends State<AgentRouteTraveled> {
 
     try {
       final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}/api/leads'),
+        Uri.parse('${AppConfig.baseUrl}/api/agents/todos'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -181,13 +181,19 @@ class _AgentRouteTraveledState extends State<AgentRouteTraveled> {
         desiredAccuracy: LocationAccuracy.high,
       );
       setState(() {
-        _currentPosition = LatLng(22.571084, 88.432457);
-        print("Current Posi: $_currentPosition");
+        // _currentPosition = LatLng(22.571084, 88.432457);
+        _currentPosition = LatLng(position.latitude, position.longitude);
       });
       _mapController.move(_currentPosition, 15.0);
     } catch (e) {
       print("Error getting location: $e");
     }
+  }
+
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
   }
 
   @override
@@ -220,7 +226,7 @@ class _AgentRouteTraveledState extends State<AgentRouteTraveled> {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => FSAMyTodoList(searchQuery: ''),
+                    builder: (context) => MyTodoList(searchQuery: ''),
                   ),
                 );
               },
@@ -232,68 +238,99 @@ class _AgentRouteTraveledState extends State<AgentRouteTraveled> {
         children: [
           Expanded(
             flex: 7,
-            child: FlutterMap(
-              // mapController: _mapController,
-              options: MapOptions(
-                center: _currentPosition,
-                zoom: 11,
-              ),
+            child: Stack(
               children: [
-                TileLayer(
-                  urlTemplate:
-                      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                  subdomains: ['a', 'b', 'c'],
-                ),
-                PolylineLayer(
-                  polylines: [
-                    Polyline(
-                      points: _routePoints,
-                      color: Colors.lightBlueAccent,
-                      strokeWidth: 4.0,
+                FlutterMap(
+                  mapController: _mapController,
+                  options: MapOptions(
+                    center: _currentPosition,
+                    zoom: 11,
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                      subdomains: ['a', 'b', 'c'],
+                    ),
+                    PolylineLayer(
+                      polylines: [
+                        Polyline(
+                          points: _routePoints,
+                          color: Colors.lightBlueAccent,
+                          strokeWidth: 4.0,
+                        ),
+                      ],
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        // Current Position Marker
+                        Marker(
+                          width: 50.0,
+                          height: 50.0,
+                          point: _currentPosition,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Container(
+                                width: 30,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withOpacity(0.3),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              Icon(Icons.circle, color: Colors.blue, size: 20),
+                            ],
+                          ),
+                        ),
+                        // Destination Markers
+                        ..._destinations.asMap().entries.map((entry) {
+                          int index = entry.key;
+                          LatLng destination = entry.value;
+                          String clientName = _clientNames[index];
+
+                          return Marker(
+                            width: MediaQuery.of(context).size.width * 1.0,
+                            height: 70.0,
+                            point: destination,
+                            child: Column(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.transparent,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    clientName.toUpperCase(),
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFFc433e0),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Image.asset("images/icons8-location.gif",
+                                    width: 40, height: 40),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ],
                     ),
                   ],
                 ),
-                MarkerLayer(
-                  markers: _destinations.asMap().entries.map(
-                    (entry) {
-                      int index = entry.key;
-                      LatLng destination = entry.value;
-                      String clientName = _clientNames[
-                          index]; // Ensure you maintain a list of client names
-
-                      return Marker(
-                        width: MediaQuery.of(context).size.width * 1.0,
-                        height: 70.0,
-                        point: destination,
-                        child: Column(
-                          children: [
-                            Container(
-                              // padding: EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.transparent,
-                                borderRadius: BorderRadius.circular(8),
-                                // boxShadow: [
-                                //   BoxShadow(
-                                //       color: Colors.white, blurRadius: 4),
-                                // ],
-                              ),
-                              child: Text(
-                                clientName.toUpperCase(),
-                                style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFFc433e0)),
-                              ),
-                            ),
-                            SizedBox(
-                                height: 4), // Spacing between text and marker
-                            Image.asset("images/icons8-location.gif",
-                                width: 40, height: 40),
-                          ],
-                        ),
-                      );
+                // Floating Button should be inside Stack
+                Positioned(
+                  bottom: 16,
+                  right: 16,
+                  child: FloatingActionButton(
+                    onPressed: () {
+                      _mapController.move(_currentPosition, 15);
                     },
-                  ).toList(),
+                    backgroundColor: Colors.white,
+                    child: Icon(Icons.my_location, color: Colors.blue),
+                  ),
                 ),
               ],
             ),
@@ -353,11 +390,15 @@ class _AgentRouteTraveledState extends State<AgentRouteTraveled> {
                                       fontSize: 17,
                                       fontWeight: FontWeight.w500),
                                 ),
-                                Text(
-                                  " ${lead['first_name']} ${lead['middle_name'] ?? ''} ${lead['last_name']}"
-                                      .toUpperCase(),
-                                  style: TextStyle(
-                                      fontSize: 16, color: Color(0xFF2C2B2B)),
+                                Flexible(
+                                  child: Text(
+                                    " ${lead['first_name']} ${lead['middle_name'] ?? ''} ${lead['last_name']}"
+                                        .toUpperCase(),
+                                    style: TextStyle(
+                                        fontSize: 16, color: Color(0xFF2C2B2B)),
+                                    softWrap: true,
+                                    textAlign: TextAlign.end,
+                                  ),
                                 ),
                               ],
                             ),
@@ -371,7 +412,7 @@ class _AgentRouteTraveledState extends State<AgentRouteTraveled> {
                                       fontWeight: FontWeight.w500),
                                 ),
                                 Text(
-                                  " + ${lead['phone_number']}".toUpperCase(),
+                                  "${lead['mobile_phone']}".toUpperCase(),
                                   style: TextStyle(
                                       fontSize: 16, color: Color(0xFF2C2B2B)),
                                 ),
@@ -389,7 +430,7 @@ class _AgentRouteTraveledState extends State<AgentRouteTraveled> {
                                 ),
                                 Flexible(
                                   child: Text(
-                                    "${lead['address1']} ${lead['address2']}",
+                                    " ${lead['perm_city']}, ${lead['perm_state']}, ${lead['perm_street']}",
                                     style: TextStyle(
                                         fontSize: 16, color: Color(0xFF2C2B2B)),
                                     softWrap: true,

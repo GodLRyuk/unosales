@@ -1,14 +1,14 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:gradient_floating_button/gradient_floating_button.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unosfa/pages/FSAModule/fsacreatcompantlead.dart';
 import 'package:unosfa/pages/FSAModule/fsacreatenewlead.dart';
 import 'package:unosfa/pages/FSAModule/fsacustomersingleleaddetail.dart';
+import 'package:unosfa/pages/FSAModule/fsasingleleaddetail.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:unosfa/pages/config/config.dart';
-
 class FsaLeadDashBoard extends StatefulWidget {
   final String searchQuery;
   const FsaLeadDashBoard({super.key, required this.searchQuery});
@@ -32,7 +32,7 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
       false; // Boolean to control visibility of date fields
   DateTime? selectedFromDate;
   DateTime? selectedToDate;
-
+  bool isExpanded = false;
   @override
   void initState() {
     super.initState();
@@ -57,58 +57,74 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
         isLoading = true;
       });
     }
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
-    String apiUrl =
+
+    // Define API URLs
+    String apiUrl1 =
         '${AppConfig.baseUrl}/api/leads/?search=${widget.searchQuery}&ordering=-created_at&page=$currentPage';
+    String apiUrl2 =
+        '${AppConfig.baseUrl}/api/leads/company-leads/?search=${widget.searchQuery}&ordering=-created_at';
 
     try {
-      final response = await http.get(
-        Uri.parse(apiUrl),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      print(response.statusCode);
+      // Fetch data from both APIs concurrently
+      final responses = await Future.wait([
+        http.get(Uri.parse(apiUrl1),
+            headers: {'Authorization': 'Bearer $token'}),
+        http.get(Uri.parse(apiUrl2),
+            headers: {'Authorization': 'Bearer $token'}),
+      ]);
 
-      if (response.statusCode == 200) {
-        Map<String, dynamic> data = json.decode(response.body);
-        List<dynamic> leadsData = data['results'] ?? [];
+      List<Map<String, String>> allLeadsData = [];
 
-        setState(() {
-          if (isLoadMore) {
-            leads.addAll(leadsData.map((item) => {
+      for (int i = 0; i < responses.length; i++) {
+        final response = responses[i];
+
+        if (response.statusCode == 200) {
+          Map<String, dynamic> data = json.decode(response.body);
+          List<dynamic> leadsData = data['results'] ?? [];
+
+          if (i == 0) {
+            // Processing Customer Leads (`/api/leads/`)
+            allLeadsData.addAll(leadsData.map((item) => {
                   'name':
-                      '${item['first_name'] ?? ''} ${item['middle_name'] ?? ''} ${item['last_name'] ?? ''}'
+                      '${(item['first_name'] ?? '')} ${(item['middle_name'] ?? '')} ${(item['last_name'] ?? '')}'
                           .trim(),
-                  'phone': item['phone_number']?.toString() ?? '',
-                  'id': item['id']?.toString() ?? '',
+                  'phone': (item['phone_number'] ?? '').toString(),
+                  'id': (item['id'] ?? '').toString(),
+                  'type': 'Customer Lead', // Identifies as a customer lead
                 }));
+
+            // Check if there's more data (only for the paginated API)
+            hasMoreData = data['next'] != null;
           } else {
-            leads = leadsData
-                .map((item) => {
-                      'name':
-                          '${item['first_name'] ?? ''} ${item['middle_name'] ?? ''} ${item['last_name'] ?? ''}'
-                              .trim(),
-                      'phone': item['phone_number']?.toString() ?? '',
-                      'id': item['id']?.toString() ?? '',
-                    })
-                .toList();
+            // Processing Company Leads (`/api/leads/company-leads/`)
+            allLeadsData.addAll(leadsData.map((item) => {
+                  'name':
+                      (item['company_name'] ?? 'Unknown Company').toString(),
+                  'phone': (item['contact_person_mobile_no'] ?? '').toString(),
+                  'id': (item['id'] ?? '').toString(),
+                  'type': 'Company Lead', // Identifies as a company lead
+                }));
           }
-
-          filteredLeads = List.from(leads);
-
-          // Check if there's more data
-          hasMoreData = data['next'] != null;
-
-          isLoading = false;
-          isFetchingMore = false;
-        });
-      } else {
-        setState(() {
-          isLoading = false;
-          isFetchingMore = false;
-        });
-        throw Exception('Failed to load leads');
+        } else {
+          throw Exception('Failed to load leads from API ${i + 1}');
+        }
       }
+
+      // Update state
+      setState(() {
+        if (isLoadMore) {
+          leads.addAll(allLeadsData);
+        } else {
+          leads = allLeadsData;
+        }
+
+        filteredLeads = List.from(leads);
+        isLoading = false;
+        isFetchingMore = false;
+      });
     } catch (e) {
       setState(() {
         isLoading = false;
@@ -166,7 +182,6 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
 
           isLoading = false;
           isFetchingMore = false;
-
         });
       } else if (response.statusCode == 401) {
         final response2 = await http.post(
@@ -434,14 +449,26 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
                                       return GestureDetector(
                                         onTap: () {
                                           String leadId = leads[index]['id']!;
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  CustomerSingleLead(
-                                                      leadId: leadId),
-                                            ),
-                                          );
+                                          if (leads[index]['type'] ==
+                                              'Customer Lead') {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    CustomerSingleLead(leadId: leadId,),
+                                              ),
+                                            );
+                                          }else
+                                          {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    FsaCompanySingleLead(
+                                                        leadId: leadId),
+                                              ),
+                                            );
+                                          }
                                         },
                                         child: Container(
                                           margin: const EdgeInsets.symmetric(
@@ -488,9 +515,75 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
                                                 ),
                                               ],
                                             ),
-                                            trailing: Icon(
-                                              Icons.chevron_right,
-                                              color: Color(0xFF640D78),
+                                            trailing: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Container(
+                                                  margin: EdgeInsets.only(
+                                                      top: 20, right: 10),
+                                                  width: 100,
+                                                  height: 25,
+                                                  decoration: BoxDecoration(
+                                                    color: (leads[index]
+                                                                ['type'] ==
+                                                            'Customer Lead')
+                                                        ? Color(0xFFc433e0)
+                                                        : Color(0xFF640D78),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            10),
+                                                  ),
+                                                  child: Column(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    children: [
+                                                      Text(
+                                                        leads[index]['type'] ??
+                                                            '',
+                                                        style: TextStyle(
+                                                            color:
+                                                                Colors.white),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                GestureDetector(
+                                                  onTap: () {
+                                                    String leadId =
+                                                        leads[index]['id']!;
+                                                    if (leads[index]['type'] ==
+                                                        'Customer Lead') {
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                          builder: (context) =>
+                                                              FsaLeadGenerate(
+                                                                  edit: leadId),
+                                                        ),
+                                                      );
+                                                    } else {
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                          builder: (context) =>
+                                                              FsaCompanyLeadGenerate(
+                                                                  edit: leadId),
+                                                        ),
+                                                      );
+                                                    }
+                                                  },
+                                                  child: Icon(
+                                                    Icons.edit,
+                                                    color: Color(0xFF640D78),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 10),
+                                                Icon(
+                                                  Icons.chevron_right,
+                                                  color: Color(0xFF640D78),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ),
@@ -510,36 +603,105 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
                 ],
               ),
             ),
-            floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 10),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 10), // Adjust padding as needed
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
-              width: 50, // Adjust the width
-              height: 50, // Adjust the height
-              child: GradientFloatingButton().withLinearGradient(
-                onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => FsaLeadGenerate(edit: '',),
-                    ),
-                  );
-                },
-                iconWidget: const Icon(
-                  Icons.add,
-                  color: Colors.white,
-                  size: 36, // Increase icon size if needed
-                ),
-                alignmentEnd: Alignment.topRight,
-                alignmentBegin: Alignment.bottomLeft,
-                colors: [
-                  Color(0xFF1f8bdf),
-                  Color(0xFF1f8bdf),
+            if (isExpanded) ...[
+              Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text("Customer Lead",
+                          style: WidgetSupport.LoginButtonTextColor()),
+                      SizedBox(width: 10),
+                      FloatingActionButton(
+                        heroTag: "btn1",
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => FsaLeadGenerate(edit: ''),
+                            ),
+                          );
+                        },
+                        child: Icon(
+                          Icons.add,
+                          color: Colors.white,
+                        ),
+                        backgroundColor: Colors.blue,
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 10),
+
+                  // Floating Button with Text
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text("Company Lead",
+                          style: WidgetSupport.LoginButtonTextColor()),
+                      SizedBox(width: 10),
+                      FloatingActionButton(
+                        heroTag: "btn2",
+                        onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => FsaCompanyLeadGenerate(
+                                edit: '',
+                              ),
+                            ),
+                          );
+                        },
+                        child: Icon(
+                          Icons.add,
+                          color: Colors.white,
+                        ),
+                        backgroundColor: Colors.blue,
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 10),
                 ],
               ),
-            ),
+            ],
+
+            // Main Button
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.blue,
+                        Colors.purple
+                      ], // Define your gradient colors
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: FloatingActionButton(
+                    onPressed: () {
+                      setState(() {
+                        isExpanded = !isExpanded;
+                      });
+                    },
+                    child: Icon(
+                      isExpanded ? Icons.close : Icons.add,
+                      color: Colors.white,
+                    ),
+                    backgroundColor: Colors
+                        .transparent, // Set transparent so gradient is visible
+                  ),
+                ),
+              ],
+            )
           ],
         ),
       ),

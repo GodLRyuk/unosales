@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unosfa/pages/FSAModule/fsaleaddashboard.dart';
 import 'package:unosfa/pages/FSAModule/fsaloancalculation.dart';
@@ -62,11 +63,16 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
   String? _selectedCompany;
   bool _isFieldFocused = false; // Track if TextField is clicked
   bool _isCityFieldFocused = false;
+  String? _cityError;
   final _externalId = TextEditingController();
   final _imageController = TextEditingController();
   bool _selectedKycId = false;
   bool _showOtherCompanyField = false;
-  String? _cityError;
+  String _imageUrl = "";
+  Uint8List? _imageBytes;
+  bool _hasError = false;
+  File? _image;
+
   @override
   void initState() {
     super.initState();
@@ -624,6 +630,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
         headers: {'Authorization': 'Bearer $token'},
       );
       final data = json.decode(response.body);
+
       final cityresponse = await http.get(
         Uri.parse(
             '${AppConfig.baseUrl}/api/leads/cities/?search=${data['city_name']}'),
@@ -706,6 +713,12 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
         _DocumentIdOptions = fetchedData5;
       }
 
+      // final Map<String, dynamic> kycIdata = _gIdOptions;
+      final String? kycIdType = data['kyc_id_type'];
+      if (kycIdType != null && _gIdOptions.containsKey(kycIdType)) {
+        _selectedGId = kycIdType; // Assign the key instead of the value
+      }
+
       final barangayresponse = await http.get(
         Uri.parse('${AppConfig.baseUrl}/api/leads/cities/${data['city']}'),
         headers: {'Authorization': 'Bearer $token'},
@@ -727,12 +740,11 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
         });
       }
       final companyResponse = await http.get(
-        Uri.parse('${AppConfig.baseUrl}/api/leads/companies/?page_size=100'),
+        Uri.parse(
+            '${AppConfig.baseUrl}/api/leads/companies/?search=${data['company']}'),
         headers: {'Authorization': 'Bearer $token'},
       );
-
       final Map<String, dynamic> dataComp = json.decode(companyResponse.body);
-
       if (dataComp['results'] != null && dataComp['results'] is List) {
         List<dynamic> companies = dataComp['results'];
 
@@ -768,11 +780,14 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
           _email.text = data['email'];
           _zip.text = data['zip'];
           _area.text = data['area'];
-          _income.text = numericCommaInputFormatter(data['income']);
-          _loanamount.text =
-              numericCommaInputFormatter(data['loan_amount_requested']);
-          _businessNameController.text = data['business_name'];
+          _externalId.text = data['kyc_id_number'];
+          _income.text =
+              numericCommaInputFormatter(double.parse(data['income']));
+          _loanamount.text = numericCommaInputFormatter(
+              double.parse(data['loan_amount_requested']));
+          _businessNameController.text = data['business_name'] ?? '';
           _location.text = data['location'];
+          _imageController.text = data['kyc_document'];
           for (var entry2 in _LocatinIdOptions.entries) {
             if (data['location_type'].toString() == entry2.value) {
               _selectedLocationType = entry2.key;
@@ -811,14 +826,100 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
               break;
             }
           }
+          // Load the image if available
+          if (data['kyc_document'] != null && data['kyc_document'].isNotEmpty) {
+            _imageUrl = data['kyc_document'];
+            _fetchImage(_imageUrl);
+
+            downloadFile(data['kyc_document']).then((file) {
+              if (file != null) {
+                setState(() {
+                  _image = file; // Now _image is a File object
+                });
+              }
+            });
+          }
           _isLoading = false;
         });
       } else {
-        throw Exception('Failed to load location types');
+        throw Exception('Failed to load document type');
       }
     } catch (e) {
       print('Error: $e');
     }
+  }
+
+  Future<void> _fetchImage(String imageUrl) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('accessToken');
+
+    try {
+      final response = await http.get(
+        Uri.parse(imageUrl),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        Uint8List imageBytes = response.bodyBytes;
+        if (imageBytes.isNotEmpty) {
+          setState(() {
+            _imageBytes = imageBytes;
+            _isLoading = false;
+            _hasError = false;
+          });
+          downloadFile(_imageUrl);
+        } else {
+          _handleImageError();
+        }
+      } else {
+        _handleImageError();
+      }
+    } catch (e) {
+      print("Image loading error: $e");
+      _handleImageError();
+    }
+  }
+
+  Future<File?> downloadFile(String imageUrl) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('accessToken'); // Retrieve access token
+
+    if (token == null || token.isEmpty) {
+      print("Error: Missing access token");
+      return null;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse(imageUrl),
+        headers: {
+          'Authorization': 'Bearer $token', // Include authorization header
+        },
+      );
+      if (response.statusCode == 200) {
+        final tempDir = await getTemporaryDirectory();
+        final fileName = Uri.parse(imageUrl).pathSegments.last;
+        final filePath = '${tempDir.path}/$fileName';
+        final _image = File(filePath);
+        await _image.writeAsBytes(response.bodyBytes);
+
+        return _image;
+      } else {
+        print("Failed to download image: ${response.statusCode}");
+        return null;
+      }
+    } catch (e) {
+      print("Error downloading image: $e");
+      return null;
+    }
+  }
+
+  void _handleImageError() {
+    setState(() {
+      _isLoading = false;
+      _hasError = true;
+      _imageBytes = null;
+    });
   }
 
   @override
@@ -1062,8 +1163,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                                   }
                                   return null;
                                 },
-                                onChanged: (value) {
-                                },
+                                onChanged: (value) {},
                               ),
                             ),
                             SizedBox(
@@ -1099,7 +1199,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                             "Address line 2",
                             'Please Enter Your Address line 2',
                             'address',
-                            isEmail: true,
+                            isEmail: false,
                             isNumeric: false,
                             icon: FontAwesomeIcons.mapLocationDot,
                             allowSpaces: true,
@@ -1214,10 +1314,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
-                          _buildBarangayDropdownField(
-                            "Select Barangay",
-                            isRequired: false,
-                          ),
+                          _buildBarangayDropdownField(),
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
@@ -1237,7 +1334,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                             _area,
                             "Area",
                             'Please Enter Area',
-                            'rate',
+                            'area',
                             isNumeric: false,
                             icon: FontAwesomeIcons.mapLocation,
                             allowSpaces: true,
@@ -1329,14 +1426,13 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                                   onPressed: () {
                                     setState(() {
                                       if (_citysearchController.text.isEmpty) {
-                                        _cityError =
-                                            "City name is required"; 
+                                        _cityError = "City name is required";
                                       } else {
                                         _cityError = null;
                                       }
-                                       if (_formKey.currentState!.validate()) {
-                                          leadSubmit();
-                                        }
+                                      if (_formKey.currentState!.validate()) {
+                                        leadSubmit();
+                                      }
                                     });
                                   },
                                   style: ElevatedButton.styleFrom(
@@ -1386,13 +1482,12 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
   }
 
   Future<void> leadSubmit() async {
-    setState(() {
-      _isLoading = true;
-    });
-
     // Check if the form is valid
     String middle_name = _mname.text.trim();
     if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
       // Collect form data
       String first_name = _fname.text.trim();
       String last_name = _lname.text.trim();
@@ -1420,18 +1515,19 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
       String document_type = _selectedDocument!;
       String finalOtherCompanyName = _selectedCompany == 'others'
           ? _otherCompanyController.text.trim()
-          : (_selectedCompany ?? '');
-      String? company =
-          finalOtherCompanyName.isNotEmpty ? "" : _selectedCompany;
+          : '';
+      String company =
+          _selectedCompany == 'others' ? '' : (_selectedCompany ?? '');
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('accessToken');
       String? refresh = prefs.getString('refreshToken');
       String barangay = _selectedBarangayType!;
       String disposition_code = "";
       String sub_disposition_code = "";
-
+      String selectedGId = _selectedGId ?? "";
+      String externalId = _externalId.text.trim();
       // Map the collected data to be sent in the request body
-      Map<String, dynamic> mappedData = {
+      Map<String, String> mappedData = {
         'company': company,
         'first_name': first_name,
         'middle_name': middle_name,
@@ -1458,19 +1554,27 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
         'document_type': document_type,
         'disposition_code': disposition_code,
         'sub_disposition_code': sub_disposition_code,
+        'kyc_id_type': selectedGId,
+        'kyc_id_number': externalId,
         'others_company': finalOtherCompanyName
       };
       if (widget.edit == "") {
         try {
           var url = Uri.parse('${AppConfig.baseUrl}/api/leads/');
+          var request = http.MultipartRequest('POST', url)
+            ..headers['Authorization'] = 'Bearer $token'
+            ..fields.addAll(mappedData);
 
-          http.Response response = await http.post(
-            url,
-            body: mappedData,
-            headers: {
-              'Authorization': 'Bearer $token',
-            },
-          );
+          if (_image != null) {
+            request.files.add(
+              await http.MultipartFile.fromPath('kyc_document', _image!.path),
+            );
+          } else if (_imageUrl != null && _imageUrl!.isNotEmpty) {
+            request.fields['kyc_document'] =
+                _imageUrl!; // Send existing image URL if no new image is picked
+          }
+          http.Response response =
+              await http.Response.fromStream(await request.send());
 
           if (response.statusCode == 201) {
             final data = json.decode(response.body);
@@ -1522,14 +1626,20 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
       } else {
         try {
           var url = Uri.parse('${AppConfig.baseUrl}/api/leads/${widget.edit}/');
+          var request = http.MultipartRequest('put', url)
+            ..headers['Authorization'] = 'Bearer $token'
+            ..fields.addAll(mappedData);
 
-          http.Response response = await http.put(
-            url,
-            body: mappedData,
-            headers: {
-              'Authorization': 'Bearer $token',
-            },
-          );
+          if (_image != null) {
+            request.files.add(
+              await http.MultipartFile.fromPath('kyc_document', _image!.path),
+            );
+          } else if (_imageUrl != null && _imageUrl!.isNotEmpty) {
+            request.fields['kyc_document'] =
+                _imageUrl!; // Send existing image URL if no new image is picked
+          }
+          http.Response response =
+              await http.Response.fromStream(await request.send());
           if (response.statusCode == 200) {
             final data = json.decode(response.body);
             Navigator.pushReplacement(
@@ -1544,7 +1654,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                 ),
               ),
             );
-          } else if (response.statusCode == 400) {
+          } else if (response.statusCode == 401) {
             setState(() {
               _isLoading = false;
             });
@@ -1669,6 +1779,13 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
         if (isRequired && (value == null || value.trim().isEmpty)) {
           return validationMessage;
         }
+        if (isEmail && value != null && value.isNotEmpty) {
+          final emailRegex = RegExp(
+              r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'); // Valid email format
+          if (!emailRegex.hasMatch(value)) {
+            return 'Please enter a valid email address';
+          }
+        }
 
         if (isNumeric && value != null && value.isNotEmpty) {
           final cleanedValue = value.replaceAll(',', '');
@@ -1680,6 +1797,20 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
         if (isBlankAlphabetic && value != null && value.isNotEmpty) {
           if (!RegExp(r'^[a-zA-Z]*$').hasMatch(value)) {
             return 'Only alphabets are allowed';
+          }
+        }
+        if (isPhoneNumber) {
+          if (value == null || value.isEmpty) {
+            return validationMessage;
+          }
+          if (value.length != 12) {
+            return 'Phone number must be exactly 12 digits';
+          }
+          if (!RegExp(r'^\d+$').hasMatch(value)) {
+            return 'Phone number must contain only digits';
+          }
+          if (!value.startsWith('63')) {
+            return 'Phone number must start with "63"';
           }
         }
 
@@ -1738,12 +1869,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
     );
   }
 
-  Widget _buildBarangayDropdownField(
-    String validationMessage,
-    {
-      bool isRequired = true,
-    }
-  ) {
+  Widget _buildBarangayDropdownField() {
     return DropdownSearch<String>(
       popupProps: PopupProps.menu(
         showSearchBox: false,
@@ -1753,16 +1879,16 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
       dropdownDecoratorProps: DropDownDecoratorProps(
         dropdownSearchDecoration: InputDecoration(
           hintText: "Select Barangay",
-          errorText: "Please Select Barangay",
           hintStyle: WidgetSupport.inputLabel(),
         ),
       ),
-      selectedItem: _barangay.isNotEmpty
-          ? _barangay.firstWhere(
-              (e) => e['id'] == _selectedBarangayType,
-              orElse: () => {'barangay_name': "Select Barangay"},
-            )['barangay_name']
-          : "Select Barangay",
+      selectedItem:
+          (_selectedBarangayType == null || _selectedBarangayType!.isEmpty)
+              ? null
+              : _barangay.firstWhere(
+                  (e) => e['id'] == _selectedBarangayType,
+                  orElse: () => {'barangay_name': ""},
+                )['barangay_name'],
       onChanged: (String? newValue) {
         setState(() {
           final selectedBarangay = _barangay.firstWhere(
@@ -1773,7 +1899,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
         FocusScope.of(context).requestFocus(FocusNode());
       },
       validator: (value) {
-        if (value == null || value.isEmpty) {
+        if (value == null || value == "") {
           return 'Please select Barangay';
         }
         return null;
@@ -1954,8 +2080,6 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
     );
   }
 
-  File? _image;
-
   Widget _buildImageUploadField(
       TextEditingController controller, String hintText) {
     return Column(
@@ -1978,34 +2102,14 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                       actions: <Widget>[
                         TextButton(
                           onPressed: () async {
-                            final ImagePicker picker = ImagePicker();
-                            final XFile? image = await picker.pickImage(
-                                source: ImageSource.camera); // Open camera
-                            if (image != null) {
-                              setState(() {
-                                _image =
-                                    File(image.path); // Save the selected image
-                                controller.text = image
-                                    .path; // Update the controller with the image path
-                              });
-                            }
+                            await _pickImage(ImageSource.camera, controller);
                             Navigator.of(context).pop(); // Close dialog
                           },
                           child: const Text("Camera"),
                         ),
                         TextButton(
                           onPressed: () async {
-                            final ImagePicker picker = ImagePicker();
-                            final XFile? image = await picker.pickImage(
-                                source: ImageSource.gallery); // Open gallery
-                            if (image != null) {
-                              setState(() {
-                                _image =
-                                    File(image.path); // Save the selected image
-                                controller.text = image
-                                    .path; // Update the controller with the image path
-                              });
-                            }
+                            await _pickImage(ImageSource.gallery, controller);
                             Navigator.of(context).pop(); // Close dialog
                           },
                           child: const Text("Gallery"),
@@ -2022,27 +2126,45 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
               ),
             ),
           ),
-          validator: (_selectedKycId) {
-            if (_selectedGId != null && _image == null) {
-              return 'Please upload an image'; // Validation message if KYC ID is selected but no image uploaded
+          validator: (_) {
+            if (_selectedGId != null &&
+                _image == null &&
+                (_imageUrl == null || _imageUrl!.isEmpty)) {
+              return 'Please upload an image'; // Show error only if no image is available at all
             }
             return null;
           },
         ),
-        if (_image != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 16.0),
-            child: ClipOval(
-              child: Image.file(
-                _image!,
-                height: 110,
-                width: 110,
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
+        Padding(
+          padding: const EdgeInsets.only(top: 16.0),
+          child: _imageBytes != null
+              ? Image.memory(
+                  _imageBytes!,
+                  width: 300,
+                  height: 150,
+                  fit: BoxFit.fill,
+                )
+              : Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+        ),
       ],
     );
+  }
+
+// Function to handle image selection and replacement
+  Future<void> _pickImage(
+      ImageSource source, TextEditingController controller) async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: source);
+
+    if (image != null) {
+      final Uint8List imageBytes = await File(image.path).readAsBytes();
+
+      setState(() {
+        _image = File(image.path); // Replace with new image
+        _imageBytes = imageBytes; // Update UI with new image bytes
+        _imageController.text = image.path;
+      });
+    }
   }
 
   Widget _buildKydIdTextField(
@@ -2052,27 +2174,25 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
     String validationKey, {
     IconData icon = FontAwesomeIcons.solidCircleUser,
     bool obscureText = false,
-    bool isEmail = false,
-    bool isPhoneNumber = false,
     bool isNumeric = false,
-    bool isZipNumber = false,
     bool isRequired = true,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
-      keyboardType: isPhoneNumber
-          ? TextInputType.phone
-          : isEmail
-              ? TextInputType.emailAddress
-              : isNumeric || isZipNumber
-                  ? TextInputType.number
-                  : TextInputType.text,
+      keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
       validator: (_selectedKycId) {
         if (_selectedKycId == "" && _selectedGId != null) {
           return 'Please Enter Id'; // Validation message if KYC ID is selected but no image uploaded
         }
-
+        if (_selectedKycId != null && _selectedKycId!.isNotEmpty) {
+          if (_selectedKycId!.length < 6) {
+            return 'ID must be at least 6 characters long';
+          }
+          if (!RegExp(r'^[a-zA-Z0-9]+$').hasMatch(_selectedKycId)) {
+            return 'Special characters are not allowed';
+          }
+        }
         return null;
       },
       decoration: InputDecoration(

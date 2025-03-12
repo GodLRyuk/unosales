@@ -54,7 +54,7 @@ class _DriverMapViewState extends State<DriverMapView> {
 
       // Ensure _mapController is used only after the widget is built
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _mapController != null) {
+        if (mounted) {
           _mapController.move(_currentPosition, 15.0);
         }
       });

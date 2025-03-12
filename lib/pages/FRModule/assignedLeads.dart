@@ -2,23 +2,22 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/FSAModule/fsacreatcompantlead.dart';
-import 'package:unosfa/pages/FSAModule/fsasingleleaddetail.dart';
+import 'package:unosfa/pages/FRModule/fsasingleleaddetail.dart';
+import 'package:unosfa/pages/FRModule/singleassignedleads.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
-import 'package:gradient_floating_button/gradient_floating_button.dart';
 import 'package:unosfa/pages/config/config.dart';
 
-class CompanyLeadDetails extends StatefulWidget {
+class AssignedLeads extends StatefulWidget {
   final String searchQuery;
-  const CompanyLeadDetails({super.key, required this.searchQuery});
+  const AssignedLeads({super.key, required this.searchQuery});
 
   @override
-  State<CompanyLeadDetails> createState() =>
-      _CompanyLeadDetailsState();
+  State<AssignedLeads> createState() =>
+      _AssignedLeadsState();
 }
 
-class _CompanyLeadDetailsState extends State<CompanyLeadDetails> {
+class _AssignedLeadsState extends State<AssignedLeads> {
   final _searchFilter = TextEditingController();
   List<Map<String, String>> leads = [];
   List<Map<String, String>> filteredLeads = [];
@@ -62,7 +61,7 @@ class _CompanyLeadDetailsState extends State<CompanyLeadDetails> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
     String apiUrl =
-        '${AppConfig.baseUrl}/api/leads/company-leads/?search=${widget.searchQuery}&ordering=-created_at';
+        '${AppConfig.baseUrl}/api/agents/assigned-leads/?search=${widget.searchQuery}&ordering=-created_at';
 
     try {
       final response = await http.get(
@@ -72,21 +71,29 @@ class _CompanyLeadDetailsState extends State<CompanyLeadDetails> {
       if (response.statusCode == 200) {
         Map<String, dynamic> data = json.decode(response.body);
         List<dynamic> leadsData = data['results'] ?? [];
-
         setState(() {
           if (isLoadMore) {
             leads.addAll(leadsData.map((item) => {
-                  'name': '${item['company_name'] ?? ''}'.trim(),
-                  'phone': item['contact_person_mobile_no']?.toString() ?? '',
+                  'name':
+                      '${item['first_name'] ?? ''} ${item['middle_name'] ?? ''} ${item['last_name'] ?? ''}'
+                          .trim(),
+                  'phone': item['mobile_phone']?.toString() ?? '',
+                  'description': item['campaign'] != null
+                      ? item['campaign']['description']?.toString() ?? ''
+                      : '', // Safely extract description
                   'id': item['id']?.toString() ?? '',
                 }));
           } else {
             leads = leadsData
                 .map((item) => {
-                      'name': '${item['company_name'] ?? ''}'.trim(),
-                      'phone':
-                          item['contact_person_mobile_no']?.toString() ?? '',
-                      'id': item['id']?.toString() ?? '',
+                      'name':
+                      '${item['first_name'] ?? ''} ${item['middle_name'] ?? ''} ${item['last_name'] ?? ''}'
+                          .trim(),
+                  'phone': item['mobile_phone']?.toString() ?? '',
+                  'description': item['campaign'] != null
+                      ? item['campaign']['description']?.toString() ?? ''
+                      : '', // Safely extract description
+                  'id': item['id']?.toString() ?? '',
                     })
                 .toList();
           }
@@ -139,9 +146,10 @@ class _CompanyLeadDetailsState extends State<CompanyLeadDetails> {
     String? token = prefs.getString('accessToken');
     String? refresh = prefs.getString('refreshToken');
     try {
+      print("${AppConfig.baseUrl}/api/agents/assigned-leads/?search=$searchQuery&ordering=-created_at");
       final response = await http.get(
         Uri.parse(
-            '${AppConfig.baseUrl}/api/leads/company-leads/?search=$searchQuery&ordering=-created_at'),
+            '${AppConfig.baseUrl}/api/agents/assigned-leads/?search=$searchQuery&ordering=-created_at'),
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -355,13 +363,13 @@ class _CompanyLeadDetailsState extends State<CompanyLeadDetails> {
                                       return GestureDetector(
                                         onTap: () {
                                           String leadId = leads[index]['id']!;
-                                          // Navigator.push(
-                                          //   context,
-                                          //   MaterialPageRoute(
-                                          //     builder: (context) =>
-                                          //         FsaSingleLead(leadId: leadId),
-                                          //   ),
-                                          // );
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  FRSingleAssignedLead(leadId: leadId),
+                                            ),
+                                          );
                                         },
                                         child: Container(
                                           margin: const EdgeInsets.symmetric(
@@ -408,9 +416,38 @@ class _CompanyLeadDetailsState extends State<CompanyLeadDetails> {
                                                 ),
                                               ],
                                             ),
-                                            trailing: Icon(
-                                              Icons.chevron_right,
-                                              color: Color(0xFF640D78),
+                                            trailing: Row(
+                                              mainAxisSize: MainAxisSize
+                                                  .min, // Ensures the row doesn't take up unnecessary space
+                                              children: [
+                                                Container(
+                                                  padding: EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical:
+                                                          5), // Added padding for better spacing
+                                                  decoration: BoxDecoration(
+                                                    color: Color(
+                                                        0xFFc433e0), // Default color if no condition matches
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            10),
+                                                  ),
+                                                  child: Text(
+                                                    leads[index]
+                                                            ['description'] ??
+                                                        '',
+                                                    style: TextStyle(
+                                                        color: Colors.white),
+                                                  ),
+                                                ),
+                                                const SizedBox(
+                                                    width:
+                                                        8), // Spacing between container and icon
+                                                Icon(
+                                                  Icons.chevron_right,
+                                                  color: Color(0xFF640D78),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ),
@@ -430,39 +467,6 @@ class _CompanyLeadDetailsState extends State<CompanyLeadDetails> {
                 ],
               ),
             ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 50, // Adjust the width
-              height: 50, // Adjust the height
-              child: GradientFloatingButton().withLinearGradient(
-                onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => FsaCompanyLeadGenerate(edit: '',),
-                    ),
-                  );
-                },
-                iconWidget: const Icon(
-                  Icons.add,
-                  color: Colors.white,
-                  size: 36, // Increase icon size if needed
-                ),
-                alignmentEnd: Alignment.topRight,
-                alignmentBegin: Alignment.bottomLeft,
-                colors: [
-                  Color(0xFF1f8bdf),
-                  Color(0xFF1f8bdf),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

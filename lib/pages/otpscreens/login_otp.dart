@@ -81,7 +81,7 @@ class _LoginOtpState extends State<LoginOtp> {
           ];
           SharedPreferences prefs = await SharedPreferences.getInstance();
           await prefs.setStringList('userInfo', userInfo);
-          await prefs.setBool('isLoggedIn', true);
+          // await prefs.setBool('isLoggedIn', true);
           await prefs.setString('accessToken', data['access']);
           await prefs.setString('refreshToken', data['refresh']);
           await prefs.setString('role', data['roles'][0]);

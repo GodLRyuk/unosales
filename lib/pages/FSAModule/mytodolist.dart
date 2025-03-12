@@ -4,7 +4,7 @@ import 'package:gradient_floating_button/gradient_floating_button.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unosfa/pages/FSAModule/leadroughttracking.dart';
-import 'package:unosfa/pages/FSAModule/route_travel_by_agent.dart';
+import 'package:unosfa/pages/services/route_travel_by_agent.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:unosfa/pages/config/config.dart';
@@ -64,7 +64,7 @@ class _FSAMyTodoListState extends State<FSAMyTodoList> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
     String apiUrl =
-        '${AppConfig.baseUrl}/api/leads/?search=${widget.searchQuery}&ordering=-created_at&page=$currentPage';
+        '${AppConfig.baseUrl}/api/agents/todos/?search=${widget.searchQuery}&ordering=-created_at&page=$currentPage';
 
     try {
       final response = await http.get(
@@ -73,8 +73,10 @@ class _FSAMyTodoListState extends State<FSAMyTodoList> {
       );
 
       if (response.statusCode == 200) {
-        Map<String, dynamic> data = json.decode(response.body);
-        List<dynamic> leadsData = data['results'] ?? [];
+        Map<String, dynamic> data =
+            json.decode(response.body); // API returns a map
+        List<dynamic> leadsData =
+            data['results'] ?? []; // Extract 'results' list
 
         setState(() {
           if (isLoadMore) {
@@ -82,7 +84,10 @@ class _FSAMyTodoListState extends State<FSAMyTodoList> {
                   'name':
                       '${item['first_name'] ?? ''} ${item['middle_name'] ?? ''} ${item['last_name'] ?? ''}'
                           .trim(),
-                  'phone': item['phone_number']?.toString() ?? '',
+                  'phone': item['mobile_phone']?.toString() ?? '',
+                  'description': item['campaign'] != null
+                      ? item['campaign']['description']?.toString() ?? ''
+                      : '', // Safely extract description
                   'id': item['id']?.toString() ?? '',
                 }));
           } else {
@@ -91,16 +96,17 @@ class _FSAMyTodoListState extends State<FSAMyTodoList> {
                       'name':
                           '${item['first_name'] ?? ''} ${item['middle_name'] ?? ''} ${item['last_name'] ?? ''}'
                               .trim(),
-                      'phone': item['phone_number']?.toString() ?? '',
+                      'phone': item['mobile_phone']?.toString() ?? '',
+                      'description': item['campaign'] != null
+                          ? item['campaign']['description']?.toString() ?? ''
+                          : '', // Handle campaign being null
                       'id': item['id']?.toString() ?? '',
                     })
                 .toList();
           }
 
           filteredLeads = List.from(leads);
-
-          // Check if there's more data
-          hasMoreData = data['next'] != null;
+          hasMoreData = data['next'] != null; // Update pagination
 
           isLoading = false;
           isFetchingMore = false;
@@ -135,7 +141,7 @@ class _FSAMyTodoListState extends State<FSAMyTodoList> {
   Future<void> fetchFilteredLeads() async {
     String searchQuery = '';
     if (_searchFilter.text.isNotEmpty) {
-      searchQuery = '?phone_number=${_searchFilter.text}';
+      searchQuery = '?mobile_phone=${_searchFilter.text}';
     }
     if (_toDate.text.isNotEmpty && _fromDate.text.isNotEmpty) {
       searchQuery += (searchQuery.isNotEmpty ? '&' : '?') +
@@ -146,7 +152,7 @@ class _FSAMyTodoListState extends State<FSAMyTodoList> {
     String? refresh = prefs.getString('refreshToken');
     try {
       final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}/api/leads/$searchQuery'),
+        Uri.parse('${AppConfig.baseUrl}/api/agents/todos/$searchQuery'),
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -158,9 +164,10 @@ class _FSAMyTodoListState extends State<FSAMyTodoList> {
           leads = leadsData.map((item) {
             return {
               'name':
-                  '${item['first_name']} ${item['middle_name']} ${item['last_name']}'
+                  '${item['first_name'] ?? ''} ${item['middle_name'] ?? ''} ${item['last_name'] ?? ''}'
                       .trim(),
-              'phone': item['phone_number']?.toString() ?? '',
+              'phone': item['mobile_phone']?.toString() ?? '',
+              'description': item['description']?.toString() ?? '',
               'id': item['id']?.toString() ?? '',
             };
           }).toList();
@@ -477,9 +484,38 @@ class _FSAMyTodoListState extends State<FSAMyTodoList> {
                                                 ),
                                               ],
                                             ),
-                                            trailing: Icon(
-                                              Icons.chevron_right,
-                                              color: Color(0xFF640D78),
+                                            trailing: Row(
+                                              mainAxisSize: MainAxisSize
+                                                  .min, // Ensures the row doesn't take up unnecessary space
+                                              children: [
+                                                Container(
+                                                  padding: EdgeInsets.symmetric(
+                                                      horizontal: 10,
+                                                      vertical:
+                                                          5), // Added padding for better spacing
+                                                  decoration: BoxDecoration(
+                                                    color: Color(
+                                                        0xFFc433e0), // Default color if no condition matches
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            10),
+                                                  ),
+                                                  child: Text(
+                                                    leads[index]
+                                                            ['description'] ??
+                                                        '',
+                                                    style: TextStyle(
+                                                        color: Colors.white),
+                                                  ),
+                                                ),
+                                                const SizedBox(
+                                                    width:
+                                                        8), // Spacing between container and icon
+                                                Icon(
+                                                  Icons.chevron_right,
+                                                  color: Color(0xFF640D78),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ),

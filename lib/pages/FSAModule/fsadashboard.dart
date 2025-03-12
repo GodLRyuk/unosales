@@ -3,6 +3,7 @@ import 'package:circle_progress_bar/circle_progress_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unosfa/pages/FSAModule/assignedLeads.dart';
 import 'package:unosfa/pages/FSAModule/campaignlist.dart';
 import 'package:unosfa/pages/FSAModule/fsacompanyleaddashboard.dart';
 import 'package:unosfa/pages/FSAModule/fsaleaddashboard.dart';
@@ -58,10 +59,17 @@ class _FsadashboardState extends State<Fsadashboard> {
           'Authorization': 'Bearer $token',
         },
       );
+      String apiUrl =
+          '${AppConfig.baseUrl}/api/leads/company-leads/?ordering=-created_at';
+      final response2 = await http.get(
+        Uri.parse(apiUrl),
+        headers: {'Authorization': 'Bearer $token'},
+      );
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
+        final Map<String, dynamic> data2 = json.decode(response2.body);
         setState(() {
-          leadDetails = data['count'];
+          leadDetails = data['count'] + data2['count'];
         });
       } else if (response.statusCode == 401) {
         Map<String, dynamic> mappedData = {
@@ -176,7 +184,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                 SizedBox(
                     height: MediaQuery.of(context).size.width > 600 ? 30 : 0),
                 Padding(
-                  padding: const EdgeInsets.all(10.0),
+                  padding: const EdgeInsets.only(left: 15, right: 15),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -185,13 +193,36 @@ class _FsadashboardState extends State<Fsadashboard> {
                         controller: _searchFilter,
                         decoration: InputDecoration(
                           labelText: 'Filter By Phone Number',
-                          border: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.grey),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(0),
+                            borderSide: const BorderSide(
+                              color: Colors.grey,
+                              width: 1.0,
+                            ),
                           ),
-                          suffixIcon: IconButton(
-                            icon: Icon(Icons.filter_list),
-                            onPressed:
-                                _toggleDateFieldsVisibility, // Toggle date fields visibility
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(0),
+                            borderSide: const BorderSide(
+                              color: Colors.grey,
+                              width: 1.0,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(0),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFac00d0),
+                              width: 1.0,
+                            ),
+                          ),
+                          suffixIcon: Container(
+                            color: const Color(0xFFac00d0),
+                            child: IconButton(
+                              onPressed: _toggleDateFieldsVisibility,
+                              icon: const Icon(
+                                Icons.filter_list,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                         ),
                         style: TextStyle(height: 1),
@@ -284,7 +315,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                                           context,
                                           MaterialPageRoute(
                                             builder: (context) =>
-                                                FsaCompanyLeadDashBoard(
+                                                FsaLeadDashBoard(
                                                     searchQuery: searchData),
                                           ),
                                         );
@@ -1025,7 +1056,7 @@ class _FsadashboardState extends State<Fsadashboard> {
   }
 
   Widget _smallBoxLeadDetailsContainer() {
-double screenWidth = MediaQuery.of(context).size.width;
+    double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
     bool isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
@@ -1079,7 +1110,7 @@ double screenWidth = MediaQuery.of(context).size.width;
                           width: 5,
                         ),
                         Text(
-                          "Customer Lead",
+                          "Create New Lead",
                           style: MediaQuery.of(context).size.width > 600
                               ? WidgetSupport.normalblackTextTab()
                               : WidgetSupport.normalblackText(),
@@ -1098,14 +1129,10 @@ double screenWidth = MediaQuery.of(context).size.width;
               Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => FsaCompanyLeadDashBoard(
+                      builder: (context) => AssignedLeads(
                             searchQuery: '',
                           )));
             },
-            // onTap: () async {
-            //   // Trigger the tooltip to show when My Leads is tapped
-            //   await _controller.showTooltip();
-            // },
             child: Column(
               children: [
                 SizedBox(
@@ -1143,7 +1170,7 @@ double screenWidth = MediaQuery.of(context).size.width;
                           width: 5,
                         ),
                         Text(
-                          "Company Lead",
+                          "Assigned Leads",
                           style: MediaQuery.of(context).size.width > 600
                               ? WidgetSupport.normalblackTextTab()
                               : WidgetSupport.normalblackText(),
@@ -1167,7 +1194,6 @@ double screenWidth = MediaQuery.of(context).size.width;
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-
           GestureDetector(
             onTap: () {
               // Trigger the tooltip on tap
@@ -1223,8 +1249,12 @@ double screenWidth = MediaQuery.of(context).size.width;
           // My Leads Box - triggers Tooltip for Training
           GestureDetector(
             onTap: () async {
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => FSAMyTodoList(searchQuery: '',)));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => FSAMyTodoList(
+                            searchQuery: '',
+                          )));
             },
             // onTap: () {
             //   _ToDotooltipKey.currentState?.ensureTooltipVisible();

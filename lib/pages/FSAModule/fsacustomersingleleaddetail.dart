@@ -27,12 +27,11 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
     try {
       final response = await http.get(
         Uri.parse(
-            '${AppConfig.baseUrl}api/leads/${widget.leadId}/'), // Using leadId in the API URL
+            '${AppConfig.baseUrl}/api/leads/${widget.leadId}/'), // Using leadId in the /API URL
         headers: {
           'Authorization': 'Bearer $token',
         },
       );
-
       if (response.statusCode == 200) {
         // Parse the response body as JSON
         setState(() {
@@ -45,7 +44,7 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
         };
         final response2 = await http.post(
           Uri.parse(
-              '${AppConfig.baseUrl}api/users/token-refresh/'), // Using leadId in the API URL
+              '${AppConfig.baseUrl}/api/users/token-refresh/'), // Using leadId in the /API URL
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -382,11 +381,13 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  Text(
-                                    '${leadDetails['address1'] ?? ''}',
-                                    style: WidgetSupport.inputLabel(),
-                                    softWrap: true,
-                                    overflow: TextOverflow.ellipsis,
+                                  Flexible(
+                                    child: Text(
+                                      '${leadDetails['address1'] ?? ''}',
+                                      style: WidgetSupport.inputLabel(),
+                                      softWrap: true,
+                                      textAlign: TextAlign.end,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -403,11 +404,13 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  Text(
-                                    '${leadDetails['address2'] ?? ''}',
-                                    style: WidgetSupport.inputLabel(),
-                                    softWrap: true,
-                                    overflow: TextOverflow.ellipsis,
+                                  Flexible(
+                                    child: Text(
+                                      '${leadDetails['address2'] ?? ''}',
+                                      style: WidgetSupport.inputLabel(),
+                                      softWrap: true,
+                                      textAlign: TextAlign.end,
+                                    ),
                                   ),
                                 ],
                               ),

@@ -6,11 +6,14 @@ import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unosfa/pages/FRModule/leaddashboard.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:intl/intl.dart';
 import 'package:unosfa/pages/config/config.dart';
+
 class LeadGenerate extends StatefulWidget {
   final String edit;
   const LeadGenerate({Key? key, required this.edit}) : super(key: key);
@@ -38,27 +41,32 @@ class _LeadGenerateState extends State<LeadGenerate> {
   final _externalId = TextEditingController();
 
   bool _isLoading = false;
-  late Map<String, String> _ComIdOptions; // Store the fetched companies
-// Initialize as an empty map
-// Initialize as an empty map
-  late List<Map<String, String>> _Tenor = []; // Initialize as an empty map
-// Initialize as an empty map
-  late List<Map<String, String>> _filteredCompanies; // Store filtered companies
-  late Map<String, String> _CityIdOptions; // Store the All city
-  late List<Map<String, String>> _filteredCity; // Store filtered companies
+  late Map<String, String> _ComIdOptions;
+  late Map<String, String> _TenorIdOptions;
 
-  late List<Map<String, String>> _barangay = []; // Initialize as an empty map
+  late List<Map<String, String>> _Tenor = [];
 
+// Initialize as an empty map
+  late List<Map<String, String>> _filteredCompanies;
+  late Map<String, String> _CityIdOptions;
+  late List<Map<String, String>> _filteredCity;
+
+  late List<Map<String, String>> _barangay = [];
+  String? _selectedDocument;
   TextEditingController _searchController = TextEditingController();
   TextEditingController _citysearchController = TextEditingController();
   String? _selectedCompany;
-  bool _isFieldFocused = false; // Track if TextField is clicked
+  bool _isFieldFocused = false;
   String? _selectedGId;
   bool _selectedKycId = false;
   bool _isCityFieldFocused = false;
   final _otherCompanyController = TextEditingController();
   bool _showOtherCompanyField = false;
   String? _cityError;
+  String? _barangayError;
+  String _imageUrl = "";
+  Uint8List? _imageBytes;
+  bool _hasError = false;
 
   final Map<String, String> _gIdOptions = {
     'passport': 'Philippines Passport',
@@ -101,8 +109,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
     _ComIdOptions = {};
     _filteredCity = [];
     _loadData();
-    _loadLocationData();
-    _loadActivityData();
     _loadTenorData();
     _loadDocData();
     _loadCityData();
@@ -228,100 +234,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
     return {'Authorization': 'Bearer $token'};
   }
 
-  Future<void> _loadLocationData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('accessToken');
-    String? refresh = prefs.getString('refreshToken');
-    try {
-      final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}/api/leads/location-types'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        if (data['results'] != null && data['results'] is List) {
-          List<dynamic> location = data['results'];
-
-          Map<String, String> fetchedData = {};
-          for (var item in location) {
-            fetchedData[item['id'].toString()] = item['description'].toString();
-          }
-
-          setState(() {
-            _ComIdOptions = fetchedData;
-            // Initially, show all companies in the list
-          });
-        }
-      } else if (response.statusCode == 401) {
-        Map<String, dynamic> mappedData = {
-          'refresh': refresh,
-        };
-        final response2 = await http.post(
-          Uri.parse(
-              '${AppConfig.baseUrl}/api/users/token-refresh/'), // Using leadId in the API URL
-          body: mappedData,
-        );
-        final data = json.decode(response2.body);
-        await prefs.setBool('isLoggedIn', true);
-        await prefs.setString('accessToken', data['access']);
-        await prefs.setString('refreshToken', data['refresh']);
-        _getAuthHeader();
-      } else {
-        throw Exception('Failed to load location types');
-      }
-    } catch (e) {
-      print('Error: $e');
-    }
-  }
-
-  Future<void> _loadActivityData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('accessToken');
-    String? refresh = prefs.getString('refreshToken');
-    try {
-      final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}/api/leads/activities'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        if (data['results'] != null && data['results'] is List) {
-          List<dynamic> location = data['results'];
-
-          Map<String, String> fetchedData = {};
-          for (var item in location) {
-            fetchedData[item['id'].toString()] = item['description'].toString();
-          }
-
-          setState(() {
-            _ComIdOptions = fetchedData;
-            // Initially, show all companies in the list
-          });
-        }
-      } else if (response.statusCode == 401) {
-        Map<String, dynamic> mappedData = {
-          'refresh': refresh,
-        };
-        final response2 = await http.post(
-          Uri.parse(
-              '${AppConfig.baseUrl}/api/users/token-refresh/'), // Using leadId in the API URL
-          body: mappedData,
-        );
-        final data = json.decode(response2.body);
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('isLoggedIn', true);
-        await prefs.setString('accessToken', data['access']);
-        await prefs.setString('refreshToken', data['refresh']);
-        _loadActivityData();
-      } else {
-        throw Exception('Failed to load location types');
-      }
-    } catch (e) {
-      print('Error: $e');
-    }
-  }
-
   String? _selectedTenor;
   Future<void> _loadTenorData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -383,7 +295,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
         Uri.parse('${AppConfig.baseUrl}/api/leads/document-types'),
         headers: {'Authorization': 'Bearer $token'},
       );
-
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
         if (data['results'] != null && data['results'] is List) {
@@ -414,7 +325,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
         await prefs.setString('refreshToken', data['refresh']);
         _loadDocData();
       } else {
-        throw Exception('Failed to load location types');
+        throw Exception('Failed to load document type');
       }
     } catch (e) {
       print('Error: $e');
@@ -568,7 +479,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
         await prefs.setString('refreshToken', data['refresh']);
         _getAuthHeader();
       } else {
-        throw Exception('Failed to load location types');
+        throw Exception('Failed to load baragay');
       }
     } catch (e) {
       print('Error: $e');
@@ -597,6 +508,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
   }
 
   Future<void> _loadEditLead() async {
+    _isLoading = true;
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
     prefs.getString('refreshToken');
@@ -671,24 +583,13 @@ class _LeadGenerateState extends State<LeadGenerate> {
         for (var item in tenor) {
           fetchedData4[item['id'].toString()] = item['id'].toString();
         }
-        _ComIdOptions = fetchedData4;
+        _TenorIdOptions = fetchedData4;
       }
-
-      final documentresponse = await http.get(
-        Uri.parse('${AppConfig.baseUrl}/api/leads/document-types'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      final Map<String, dynamic> data5 = json.decode(documentresponse.body);
-      if (data5['results'] != null && data5['results'] is List) {
-        List<dynamic> docs = data5['results'];
-
-        Map<String, String> fetchedData5 = {};
-        for (var item in docs) {
-          fetchedData5[item['id'].toString()] = item['id'].toString();
-        }
-        _ComIdOptions = fetchedData5;
+      // final Map<String, dynamic> kycIdata = _gIdOptions;
+      final String? kycIdType = data['kyc_id_type'];
+      if (kycIdType != null && _gIdOptions.containsKey(kycIdType)) {
+        _selectedGId = kycIdType; // Assign the key instead of the value
       }
-
       final barangayresponse = await http.get(
         Uri.parse('${AppConfig.baseUrl}/api/leads/cities/${data['city']}'),
         headers: {'Authorization': 'Bearer $token'},
@@ -750,13 +651,15 @@ class _LeadGenerateState extends State<LeadGenerate> {
           _address2.text = data['address2'];
           _email.text = data['email'];
           _zip.text = data['zip'];
-          _area.text = data['area'];
-          _income.text = numericCommaInputFormatter(data['income']);
-          _loanamount.text =
-              numericCommaInputFormatter(data['loan_amount_requested']);
-          _businessNameController.text = data['business_name'];
+          _area.text = data['area'] ?? '';
+          _income.text =
+              numericCommaInputFormatter(double.parse(data['income']));
+          _loanamount.text = numericCommaInputFormatter(
+              double.parse(data['loan_amount_requested']));
+          _businessNameController.text = data['business_name'] ?? '';
           _location.text = data['location'];
-
+          _externalId.text = data['kyc_id_number'] ?? '';
+          _imageController.text = data['kyc_document'] ?? '';
           for (var entry2 in _ComIdOptions.entries) {
             if (data['location_type'].toString() == entry2.value) {
               break;
@@ -767,14 +670,9 @@ class _LeadGenerateState extends State<LeadGenerate> {
               break;
             }
           }
-          for (var entry4 in _ComIdOptions.entries) {
+          for (var entry4 in _TenorIdOptions.entries) {
             if (data['tenor'].toString() == entry4.value) {
               _selectedTenor = entry4.key;
-              break;
-            }
-          }
-          for (var entry5 in _ComIdOptions.entries) {
-            if (data['document_type'].toString() == entry5.value) {
               break;
             }
           }
@@ -789,13 +687,99 @@ class _LeadGenerateState extends State<LeadGenerate> {
               break;
             }
           }
+          if (data['kyc_document'] != null && data['kyc_document'].isNotEmpty) {
+            _imageUrl = data['kyc_document'];
+            _fetchImage(_imageUrl);
+
+            downloadFile(data['kyc_document']).then((file) {
+              if (file != null) {
+                setState(() {
+                  _image = file; // Now _image is a File object
+                });
+              }
+            });
+          }
+          _isLoading = false;
         });
       } else {
-        throw Exception('Failed to load location types');
+        throw Exception('Failed to load');
       }
     } catch (e) {
       print('Error: $e');
     }
+  }
+
+  Future<void> _fetchImage(String imageUrl) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('accessToken');
+
+    try {
+      final response = await http.get(
+        Uri.parse(imageUrl),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        Uint8List imageBytes = response.bodyBytes;
+        if (imageBytes.isNotEmpty) {
+          setState(() {
+            _imageBytes = imageBytes;
+            _isLoading = false;
+            _hasError = false;
+          });
+          downloadFile(_imageUrl);
+        } else {
+          _handleImageError();
+        }
+      } else {
+        _handleImageError();
+      }
+    } catch (e) {
+      print("Image loading error: $e");
+      _handleImageError();
+    }
+  }
+
+  Future<File?> downloadFile(String imageUrl) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('accessToken'); // Retrieve access token
+
+    if (token == null || token.isEmpty) {
+      print("Error: Missing access token");
+      return null;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse(imageUrl),
+        headers: {
+          'Authorization': 'Bearer $token', // Include authorization header
+        },
+      );
+      if (response.statusCode == 200) {
+        final tempDir = await getTemporaryDirectory();
+        final fileName = Uri.parse(imageUrl).pathSegments.last;
+        final filePath = '${tempDir.path}/$fileName';
+        final _image = File(filePath);
+        await _image.writeAsBytes(response.bodyBytes);
+
+        return _image;
+      } else {
+        print("Failed to download image: ${response.statusCode}");
+        return null;
+      }
+    } catch (e) {
+      print("Error downloading image: $e");
+      return null;
+    }
+  }
+
+  void _handleImageError() {
+    setState(() {
+      _isLoading = false;
+      _hasError = true;
+      _imageBytes = null;
+    });
   }
 
   @override
@@ -836,8 +820,9 @@ class _LeadGenerateState extends State<LeadGenerate> {
                 Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
-                        builder: (context) =>
-                            NavigationPage())); // Go back to the previous screen
+                        builder: (context) => LeadDashBoard(
+                              searchQuery: '',
+                            ))); // Go back to the previous screen
               },
             ),
           ),
@@ -1038,8 +1023,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
                                   }
                                   return null;
                                 },
-                                onChanged: (value) {
-                                },
+                                onChanged: (value) {},
                               ),
                             ),
                             SizedBox(
@@ -1188,52 +1172,10 @@ class _LeadGenerateState extends State<LeadGenerate> {
                               ],
                             ),
                           ),
-                          // Stack(
-                          //   children: [
-                          //     Positioned(
-                          //       child: Material(
-                          //         elevation: 4,
-                          //         borderRadius: BorderRadius.circular(8.0),
-                          //         child: Container(
-                          //           height: 200,
-                          //           decoration: BoxDecoration(
-                          //             color: Colors.white,
-                          //             borderRadius: BorderRadius.circular(8.0),
-                          //           ),
-                          //           child: ListView.builder(
-                          //             itemCount: _filteredCompanies.length,
-                          //             itemBuilder: (context, index) {
-                          //               return ListTile(
-                          //                 title: Text(_filteredCompanies[index]
-                          //                     ['company_name']!),
-                          //                 onTap: () {
-                          //                   // Set the selected company
-                          //                   setState(() {
-                          //                     _selectedCompany =
-                          //                         _filteredCompanies[index]
-                          //                             ['id'];
-                          //                     _searchController.text =
-                          //                         _filteredCompanies[index]
-                          //                             ['company_name']!;
-                          //                     _isFieldFocused =
-                          //                         false; // Dismiss the suggestions after selection
-                          //                   });
-                          //                 },
-                          //               );
-                          //             },
-                          //           ),
-                          //         ),
-                          //       ),
-                          //     ),
-                          //   ],
-                          // ),
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
-                          _buildBarangayDropdownField(
-                            "Select Barangay",
-                            isRequired: false,
-                          ),
+                          _buildBarangayDropdownField(),
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
@@ -1249,27 +1191,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
-                          // _buildTextField(
-                          //   _area,
-                          //   "Area",
-                          //   'Please Enter Area',
-                          //   'rate',
-                          //   isNumeric: false,
-                          //   icon: FontAwesomeIcons.mapLocation,
-                          //   allowSpaces: true,
-                          // ),
-                          // SizedBox(
-                          //   height: MediaQuery.of(context).size.height * 0.04,
-                          // ),
-                          // _buildLocTypeDropdownField(),
-                          // SizedBox(
-                          //   height: MediaQuery.of(context).size.height * 0.04,
-                          // ),
-                          // _buildactivityDropdownField(),
-
-                          // SizedBox(
-                          //   height: MediaQuery.of(context).size.height * 0.04,
-                          // ),
                           _buildTextField(
                             _income,
                             "Monthly Income",
@@ -1301,10 +1222,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.04,
                           ),
-                          // _buildDocTypeDropdownField(),
-                          // SizedBox(
-                          //   height: MediaQuery.of(context).size.height * 0.04,
-                          // ),
                           _buildTextField(
                             _email,
                             "Contact Person Email ID",
@@ -1344,17 +1261,19 @@ class _LeadGenerateState extends State<LeadGenerate> {
                               children: [
                                 ElevatedButton(
                                   onPressed: () {
-                                   setState(() {
+                                    setState(() {
                                       if (_citysearchController.text.isEmpty) {
-                                        _cityError =
-                                            "City name is required"; 
+                                        _cityError = "City name is required";
                                       } else {
                                         _cityError = null;
                                       }
-                                       if (_formKey.currentState!.validate()) {
-                                          leadSubmit();
-                                        }
-                                   });
+                                      if (_selectedBarangayType == null) {
+                                        _barangayError = "Barangay is required";
+                                      }
+                                      if (_formKey.currentState!.validate()) {
+                                        leadSubmit();
+                                      }
+                                    });
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.transparent,
@@ -1403,7 +1322,9 @@ class _LeadGenerateState extends State<LeadGenerate> {
   Future<void> leadSubmit() async {
     // Check if the form is valid
     if (_formKey.currentState!.validate()) {
-      // Collect form data
+      setState(() {
+        _isLoading = true;
+      });
       String first_name = _fname.text.trim();
       String middle_name = _mname.text.trim();
       String last_name = _lname.text.trim();
@@ -1428,19 +1349,18 @@ class _LeadGenerateState extends State<LeadGenerate> {
           ? _businessNameController.text.trim()
           : '';
       String tenor = _selectedTenor!;
-      String document_type = "";
-      // String document_type = _selectedDocument!;
+      String document_type = _selectedDocument ?? '';
       String finalOtherCompanyName = _selectedCompany == 'others'
           ? _otherCompanyController.text.trim()
-          : (_selectedCompany ?? '');
+          : '';
       String company =
-          _selectedCompany?.isNotEmpty ?? false ? _selectedCompany! : '';
+          _selectedCompany == 'others' ? '' : (_selectedCompany ?? '');
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString('accessToken');
       String? refresh = prefs.getString('refreshToken');
       String selectedGId = _selectedGId ?? "";
       String externalId = _externalId.text.trim();
-      String barangay = _selectedBarangayType!;
+      String barangay = _selectedBarangayType ?? '';
       // Map the collected data to be sent in the request body
       Map<String, String> mappedData = {
         'company': company,
@@ -1471,93 +1391,156 @@ class _LeadGenerateState extends State<LeadGenerate> {
         'kyc_id_number': externalId,
         'others_company': finalOtherCompanyName
       };
-      setState(() {
-        _isLoading = true;
-      });
-      try {
-        var url = Uri.parse('${AppConfig.baseUrl}/api/leads/');
+      if (widget.edit == "") {
+        try {
+          var url = Uri.parse('${AppConfig.baseUrl}/api/leads/');
 
-        var request = http.MultipartRequest('POST', url)
-          ..headers['Authorization'] = 'Bearer $token'
-          ..fields.addAll(mappedData);
-        if (_image != null) {
-          request.files.add(await http.MultipartFile.fromPath(
-            'kyc_document',
-            _image!.path,
-          ));
-        }
-        http.Response response =
-            await http.Response.fromStream(await request.send());
-        if (response.statusCode == 201) {
-          // final data = json.decode(response.body);
-          // Navigator.pushReplacement(
-          //   context,
-          //   MaterialPageRoute(
-          //     builder: (context) => Loancalculation(
-          //       id: data['id'],
-          //       loanAmountRequested: data['loan_amount_requested'],
-          //       tenorDescription: data['tenor_description'],
-          //       monthlyInstallment: data['monthly_installment'],
-          //       interest: data['interest'],
-          //     ),
-          //   ),
-          // );
-          json.decode(response.body);
-          showDialog(
-            context: context,
-            barrierDismissible: true, // Allow dismissing by clicking outside
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text('Success'),
-                content: Text('Lead submitted successfully!'),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => NavigationPage(),
-                        ),
-                      );
-                    },
-                    child: Text('OK'),
-                  ),
-                ],
-              );
-            },
-          );
-        } else if (response.statusCode == 401) {
-          setState(() {
-            _isLoading = false;
-          });
-          // Refresh token
-          Map<String, dynamic> refreshData = {'refresh': refresh};
-          final response2 = await http.post(
-            Uri.parse('${AppConfig.baseUrl}/api/users/token-refresh/'),
-            body: refreshData,
-          );
-          final data = json.decode(response2.body);
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('isLoggedIn', true);
-          await prefs.setString('accessToken', data['access']);
-          await prefs.setString('refreshToken', data['refresh']);
-          leadSubmit(); // Retry the submission
-        } else {
-          // Handle API errors
+          var request = http.MultipartRequest('POST', url)
+            ..headers['Authorization'] = 'Bearer $token'
+            ..fields.addAll(mappedData);
+          if (_image != null) {
+            request.files.add(await http.MultipartFile.fromPath(
+              'kyc_document',
+              _image!.path,
+            ));
+          }
+          http.Response response =
+              await http.Response.fromStream(await request.send());
+          if (response.statusCode == 201) {
+            json.decode(response.body);
+            showDialog(
+              context: context,
+              barrierDismissible: true, // Allow dismissing by clicking outside
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  title: Text('Success'),
+                  content: Text('Lead submitted successfully!'),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => NavigationPage(),
+                          ),
+                        );
+                      },
+                      child: Text('OK'),
+                    ),
+                  ],
+                );
+              },
+            );
+          } else if (response.statusCode == 401) {
+            setState(() {
+              _isLoading = false;
+            });
+            // Refresh token
+            Map<String, dynamic> refreshData = {'refresh': refresh};
+            final response2 = await http.post(
+              Uri.parse('${AppConfig.baseUrl}/api/users/token-refresh/'),
+              body: refreshData,
+            );
+            final data = json.decode(response2.body);
+            SharedPreferences prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('isLoggedIn', true);
+            await prefs.setString('accessToken', data['access']);
+            await prefs.setString('refreshToken', data['refresh']);
+            leadSubmit(); // Retry the submission
+          } else {
+            // Handle API errors
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Failed to submit lead. Error: ${response.body}"),
+              ),
+            );
+          }
+        } catch (e) {
+          // Handle network errors
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text("Failed to submit lead. Error: ${response.body}"),
+              content: Text("An error occurred: $e"),
             ),
           );
         }
-      } catch (e) {
-        // Handle network errors
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("An error occurred: $e"),
-          ),
-        );
+      } else {
+        try {
+          var url = Uri.parse('${AppConfig.baseUrl}/api/leads/${widget.edit}/');
+          var request = http.MultipartRequest('put', url)
+            ..headers['Authorization'] = 'Bearer $token'
+            ..fields.addAll(mappedData);
+
+          if (_image != null) {
+            request.files.add(
+              await http.MultipartFile.fromPath('kyc_document', _image!.path),
+            );
+          } else if (_imageUrl != null && _imageUrl!.isNotEmpty) {
+            request.fields['kyc_document'] =
+                _imageUrl!; // Send existing image URL if no new image is picked
+          }
+          http.Response response =
+              await http.Response.fromStream(await request.send());
+          if (response.statusCode == 200) {
+            json.decode(response.body);
+            showDialog(
+              context: context,
+              barrierDismissible: true, // Allow dismissing by clicking outside
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  title: Text('Success'),
+                  content: Text('Lead Updated successfully!'),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => NavigationPage(),
+                          ),
+                        );
+                      },
+                      child: Text('OK'),
+                    ),
+                  ],
+                );
+              },
+            );
+          } else if (response.statusCode == 401) {
+            setState(() {
+              _isLoading = false;
+            });
+            Map<String, dynamic> mappedData = {
+              'refresh': refresh,
+            };
+            final response2 = await http.post(
+              Uri.parse('${AppConfig.baseUrl}/api/users/token-refresh/'),
+              body: mappedData,
+            );
+            final data = json.decode(response2.body);
+            SharedPreferences prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('isLoggedIn', true);
+            await prefs.setString('accessToken', data['access']);
+            await prefs.setString('refreshToken', data['refresh']);
+            leadSubmit();
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Failed to update lead. Error: ${response.body}"),
+              ),
+            );
+          }
+        } catch (e) {
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("An error occurred: $e"),
+            ),
+          );
+        }
       }
     } else {
       // Show a snackbar or other UI indication if validation fails
@@ -1617,6 +1600,13 @@ class _LeadGenerateState extends State<LeadGenerate> {
         if (isRequired && (value == null || value.trim().isEmpty)) {
           return validationMessage;
         }
+        if (isEmail && value != null && value.isNotEmpty) {
+          final emailRegex = RegExp(
+              r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'); // Valid email format
+          if (!emailRegex.hasMatch(value)) {
+            return 'Please enter a valid email address';
+          }
+        }
 
         if (isNumeric && value != null && value.isNotEmpty) {
           final cleanedValue = value.replaceAll(',', '');
@@ -1628,6 +1618,20 @@ class _LeadGenerateState extends State<LeadGenerate> {
         if (isBlankAlphabetic && value != null && value.isNotEmpty) {
           if (!RegExp(r'^[a-zA-Z]*$').hasMatch(value)) {
             return 'Only alphabets are allowed';
+          }
+        }
+        if (isPhoneNumber) {
+          if (value == null || value.isEmpty) {
+            return validationMessage;
+          }
+          if (value.length != 12) {
+            return 'Phone number must be exactly 12 digits';
+          }
+          if (!RegExp(r'^\d+$').hasMatch(value)) {
+            return 'Phone number must contain only digits';
+          }
+          if (!value.startsWith('63')) {
+            return 'Phone number must start with "63"';
           }
         }
 
@@ -1655,41 +1659,25 @@ class _LeadGenerateState extends State<LeadGenerate> {
     String validationKey, {
     IconData icon = FontAwesomeIcons.solidCircleUser,
     bool obscureText = false,
-    bool isEmail = false,
-    bool isPhoneNumber = false,
-    bool isAlphabetic = false,
     bool isNumeric = false,
-    bool isZipNumber = false,
-    bool isRequired = true, // Add a flag to make the field optional
-    bool allowSpaces = false,
+    bool isRequired = true,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
-      keyboardType: isPhoneNumber
-          ? TextInputType.phone
-          : isEmail
-              ? TextInputType.emailAddress
-              : isNumeric || isZipNumber
-                  ? TextInputType.number
-                  : TextInputType.text,
-      inputFormatters: [
-        if (isNumeric) NumericCommaInputFormatter(),
-        if (isZipNumber) FilteringTextInputFormatter.digitsOnly,
-        if (isPhoneNumber)
-          LengthLimitingTextInputFormatter(12), // Limit to 12 digits
-        if (isAlphabetic)
-          FilteringTextInputFormatter.allow(
-            allowSpaces
-                ? RegExp(r'^[a-zA-Z\s]+$') // Allow alphabets and spaces
-                : RegExp(r'^[a-zA-Z]+$'), // Allow alphabets only (no spaces)
-          ),
-      ],
+      keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
       validator: (_selectedKycId) {
         if (_selectedKycId == "" && _selectedGId != null) {
           return 'Please Enter Id'; // Validation message if KYC ID is selected but no image uploaded
         }
-
+        if (_selectedKycId != null && _selectedKycId!.isNotEmpty) {
+          if (_selectedKycId!.length < 6) {
+            return 'ID must be at least 6 characters long';
+          }
+          if (!RegExp(r'^[a-zA-Z0-9]+$').hasMatch(_selectedKycId)) {
+            return 'Special characters are not allowed';
+          }
+        }
         return null;
       },
       decoration: InputDecoration(
@@ -1786,50 +1774,56 @@ class _LeadGenerateState extends State<LeadGenerate> {
     );
   }
 
-   Widget _buildBarangayDropdownField(
-    String validationMessage,
-    {
-      bool isRequired = true,
-    }
-  ) {
-    return DropdownSearch<String>(
-      popupProps: PopupProps.menu(
-        showSearchBox: false,
-        fit: FlexFit.loose,
-      ),
-      items: _barangay.map((e) => e['barangay_name'].toString()).toList(),
-      dropdownDecoratorProps: DropDownDecoratorProps(
-        dropdownSearchDecoration: InputDecoration(
-          hintText: "Select Barangay",
-          errorText: "Please Select Barangay",
-          hintStyle: WidgetSupport.inputLabel(),
-        ),
-      ),
-      selectedItem: _barangay.isNotEmpty
-          ? _barangay.firstWhere(
-              (e) => e['id'] == _selectedBarangayType,
-              orElse: () => {'barangay_name': "Select Barangay"},
-            )['barangay_name']
-          : "Select Barangay",
-      onChanged: (String? newValue) {
-        setState(() {
-          final selectedBarangay = _barangay.firstWhere(
-            (e) => e['barangay_name'] == newValue,
-          );
-          _selectedBarangayType = selectedBarangay['id']?.toString();
-        });
-        FocusScope.of(context).requestFocus(FocusNode());
-      },
+  Widget _buildBarangayDropdownField() {
+    return FormField<String>(
       validator: (value) {
-        if (value == null || value.isEmpty) {
+        if (_selectedBarangayType == null || _selectedBarangayType!.isEmpty) {
           return 'Please select Barangay';
         }
         return null;
       },
-      dropdownBuilder: (BuildContext context, String? selectedItem) {
-        return Text(
-          selectedItem ?? "Select Barangay",
-          style: WidgetSupport.dropDownText(),
+      builder: (FormFieldState<String> fieldState) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DropdownSearch<String>(
+              popupProps: PopupProps.menu(
+                showSearchBox: false,
+                fit: FlexFit.loose,
+              ),
+              items:
+                  _barangay.map((e) => e['barangay_name'].toString()).toList(),
+              dropdownDecoratorProps: DropDownDecoratorProps(
+                dropdownSearchDecoration: InputDecoration(
+                  hintText: "Select Barangay",
+                  hintStyle: WidgetSupport.inputLabel(),
+                  errorText: fieldState.errorText, // Display validation error
+                ),
+              ),
+              selectedItem: _barangay.isNotEmpty
+                  ? _barangay.firstWhere(
+                      (e) => e['id'] == _selectedBarangayType,
+                      orElse: () => {'barangay_name': "Select Barangay"},
+                    )['barangay_name']
+                  : "Select Barangay",
+              onChanged: (String? newValue) {
+                setState(() {
+                  final selectedBarangay = _barangay.firstWhere(
+                    (e) => e['barangay_name'] == newValue,
+                  );
+                  _selectedBarangayType = selectedBarangay['id']?.toString();
+                  fieldState.didChange(newValue); // Notify validation change
+                });
+                FocusScope.of(context).requestFocus(FocusNode());
+              },
+              dropdownBuilder: (BuildContext context, String? selectedItem) {
+                return Text(
+                  selectedItem ?? "Select Barangay",
+                  style: WidgetSupport.dropDownText(),
+                );
+              },
+            ),
+          ],
         );
       },
     );
@@ -1942,34 +1936,14 @@ class _LeadGenerateState extends State<LeadGenerate> {
                       actions: <Widget>[
                         TextButton(
                           onPressed: () async {
-                            final ImagePicker picker = ImagePicker();
-                            final XFile? image = await picker.pickImage(
-                                source: ImageSource.camera); // Open camera
-                            if (image != null) {
-                              setState(() {
-                                _image =
-                                    File(image.path); // Save the selected image
-                                controller.text = image
-                                    .path; // Update the controller with the image path
-                              });
-                            }
+                            await _pickImage(ImageSource.camera, controller);
                             Navigator.of(context).pop(); // Close dialog
                           },
                           child: const Text("Camera"),
                         ),
                         TextButton(
                           onPressed: () async {
-                            final ImagePicker picker = ImagePicker();
-                            final XFile? image = await picker.pickImage(
-                                source: ImageSource.gallery); // Open gallery
-                            if (image != null) {
-                              setState(() {
-                                _image =
-                                    File(image.path); // Save the selected image
-                                controller.text = image
-                                    .path; // Update the controller with the image path
-                              });
-                            }
+                            await _pickImage(ImageSource.gallery, controller);
                             Navigator.of(context).pop(); // Close dialog
                           },
                           child: const Text("Gallery"),
@@ -1986,27 +1960,45 @@ class _LeadGenerateState extends State<LeadGenerate> {
               ),
             ),
           ),
-          validator: (_selectedKycId) {
-            if (_selectedGId != null && _image == null) {
-              return 'Please upload an image'; // Validation message if KYC ID is selected but no image uploaded
+          validator: (_) {
+            if (_selectedGId != null &&
+                _image == null &&
+                (_imageUrl == null || _imageUrl!.isEmpty)) {
+              return 'Please upload an image'; // Show error only if no image is available at all
             }
             return null;
           },
         ),
-        if (_image != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 16.0),
-            child: ClipOval(
-              child: Image.file(
-                _image!,
-                height: 110,
-                width: 110,
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
+        Padding(
+          padding: const EdgeInsets.only(top: 16.0),
+          child: _imageBytes != null
+              ? Image.memory(
+                  _imageBytes!,
+                  width: 300,
+                  height: 150,
+                  fit: BoxFit.fill,
+                )
+              : Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+        ),
       ],
     );
+  }
+
+// Function to handle image selection and replacement
+  Future<void> _pickImage(
+      ImageSource source, TextEditingController controller) async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: source);
+
+    if (image != null) {
+      final Uint8List imageBytes = await File(image.path).readAsBytes();
+
+      setState(() {
+        _image = File(image.path); // Replace with new image
+        _imageBytes = imageBytes; // Update UI with new image bytes
+        _imageController.text = image.path;
+      });
+    }
   }
 }
 

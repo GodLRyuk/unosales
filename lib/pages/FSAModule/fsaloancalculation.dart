@@ -417,6 +417,7 @@ class _FsaLoancalculationState extends State<FsaLoancalculation> {
                 .firstWhere((entry) => entry.value == newValue)
                 .key;
             _loadDependentData(_selectedDispositionCode!);
+            _selectedDependentData=null;
           }
         });
       },
@@ -460,12 +461,6 @@ class _FsaLoancalculationState extends State<FsaLoancalculation> {
           }
         });
       },
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Sub Disposition Code';
-        }
-        return null;
-      },
       dropdownBuilder: (BuildContext context, String? selectedItem) {
         return Text(
           selectedItem ?? "Sub Disposition Code",
@@ -482,7 +477,9 @@ class _FsaLoancalculationState extends State<FsaLoancalculation> {
 
     if (_formKey.currentState!.validate()) {
       int disposition_code = int.tryParse(_selectedDispositionCode!) ?? 0;
-      int sub_disposition_code = int.tryParse(_selectedDependentData!) ?? 0;
+      // int sub_disposition_code = int.tryParse(_selectedDependentData!) ?? 0;
+       int? sub_disposition_code = _selectedDependentData != null ? int.tryParse(_selectedDependentData!) : null;
+
 
       Map<String, dynamic> mappedData = {
         'disposition_code': disposition_code,

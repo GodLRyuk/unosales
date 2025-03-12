@@ -1,24 +1,29 @@
 import 'dart:convert'; // for json.decode
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/FSAModule/fsacompanyleaddashboard.dart';
+import 'package:unosfa/pages/FSAModule/fsaleaddashboard.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:unosfa/pages/config/config.dart';
 
-class FsaSingleLead extends StatefulWidget {
+class FsaCompanySingleLead extends StatefulWidget {
   final String leadId; // Lead ID passed from the previous screen
 
-  const FsaSingleLead({super.key, required this.leadId});
+  const FsaCompanySingleLead({super.key, required this.leadId});
 
   @override
-  State<FsaSingleLead> createState() => _FsaSingleLeadState();
+  State<FsaCompanySingleLead> createState() => _FsaCompanySingleLeadState();
 }
 
-class _FsaSingleLeadState extends State<FsaSingleLead> {
+class _FsaCompanySingleLeadState extends State<FsaCompanySingleLead> {
   bool isLoading = true;
   Map<String, dynamic> leadDetails = {}; // To store the lead details
-
+  Uint8List? _imageBytes;
+  bool _hasError = false;
+  File? _image;
+  bool _isLoading = false;
   // Function to fetch lead details by ID
   Future<void> fetchLeadDetails() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -27,17 +32,17 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
     try {
       final response = await http.get(
         Uri.parse(
-            '${AppConfig.baseUrl}api/leads/company-leads/${widget.leadId}/'), // Using leadId in the API URL
+            '${AppConfig.baseUrl}/api/leads/company-leads/${widget.leadId}/'), // Using leadId in the API URL
         headers: {
           'Authorization': 'Bearer $token',
         },
       );
-
       if (response.statusCode == 200) {
         // Parse the response body as JSON
         setState(() {
           leadDetails = json.decode(response.body);
           isLoading = false; // Data loaded
+          _fetchImage(leadDetails['kyc_document']);
         });
       } else if (response.statusCode == 401) {
         Map<String, dynamic> mappedData = {
@@ -45,7 +50,7 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
         };
         final response2 = await http.post(
           Uri.parse(
-              '${AppConfig.baseUrl}api/users/token-refresh/'), // Using leadId in the API URL
+              '${AppConfig.baseUrl}/api/users/token-refresh/'), // Using leadId in the API URL
           body: mappedData,
         );
         final data = json.decode(response2.body);
@@ -68,6 +73,46 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
   void initState() {
     super.initState();
     fetchLeadDetails(); // Fetch lead details when the screen is loaded
+  }
+
+  Future<void> _fetchImage(String imageUrl) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('accessToken');
+
+    try {
+      final response = await http.get(
+        Uri.parse(imageUrl),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        Uint8List imageBytes = response.bodyBytes;
+        if (imageBytes.isNotEmpty) {
+          setState(() {
+            _imageBytes = imageBytes;
+            _isLoading = false;
+            _hasError = false;
+          });
+        } else {
+          _handleImageError();
+        }
+      } else {
+        _handleImageError();
+      }
+    } catch (e) {
+      print("Image loading error: $e");
+      _handleImageError();
+    }
+  }
+
+  void _handleImageError() {
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+        _imageBytes = null;
+      });
+    }
   }
 
   @override
@@ -108,7 +153,7 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                 Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => FsaCompanyLeadDashBoard(
+                        builder: (context) => FsaLeadDashBoard(
                               searchQuery: '',
                             ))); // Go back to the previous screen
               },
@@ -528,7 +573,7 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    leadDetails['kyc_id_type'].toUpperCase(),
+                                    leadDetails['kyc_id_type'] ?? '',
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
@@ -545,53 +590,25 @@ class _FsaSingleLeadState extends State<FsaSingleLead> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['kyc_id_number'].toUpperCase() ?? ''}',
+                                    '${leadDetails['kyc_id_number'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'KYC Document:',
-                                    style: WidgetSupport.inputLabel(),
-                                    softWrap: true,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  leadDetails['kyc_document'] != null &&
-                                          leadDetails['kyc_document'].isNotEmpty
-                                      ? Image.network(
-                                          leadDetails[
-                                              'kyc_document'], // If it's a URL
-                                          height:
-                                              50, // Adjust the height as needed
-                                          width:
-                                              50, // Adjust the width as needed
-                                          fit: BoxFit
-                                              .cover, // Adjust the fit as needed
-                                        )
-                                      : leadDetails['kyc_document'] is String &&
-                                              leadDetails['kyc_document']
-                                                  .startsWith('assets/')
-                                          ? Image.asset(
-                                              leadDetails[
-                                                  'kyc_document'], // If it's a local asset path
-                                              height:
-                                                  50, // Adjust the height as needed
-                                              width:
-                                                  50, // Adjust the width as needed
-                                              fit: BoxFit
-                                                  .cover, // Adjust the fit as needed
-                                            )
-                                          : Text(
-                                              '${leadDetails['kyc_document'].toUpperCase() ?? ''}',
-                                              style: WidgetSupport.inputLabel(),
-                                            ),
-                                ],
+                              Padding(
+                                padding: const EdgeInsets.only(top: 16.0),
+                                child: _imageBytes != null
+                                    ? Image.memory(
+                                        _imageBytes!,
+                                        width: 300,
+                                        height: 150,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Icon(Icons.image_not_supported,
+                                        size: 50, color: Colors.grey),
                               ),
+                              const SizedBox(height: 1),
                             ],
                           ),
                         ),

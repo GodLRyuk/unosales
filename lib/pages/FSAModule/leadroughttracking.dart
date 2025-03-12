@@ -38,7 +38,7 @@ class _FSAOSMRouteTrackingState extends State<FSAOSMRouteTracking> {
     _mapController = MapController();
     getCurrentLocation();
     fetchLeadDetails();
-    trackUserMovement();
+    // trackUserMovement();
     requestLocationPermission();
   }
 
@@ -70,7 +70,7 @@ class _FSAOSMRouteTrackingState extends State<FSAOSMRouteTracking> {
     try {
       final response = await http.get(
         Uri.parse(
-            '${AppConfig.baseUrl}/api/leads/${widget.leadId}/'), // Using leadId in the API URL
+            '${AppConfig.baseUrl}/api/agents/todos/${widget.leadId}/'), // Using leadId in the API URL
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -80,8 +80,9 @@ class _FSAOSMRouteTrackingState extends State<FSAOSMRouteTracking> {
         setState(() {
           leadDetails = json.decode(response.body);
           isLoading = false; // Data loaded
-          getLatLngFromAddress(
-              leadDetails['address1'] + leadDetails['address2']);
+          getLatLngFromAddress(leadDetails['perm_city'] +
+              leadDetails['perm_state'] +
+              leadDetails['perm_street']);
         });
       } else if (response.statusCode == 401) {
         Map<String, dynamic> mappedData = {
@@ -155,57 +156,7 @@ class _FSAOSMRouteTrackingState extends State<FSAOSMRouteTracking> {
     }
   }
 
-  // Future<void> getCurrentLocation() async {
-  //   print("current position ");
-  //   try {
-  //     Position position = await Geolocator.getCurrentPosition(
-  //       desiredAccuracy: LocationAccuracy.high,
-  //     );
-  //     setState(() {
-  //       _currentPosition = LatLng(position.latitude, position.longitude);
-  //       print("Current Posi: $_currentPosition");
-  //     });
-  //     _mapController.move(_currentPosition, 15.0);
-  //   } catch (e) {
-  //     print("Error getting location: $e");
-  //   }
-  // }
-
-  // void trackUserMovement() {
-  //   _positionStream?.cancel(); // Cancel any existing stream
-  //   _positionStream = Geolocator.getPositionStream(
-  //     locationSettings: LocationSettings(
-  //       accuracy: LocationAccuracy.high,
-  //       distanceFilter: 1, // Update on every 1 meter movement
-  //     ),
-  //   ).listen((Position position) {
-  //     if (mounted) {
-  //       LatLng newPosition = LatLng(position.latitude, position.longitude);
-
-  //       // Add the new position only if it differs significantly
-  //       if (_routePoints.isEmpty ||
-  //           Geolocator.distanceBetween(
-  //                   _routePoints.last.latitude,
-  //                   _routePoints.last.longitude,
-  //                   newPosition.latitude,
-  //                   newPosition.longitude) >=
-  //               1) {
-  //         setState(() {
-  //           _currentPosition = newPosition;
-  //           _routePoints.add(newPosition);
-
-  //         });
-
-  //         _mapController.move(newPosition, 15.0);
-  //       }
-  //     }
-  //   }, onError: (error) {
-  //     print("Error in position stream: $error");
-  //   });
-  // }
-
   void trackUserMovement() {
-    print("tracking------------------");
     _positionStream?.cancel(); // Cancel any existing stream
 
     _positionStream = Geolocator.getPositionStream(
@@ -248,7 +199,6 @@ class _FSAOSMRouteTrackingState extends State<FSAOSMRouteTracking> {
             if (!_routePoints.contains(closestPoint)) {
               _routePoints.add(closestPoint);
             }
-            print(_routePoints);
           });
 
           _mapController.move(newPosition, 15.0);
@@ -288,9 +238,11 @@ class _FSAOSMRouteTrackingState extends State<FSAOSMRouteTracking> {
     } catch (e) {
       print("Error fetching route: $e");
     }
-    setState(() {
-      isRouteLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        isRouteLoading = false;
+      });
+    }
   }
 
   void openGoogleMaps() async {
@@ -447,185 +399,207 @@ class _FSAOSMRouteTrackingState extends State<FSAOSMRouteTracking> {
               flex: 6,
               child: Column(
                 children: [
-                  Expanded(
-                    flex: 6,
-                    child: FlutterMap(
-                      mapController: _mapController,
-                      options: MapOptions(
-                        center: _currentPosition,
-                        zoom: 15,
-                      ),
-                      children: [
-                        TileLayer(
-                          urlTemplate:
-                              "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                          subdomains: ['a', 'b', 'c'],
-                        ),
-                        PolylineLayer(
-                          polylines: [
-                            // This is the pre-fetched route from OSRM
-                            Polyline(
-                              points: _routePoints,
-                              strokeWidth: 4.0,
-                              color: Colors.blue,
+                  Stack(
+                    children: [
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height *
+                            0.58, // Set height
+                        child: FlutterMap(
+                          mapController: _mapController,
+                          options: MapOptions(
+                            center: _currentPosition,
+                            zoom: 15,
+                          ),
+                          children: [
+                            TileLayer(
+                              urlTemplate:
+                                  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                              subdomains: ['a', 'b', 'c'],
                             ),
-                            // This is the dynamically updated movement path
-                            Polyline(
-                              points: _movementPath,
-                              strokeWidth: 4.0,
-                              color: Colors
-                                  .red, // Use a different color for live movement tracking
+                            PolylineLayer(
+                              polylines: [
+                                Polyline(
+                                  points: _routePoints,
+                                  strokeWidth: 4.0,
+                                  color: Colors.blue,
+                                ),
+                                Polyline(
+                                  points: _movementPath,
+                                  strokeWidth: 4.0,
+                                  color: Colors.red,
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        MarkerLayer(
-                          markers: [
-                            Marker(
-                              width: 40.0,
-                              height: 40.0,
-                              point: _currentPosition,
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Container(
-                                    width: 30,
-                                    height: 30,
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.withOpacity(0.3),
-                                      shape: BoxShape.circle,
-                                    ),
+                            MarkerLayer(
+                              markers: [
+                                Marker(
+                                  width: 40.0,
+                                  height: 40.0,
+                                  point: _currentPosition,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      Container(
+                                        width: 30,
+                                        height: 30,
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue.withOpacity(0.3),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      Icon(Icons.circle,
+                                          color: Colors.blue, size: 20),
+                                    ],
                                   ),
-                                  Icon(Icons.circle,
-                                      color: Colors.blue, size: 20),
-                                ],
-                              ),
-                            ),
-                            Marker(
-                              width: 40.0,
-                              height: 40.0,
-                              point: _destination,
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Container(
-                                    width: 30,
-                                    height: 30,
-                                    decoration: BoxDecoration(
-                                      color:
-                                          Colors.greenAccent.withOpacity(0.3),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  Icon(Icons.circle,
-                                      color: Colors.green, size: 20),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (isRouteLoading)
-                          Center(child: CircularProgressIndicator()),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    flex: 4,
-                    child: Container(
-                      padding: const EdgeInsets.all(16.0),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(20),
-                          topRight: Radius.circular(20),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: 5,
-                            spreadRadius: 2,
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Lead Details:",
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            "Name: ${leadDetails['first_name']} ${leadDetails['middle_name']} ${leadDetails['last_name']}",
-                            style: TextStyle(
-                                fontSize: 16, color: Color(0xFF2C2B2B)),
-                          ),
-                          Text(
-                            "Phone Number: +${leadDetails['phone_number']} ",
-                            style: TextStyle(
-                                fontSize: 16, color: Color(0xFF2C2B2B)),
-                          ),
-                          Text(
-                            "Zip: ${leadDetails['zip']} ",
-                            style: TextStyle(
-                                fontSize: 16, color: Color(0xFF2C2B2B)),
-                          ),
-                          Text(
-                            "Location: ${leadDetails['location']} ",
-                            style: TextStyle(
-                                fontSize: 16, color: Color(0xFF2C2B2B)),
-                          ),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.01,
-                          ),
-                          Text(
-                            "Destination:",
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            "Address: ${leadDetails['address1']} ${leadDetails['address2']}",
-                            style: TextStyle(
-                                fontSize: 16, color: Color(0xFF2C2B2B)),
-                          ),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.02,
-                          ),
-                          Container(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                ElevatedButton(
-                                  onPressed: () {
-                                    if (isTracking) {
-                                      stopTracking();
-                                    } else {
-                                      startTracking();
-                                      openGoogleMaps();
-                                    }
-                                  },
-                                  child: Text(
-                                    isTracking
-                                        ? "Stop Tracking"
-                                        : "Going For Lead",
-                                    style: WidgetSupport.LoginButtonTextColor(),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.transparent,
-                                    shadowColor: Colors.transparent,
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal:
-                                          MediaQuery.of(context).size.width *
-                                              0.02,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                    ),
+                                ),
+                                Marker(
+                                  width: 40.0,
+                                  height: 40.0,
+                                  point: _destination,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      Container(
+                                        width: 30,
+                                        height: 30,
+                                        decoration: BoxDecoration(
+                                          color: Colors.greenAccent
+                                              .withOpacity(0.3),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      Icon(Icons.circle,
+                                          color: Colors.green, size: 20),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
+                            if (isRouteLoading)
+                              Center(child: CircularProgressIndicator()),
+                          ],
+                        ),
+                      ),
+
+                      // Floating Recenter Button
+                      Positioned(
+                        bottom: 16,
+                        right: 16,
+                        child: FloatingActionButton(
+                          onPressed: () {
+                            _mapController.move(_currentPosition, 15);
+                          },
+                          backgroundColor: Colors.white,
+                          child: Icon(Icons.my_location, color: Colors.blue),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Expanded(
+                    flex: 4,
+                    child: SingleChildScrollView(
+                      child: Container(
+                        height: MediaQuery.of(context).size.height * 0.4,
+                        padding: const EdgeInsets.all(15.0),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border(
+                            top: BorderSide(
+                                color: Color(0xFF640D78), width: 1.0),
+                            bottom: BorderSide(
+                                color: Color(0xFF640D78), width: 1.0),
+                            left: BorderSide(
+                                color: Color(0xFF640D78), width: 5.0),
+                            right: BorderSide(
+                                color: Color(0xFF640D78), width: 1.0),
                           ),
-                        ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Lead Details:",
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              "Name: ${leadDetails['first_name']} ${leadDetails['middle_name']} ${leadDetails['last_name']}"
+                                  .toUpperCase(),
+                              style: TextStyle(
+                                  fontSize: 16, color: Color(0xFF2C2B2B)),
+                            ),
+                            Text(
+                              "PHONE NUMBER: ${leadDetails['mobile_phone']} ",
+                              style: TextStyle(
+                                  fontSize: 16, color: Color(0xFF2C2B2B)),
+                            ),
+                            Text(
+                              "ZIP: ${leadDetails['perm_zip_code']} ",
+                              style: TextStyle(
+                                  fontSize: 16, color: Color(0xFF2C2B2B)),
+                            ),
+                            Text(
+                              "BARANGAY: ${leadDetails['perm_barangay']}"
+                                  .toUpperCase(),
+                              style: TextStyle(
+                                  fontSize: 16, color: Color(0xFF2C2B2B)),
+                            ),
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.01,
+                            ),
+                            Text(
+                              "Destination:",
+                              style: TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              "Address:  ${leadDetails['perm_city']} ${leadDetails['perm_state']} ${leadDetails['perm_street']}"
+                                  .toUpperCase(),
+                              style: TextStyle(
+                                  fontSize: 16, color: Color(0xFF2C2B2B)),
+                            ),
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.01,
+                            ),
+                            Container(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      if (isTracking) {
+                                        stopTracking();
+                                      } else {
+                                        startTracking();
+                                        openGoogleMaps();
+                                      }
+                                    },
+                                    child: Text(
+                                      isTracking
+                                          ? "Stop Tracking"
+                                          : "Going For Lead",
+                                      style:
+                                          WidgetSupport.LoginButtonTextColor(),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      shadowColor: Colors.transparent,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal:
+                                            MediaQuery.of(context).size.width *
+                                                0.02,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(8.0),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

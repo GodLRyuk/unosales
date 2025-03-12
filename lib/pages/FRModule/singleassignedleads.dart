@@ -1,29 +1,23 @@
 import 'dart:convert'; // for json.decode
-import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/FRModule/leaddashboard.dart';
+import 'package:unosfa/pages/FSAModule/assignedLeads.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:unosfa/pages/config/config.dart';
 
-class SingleLead extends StatefulWidget {
-  final String leadId; // Lead ID passed from the previous screen
-
-  const SingleLead({super.key, required this.leadId});
+class FRSingleAssignedLead extends StatefulWidget {
+  final String leadId;
+  const FRSingleAssignedLead(
+      {super.key, required this.leadId});
 
   @override
-  State<SingleLead> createState() => _SingleLeadState();
+  State<FRSingleAssignedLead> createState() => _FRSingleAssignedLeadState();
 }
 
-class _SingleLeadState extends State<SingleLead> {
+class _FRSingleAssignedLeadState extends State<FRSingleAssignedLead> {
   bool isLoading = true;
   Map<String, dynamic> leadDetails = {}; // To store the lead details
-  Uint8List? _imageBytes;
-  bool _hasError = false;
-  File? _image;
-  bool _isLoading = false;
 
   // Function to fetch lead details by ID
   Future<void> fetchLeadDetails() async {
@@ -33,7 +27,7 @@ class _SingleLeadState extends State<SingleLead> {
     try {
       final response = await http.get(
         Uri.parse(
-            '${AppConfig.baseUrl}/api/leads/${widget.leadId}/'), // Using leadId in the API URL
+            '${AppConfig.baseUrl}/api/agents/assigned-leads/${widget.leadId}'), // Using leadId in the API URL
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -43,8 +37,6 @@ class _SingleLeadState extends State<SingleLead> {
         setState(() {
           leadDetails = json.decode(response.body);
           isLoading = false; // Data loaded
-          _fetchImage(leadDetails['kyc_document']);
-
         });
       } else if (response.statusCode == 401) {
         Map<String, dynamic> mappedData = {
@@ -76,43 +68,6 @@ class _SingleLeadState extends State<SingleLead> {
     super.initState();
     fetchLeadDetails(); // Fetch lead details when the screen is loaded
   }
-  Future<void> _fetchImage(String imageUrl) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('accessToken');
-
-    try {
-      final response = await http.get(
-        Uri.parse(imageUrl),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-
-      if (response.statusCode == 200) {
-        Uint8List imageBytes = response.bodyBytes;
-        if (imageBytes.isNotEmpty) {
-          setState(() {
-            _imageBytes = imageBytes;
-            _isLoading = false;
-            _hasError = false;
-          });
-        } else {
-          _handleImageError();
-        }
-      } else {
-        _handleImageError();
-      }
-    } catch (e) {
-      print("Image loading error: $e");
-      _handleImageError();
-    }
-  }
-void _handleImageError() {
-    setState(() {
-      _isLoading = false;
-      _hasError = true;
-      _imageBytes = null;
-    });
-  }
-
 
   @override
   Widget build(BuildContext context) {
@@ -152,9 +107,7 @@ void _handleImageError() {
                 Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => LeadDashBoard(
-                              searchQuery: '',
-                            ))); // Go back to the previous screen
+                        builder: (context) => AssignedLeads(searchQuery: '',))); // Go back to the previous screen
               },
             ),
           ),
@@ -239,14 +192,48 @@ void _handleImageError() {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['first_name'] ?? ''} ${leadDetails['middle_name'] ?? ''} ${leadDetails['last_name'] ?? ''}',
+                                    '${(leadDetails['first_name'] ?? '').toUpperCase()} '
+                                    '${(leadDetails['middle_name'] ?? '').toUpperCase()} '
+                                    '${(leadDetails['last_name'] ?? '').toUpperCase()}',
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
                               ),
-                              const SizedBox(
-                                  height: 8), // Add space between rows
-
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'BOB:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['birth_date'] ?? ''}',
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Gender:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['gender'].toUpperCase() ?? ''}',
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8), // A
                               // Phone
                               Row(
                                 mainAxisAlignment:
@@ -259,7 +246,7 @@ void _handleImageError() {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['phone_number'] ?? ''}',
+                                    '${leadDetails['mobile_phone'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
@@ -318,52 +305,26 @@ void _handleImageError() {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Address 1
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Address 1:',
+                                    'State:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  Flexible(
-                                    child: Text(
-                                      '${leadDetails['address1'] ?? ''}',
-                                      style: WidgetSupport.inputLabel(),
-                                      softWrap: true,
-                                      textAlign: TextAlign.end,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8), // Space between rows
-
-                              // Address 2
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
                                   Text(
-                                    'Address 2:',
+                                    '${leadDetails['perm_state'] ?? ''}'
+                                        .toUpperCase(),
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
-                                  ),
-                                  Flexible(
-                                    child: Text(
-                                      '${leadDetails['address2'] ?? ''}',
-                                      style: WidgetSupport.inputLabel(),
-                                      softWrap: true,
-                                      textAlign: TextAlign.end,
-                                    ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 8),
-
                               // City
                               Row(
                                 mainAxisAlignment:
@@ -376,7 +337,8 @@ void _handleImageError() {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['city_name'] ?? ''}',
+                                    '${leadDetails['perm_city'] ?? ''}'
+                                        .toUpperCase(),
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
@@ -391,12 +353,14 @@ void _handleImageError() {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Location:',
+                                    'Street:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  Text('${leadDetails['location'] ?? ''}',
+                                  Text(
+                                      '${leadDetails['perm_street'] ?? ''}'
+                                          .toUpperCase(),
                                       style: WidgetSupport.inputLabel()),
                                 ],
                               ),
@@ -406,13 +370,14 @@ void _handleImageError() {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Location Type',
+                                    'Country',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['location_type_description'] ?? ''}',
+                                    '${leadDetails['perm_country'] ?? ''}'
+                                        .toUpperCase(),
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
@@ -425,22 +390,53 @@ void _handleImageError() {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text('Area:',
+                                  Text('Zip Code:',
                                       style: WidgetSupport.inputLabel()),
-                                  Text('${leadDetails['area'] ?? ''}',
+                                  Text(
+                                      '${leadDetails['perm_zip_code'] ?? ''}'
+                                          .toUpperCase(),
                                       style: WidgetSupport.inputLabel()),
                                 ],
                               ),
                               const SizedBox(height: 8),
-
                               // ZIP
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text('ZIP:',
+                                  Text('Barangay:',
                                       style: WidgetSupport.inputLabel()),
-                                  Text('${leadDetails['zip'] ?? ''}',
+                                  Text(
+                                      '${leadDetails['perm_barangay'] ?? ''}'
+                                          .toUpperCase(),
+                                      style: WidgetSupport.inputLabel()),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              // Region
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('Region:',
+                                      style: WidgetSupport.inputLabel()),
+                                  Text(
+                                      '${leadDetails['perm_region'] ?? ''}'
+                                          .toUpperCase(),
+                                      style: WidgetSupport.inputLabel()),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              // Region
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('Country Code:',
+                                      style: WidgetSupport.inputLabel()),
+                                  Text(
+                                      '${leadDetails['perm_country_code'] ?? ''}'
+                                          .toUpperCase(),
                                       style: WidgetSupport.inputLabel()),
                                 ],
                               ),
@@ -480,7 +476,7 @@ void _handleImageError() {
                                   size: 24, // Set the icon size
                                 ),
                                 Text(
-                                  "Company Information".toUpperCase(),
+                                  "Employee Information".toUpperCase(),
                                   style: WidgetSupport.inputLabel().copyWith(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w500,
@@ -497,94 +493,360 @@ void _handleImageError() {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // Address 1
-                              leadDetails['company_name'] != null &&
-                                      leadDetails['company_name']!.isNotEmpty
-                                  ? Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'Company Name:',
-                                          style: WidgetSupport.inputLabel(),
-                                        ),
-                                        MediaQuery.of(context).size.width < 600
-                                            ? Flexible(
-                                                child: Text(
-                                                  '${leadDetails['company_name'] ?? ''}', // Ensure leadDetails is null-safe
-                                                  style: WidgetSupport
-                                                      .inputLabel(),
-                                                  softWrap: true,
-                                                  textAlign: TextAlign.end,
-                                                ),
-                                              )
-                                            : Flexible(
-                                                child: Text(
-                                                  '${leadDetails['company_name'] ?? ''}', // Ensure leadDetails is null-safe
-                                                  style: WidgetSupport
-                                                      .inputLabel(),
-                                                  softWrap: true,
-                                                  textAlign: TextAlign.end,
-                                                ),
-                                              ),
-                                      ],
-                                    )
-                                  : SizedBox(),
-                              // Address 2
-                              leadDetails['business_name'] != null &&
-                                      leadDetails['business_name']!.isNotEmpty
-                                  ? Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'Business Name:',
-                                          style: WidgetSupport.inputLabel(),
-                                          softWrap: true,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        Text(
-                                          '${leadDetails['business_name'] ?? ''}',
-                                          style: WidgetSupport.inputLabel(),
-                                        ),
-                                      ],
-                                    )
-                                  : SizedBox(),
-                              const SizedBox(height: 8),
-                              // Customer Type
-
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Customer Type:',
+                                    'Employer Name:',
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                  Text(
+                                    '${leadDetails['emp_employer_name'] ?? ''}'
+                                        .toUpperCase(), // Ensure leadDetails is null-safe
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Employee Industry Type:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    leadDetails['customer_type'] == 'salaried'
-                                        ? "Salaried"
-                                        : "Self Employed",
+                                    '${leadDetails['emp_indus_type'] ?? ''}'
+                                        .toUpperCase(),
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 8),
-
-                              // Income
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Income:',
+                                    'Employee Email Id:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['income'] ?? ''}',
+                                    '${leadDetails['emp_email'] ?? ''}',
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Nationality:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['nationality'] ?? ''}'
+                                        .toUpperCase(),
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Street:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['emp_street'] ?? ''}'
+                                        .toUpperCase(),
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'State:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['emp_state'] ?? ''}'
+                                        .toUpperCase(),
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'City:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['emp_city'] ?? ''}'
+                                        .toUpperCase(),
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Country:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['emp_country'] ?? ''}'
+                                        .toUpperCase(),
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Zip:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['emp_zip_code'] ?? ''}'
+                                        .toUpperCase(),
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Barangay:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['emp_barangay'] ?? ''}'
+                                        .toUpperCase(),
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Region:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['emp_region'] ?? ''}'
+                                        .toUpperCase(),
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Country Code:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    leadDetails['emp_country_code']
+                                        .toUpperCase(),
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Civil Status:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['civil_status'] ?? ''}'
+                                        .toUpperCase(),
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Place Of Birth:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['place_of_birth'] ?? ''}'
+                                        .toUpperCase(),
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Sourche Company:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['source_company'] ?? ''}'
+                                        .toUpperCase(),
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Partner Name:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['partner_name'] ?? ''}'
+                                        .toUpperCase(),
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Nature Of Partnership:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['nature_of_partnership'] ?? ''}'
+                                        .toUpperCase(),
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Monthly Income:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['fin_monthly_income'] ?? ''}'
+                                        .toUpperCase(),
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Source Of Funds:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['fin_src_of_funds'] ?? ''}'
+                                        .toUpperCase(),
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Source Of Funds Code:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['fin_src_of_funds_code'] ?? ''}'
+                                        .toUpperCase(),
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
@@ -626,7 +888,7 @@ void _handleImageError() {
                                   size: 24, // Set the icon size
                                 ),
                                 Text(
-                                  "KYC Information".toUpperCase(),
+                                  "Verification Information".toUpperCase(),
                                   style: WidgetSupport.inputLabel().copyWith(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w500,
@@ -647,13 +909,13 @@ void _handleImageError() {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'KYC ID:',
+                                    'Email Verification:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    leadDetails['kyc_id_type'] ?? '',
+                                    leadDetails['email_verification'] ?? '',
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
@@ -664,208 +926,58 @@ void _handleImageError() {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'ID Number:',
+                                    'Income Verification:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['kyc_id_number'] ?? ''}',
+                                    '${leadDetails['income_validation'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 8),
-                              Padding(
-                                padding: const EdgeInsets.only(top: 16.0),
-                                child: _imageBytes != null
-                                    ? Image.memory(
-                                      _imageBytes!,
-                                      width: 300,
-                                      height: 150,
-                                      fit: BoxFit.cover,
-                                    )
-                                    : Icon(Icons.image_not_supported,
-                                        size: 50, color: Colors.grey),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Address Verification:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['address_validation'] ?? ''}'.toUpperCase(),
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 1),
+                               const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Employment Verification:',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['employment_validation'] ?? ''}'.toUpperCase(),
+                                    style: WidgetSupport.inputLabel(),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 0),
-
-                  // Loan Information Section
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(
-                                color: Color(0xFF640D78),
-                                width: 1,
-                              ),
-                            ),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.only(
-                                bottom:
-                                    8.0), // Add padding below the icon and text
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons
-                                      .monetization_on_outlined, // You can replace this with any other icon you prefer
-                                  color: Color(
-                                      0xFF640D78), // Match the color with your border
-                                  size: 24, // Set the icon size
-                                ),
-                                Text(
-                                  "Loan Information".toUpperCase(),
-                                  style: WidgetSupport.inputLabel().copyWith(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(0.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 8),
-                              // Address 1
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Tenor:',
-                                    style: WidgetSupport.inputLabel(),
-                                    softWrap: true,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  Text(
-                                    '${leadDetails['tenor_description'] ?? ''}',
-                                    style: WidgetSupport.inputLabel(),
-                                    softWrap: true,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-
-                              // Loan Requested
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Loan Requested:',
-                                    style: WidgetSupport.inputLabel(),
-                                    softWrap: true,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  Text(
-                                    '${leadDetails['loan_amount_requested'] ?? ''}',
-                                    style: WidgetSupport.inputLabel(),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-
-                              // Interest
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Interest:',
-                                    style: WidgetSupport.inputLabel(),
-                                    softWrap: true,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  Text(
-                                    '${leadDetails['interest'] ?? ''}%',
-                                    style: WidgetSupport.inputLabel(),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              // Monthly Installment
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Monthly Installment:',
-                                    style: WidgetSupport.inputLabel(),
-                                    softWrap: true,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  Text(
-                                    '${leadDetails['monthly_installment'] ?? ''}',
-                                    style: WidgetSupport.inputLabel(),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              // Desposition Code
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Disposition:',
-                                    style: WidgetSupport.inputLabel(),
-                                    softWrap: true,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  Text(
-                                    '${leadDetails['disposition_code_description'] ?? ''}',
-                                    style: WidgetSupport.inputLabel(),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              // Sub-Desposition Code
-                              leadDetails['sub_disposition_code_description'] !=
-                                          null &&
-                                      leadDetails[
-                                              'sub_disposition_code_description']!
-                                          .isNotEmpty
-                                  ? Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'Sub-Disposition:',
-                                          style: WidgetSupport.inputLabel(),
-                                          softWrap: true,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        Text(
-                                          '${leadDetails['sub_disposition_code_description'] ?? ''}',
-                                          style: WidgetSupport.inputLabel(),
-                                        ),
-                                      ],
-                                    )
-                                  : SizedBox(),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  const SizedBox(height: 10),
                 ],
               ),
             ),

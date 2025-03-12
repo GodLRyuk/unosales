@@ -4,8 +4,8 @@ import 'package:circle_progress_bar/circle_progress_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unosfa/pages/FRModule/assignedLeads.dart';
 import 'package:unosfa/pages/FRModule/campaignlist.dart';
-import 'package:unosfa/pages/FRModule/createnewlead.dart';
 import 'package:unosfa/pages/FRModule/leaddashboard.dart';
 import 'package:unosfa/pages/FRModule/mytodolist.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
@@ -950,9 +950,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
               Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => LeadGenerate(
-                            edit: '',
-                          )));
+                      builder: (context) => LeadDashBoard(searchQuery: '',)));
             },
             child: Column(
               children: [
@@ -986,7 +984,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                           width: 5,
                         ),
                         Text(
-                          "Create New Lead",
+                          "Customer Lead",
                           style: MediaQuery.of(context).size.width > 600
                               ? WidgetSupport.normalblackTextTab()
                               : WidgetSupport.normalblackText(),
@@ -1005,7 +1003,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
               Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => LeadDashBoard(
+                      builder: (context) => AssignedLeads(
                             searchQuery: '',
                           )));
             },

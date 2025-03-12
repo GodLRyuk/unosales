@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unosfa/pages/FRModule/createnewlead.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
 import 'package:unosfa/pages/FRModule/singleleaddetail.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:unosfa/pages/config/config.dart';
+
 class LeadDashBoard extends StatefulWidget {
   final String searchQuery;
   const LeadDashBoard({super.key, required this.searchQuery});
@@ -30,6 +32,7 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
   bool isFetchingMore = false;
   int currentPage = 1;
   bool hasMoreData = true;
+  bool isExpanded = false;
 
   @override
   void initState() {
@@ -60,7 +63,8 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
-    String apiUrl ='${AppConfig.baseUrl}/api/leads/?search=${widget.searchQuery}&ordering=-created_at&page=$currentPage';
+    String apiUrl =
+        '${AppConfig.baseUrl}/api/leads/?search=${widget.searchQuery}&ordering=-created_at&page=$currentPage';
 
     try {
       final response = await http.get(
@@ -224,7 +228,8 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
       areDateFieldsVisible = !areDateFieldsVisible;
     });
   }
- @override
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
@@ -435,8 +440,7 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) =>
-                                                  SingleLead(
-                                                      leadId: leadId),
+                                                  SingleLead(leadId: leadId),
                                             ),
                                           );
                                         },
@@ -485,9 +489,33 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
                                                 ),
                                               ],
                                             ),
-                                            trailing: Icon(
-                                              Icons.chevron_right,
-                                              color: Color(0xFF640D78),
+                                            trailing: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                GestureDetector(
+                                                  onTap: () {
+                                                    String leadId =
+                                                        leads[index]['id']!;
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) =>
+                                                            LeadGenerate(
+                                                                edit: leadId),
+                                                      ),
+                                                    );
+                                                  },
+                                                  child: Icon(
+                                                    Icons.edit,
+                                                    color: Color(0xFF640D78),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 10),
+                                                Icon(
+                                                  Icons.chevron_right,
+                                                  color: Color(0xFF640D78),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ),
@@ -507,6 +535,79 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
                 ],
               ),
             ),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 10), // Adjust padding as needed
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isExpanded) ...[
+              Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text("Customer Lead",
+                          style: WidgetSupport.LoginButtonTextColor()),
+                      SizedBox(width: 10),
+                      FloatingActionButton(
+                        heroTag: "btn1",
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => LeadGenerate(edit: ''),
+                            ),
+                          );
+                        },
+                        child: Icon(
+                          Icons.add,
+                          color: Colors.white,
+                        ),
+                        backgroundColor: Color(0xFFc433e0),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 10),
+                ],
+              ),
+            ],
+
+            // Main Button
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFFc433e0),
+                        Color(0xFF9a37ae),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
+                  child: FloatingActionButton(
+                    onPressed: () {
+                      setState(() {
+                        isExpanded = !isExpanded;
+                      });
+                    },
+                    child: Icon(
+                      isExpanded ? Icons.close : Icons.add,
+                      color: Colors.white,
+                    ),
+                    backgroundColor: Colors
+                        .transparent, // Set transparent so gradient is visible
+                  ),
+                ),
+              ],
+            )
+          ],
+        ),
+      ),
     );
   }
 

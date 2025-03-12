@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unosfa/pages/FSAModule/fsadashboard.dart';
-import 'package:unosfa/pages/FSAModule/route_travel_by_agent.dart';
+import 'package:unosfa/pages/commingSoon.dart';
+import 'package:unosfa/pages/services/route_travel_by_agent.dart';
 import 'package:unosfa/pages/generalscreens/profile.dart';
 import 'package:unosfa/pages/generalscreens/setting.dart';
 import 'package:unosfa/pages/FRModule/salesdashboard.dart';
 import 'package:unosfa/pages/testfacelogin.dart';
+import 'package:unosfa/pages/testpage.dart';
 import 'package:unosfa/pages/videoKyc.dart';
 
 class NavigationPage extends StatefulWidget {
@@ -55,12 +57,12 @@ class _NavigationPageState extends State<NavigationPage> {
         },
         children: [
           ProfilePage(),
-          AgentRouteTraveled(),
-           if (_role == "FR") Salesdashboard(),
+          ComingSoon(),
+          if (_role == "FR") Salesdashboard(),
           if (_role == "FSA") Fsadashboard(),
-            FaceRecognitionScreen(),
-          VideoKyc(),
-          SettingsPage(searchQuery: '',),
+          ComingSoon(),
+          ComingSoon(),
+          ComingSoon(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
