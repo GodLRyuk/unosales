@@ -354,7 +354,7 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                   size: 24, // Set the icon size
                                 ),
                                 Text(
-                                  "Company Information".toUpperCase(),
+                                  "Address Information".toUpperCase(),
                                   style: WidgetSupport.inputLabel().copyWith(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w500,
@@ -453,6 +453,26 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                 ],
                               ),
                               const SizedBox(height: 8),
+                              // Address 2
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Location Type',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    '${leadDetails['location_type_description'] ?? ''}',
+                                    style: WidgetSupport.inputLabel(),
+                                    softWrap: true,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8), // Space between rows
 
                               // ZIP
                               Row(
@@ -503,7 +523,7 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                   size: 24, // Set the icon size
                                 ),
                                 Text(
-                                  "Address Information".toUpperCase(),
+                                  "Company Information".toUpperCase(),
                                   style: WidgetSupport.inputLabel().copyWith(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w500,
@@ -647,25 +667,48 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                               ),
                               const SizedBox(height: 8), // Space between rows
 
-                              // Address 2
+                              
+                              // Desposition Code
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Location Type',
+                                    'Disposition:',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
-                                    '${leadDetails['location_type_description'] ?? ''}',
+                                    '${leadDetails['disposition_code_description'] ?? ''}',
                                     style: WidgetSupport.inputLabel(),
-                                    softWrap: true,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
+                              const SizedBox(height: 8),
+                              // Sub-Desposition Code
+                              leadDetails['sub_disposition_code_description'] !=
+                                          null &&
+                                      leadDetails[
+                                              'sub_disposition_code_description']!
+                                          .isNotEmpty
+                                  ? Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Sub-Disposition:',
+                                          style: WidgetSupport.inputLabel(),
+                                          softWrap: true,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          '${leadDetails['sub_disposition_code_description'] ?? ''}',
+                                          style: WidgetSupport.inputLabel(),
+                                        ),
+                                      ],
+                                    )
+                                  : SizedBox(),
                             ],
                           ),
                         ),

@@ -73,6 +73,8 @@ dependencies:
   flutter_polyline_points: ^2.1.0
   cached_network_image: ^3.4.1
   flutter_expandable_fab: ^2.3.0
+  app_tutorial: ^1.0.6
+  tutorial_coach_mark: ^1.2.13
 
 dev_dependencies:
 flutter_icons:

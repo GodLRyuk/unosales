@@ -401,38 +401,6 @@ void _handleImageError() {
                                 ],
                               ),
                               const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Location Type',
-                                    style: WidgetSupport.inputLabel(),
-                                    softWrap: true,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  Text(
-                                    '${leadDetails['location_type_description'] ?? ''}',
-                                    style: WidgetSupport.inputLabel(),
-                                    softWrap: true,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              // Area
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('Area:',
-                                      style: WidgetSupport.inputLabel()),
-                                  Text('${leadDetails['area'] ?? ''}',
-                                      style: WidgetSupport.inputLabel()),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-
                               // ZIP
                               Row(
                                 mainAxisAlignment:
@@ -544,6 +512,28 @@ void _handleImageError() {
                                         ),
                                         Text(
                                           '${leadDetails['business_name'] ?? ''}',
+                                          style: WidgetSupport.inputLabel(),
+                                        ),
+                                      ],
+                                    )
+                                  : SizedBox(),
+                                  
+
+
+                                  leadDetails['others_company'] != null &&
+                                      leadDetails['others_company']!.isNotEmpty
+                                  ? Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Other Company:',
+                                          style: WidgetSupport.inputLabel(),
+                                          softWrap: true,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          '${leadDetails['others_company'] ?? ''}',
                                           style: WidgetSupport.inputLabel(),
                                         ),
                                       ],
@@ -807,7 +797,7 @@ void _handleImageError() {
                                     MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    'Monthly Installment:',
+                                    'Monthly Installment :',
                                     style: WidgetSupport.inputLabel(),
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
@@ -820,46 +810,46 @@ void _handleImageError() {
                               ),
                               const SizedBox(height: 8),
                               // Desposition Code
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Disposition:',
-                                    style: WidgetSupport.inputLabel(),
-                                    softWrap: true,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  Text(
-                                    '${leadDetails['disposition_code_description'] ?? ''}',
-                                    style: WidgetSupport.inputLabel(),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              // Sub-Desposition Code
-                              leadDetails['sub_disposition_code_description'] !=
-                                          null &&
-                                      leadDetails[
-                                              'sub_disposition_code_description']!
-                                          .isNotEmpty
-                                  ? Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'Sub-Disposition:',
-                                          style: WidgetSupport.inputLabel(),
-                                          softWrap: true,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        Text(
-                                          '${leadDetails['sub_disposition_code_description'] ?? ''}',
-                                          style: WidgetSupport.inputLabel(),
-                                        ),
-                                      ],
-                                    )
-                                  : SizedBox(),
+                              // Row(
+                              //   mainAxisAlignment:
+                              //       MainAxisAlignment.spaceBetween,
+                              //   children: [
+                              //     Text(
+                              //       'Disposition:',
+                              //       style: WidgetSupport.inputLabel(),
+                              //       softWrap: true,
+                              //       overflow: TextOverflow.ellipsis,
+                              //     ),
+                              //     Text(
+                              //       '${leadDetails['disposition_code_description'] ?? ''}',
+                              //       style: WidgetSupport.inputLabel(),
+                              //     ),
+                              //   ],
+                              // ),
+                              // const SizedBox(height: 8),
+                              // // Sub-Desposition Code
+                              // leadDetails['sub_disposition_code_description'] !=
+                              //             null &&
+                              //         leadDetails[
+                              //                 'sub_disposition_code_description']!
+                              //             .isNotEmpty
+                              //     ? Row(
+                              //         mainAxisAlignment:
+                              //             MainAxisAlignment.spaceBetween,
+                              //         children: [
+                              //           Text(
+                              //             'Sub-Disposition:',
+                              //             style: WidgetSupport.inputLabel(),
+                              //             softWrap: true,
+                              //             overflow: TextOverflow.ellipsis,
+                              //           ),
+                              //           Text(
+                              //             '${leadDetails['sub_disposition_code_description'] ?? ''}',
+                              //             style: WidgetSupport.inputLabel(),
+                              //           ),
+                              //         ],
+                              //       )
+                              //     : SizedBox(),
                             ],
                           ),
                         ),

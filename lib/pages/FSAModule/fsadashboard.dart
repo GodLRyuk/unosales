@@ -1,11 +1,11 @@
 import 'dart:convert';
+import 'package:app_tutorial/app_tutorial.dart';
 import 'package:circle_progress_bar/circle_progress_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unosfa/pages/FSAModule/assignedLeads.dart';
 import 'package:unosfa/pages/FSAModule/campaignlist.dart';
-import 'package:unosfa/pages/FSAModule/fsacompanyleaddashboard.dart';
 import 'package:unosfa/pages/FSAModule/fsaleaddashboard.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:flutter/services.dart';
@@ -14,7 +14,6 @@ import 'package:unosfa/pages/config/config.dart';
 import 'package:unosfa/pages/FSAModule/mytodolist.dart';
 
 class Fsadashboard extends StatefulWidget {
-  // final String loginWith;
   const Fsadashboard({super.key});
 
   @override
@@ -33,12 +32,83 @@ class _FsadashboardState extends State<Fsadashboard> {
   bool tokenisLoading = false;
   bool areDateFieldsVisible = false;
   final _searchFilter = TextEditingController();
-
   String? role;
+
+  List<TutorialItem> items = [];
+
+  final CreateLeadKey = GlobalKey();
+  final AssignedLeadsKey = GlobalKey();
+  final MyToDoListKey = GlobalKey();
+  final CampaignKey = GlobalKey();
   @override
   void initState() {
-    super.initState();
     _loadData();
+    _checkFirstTimeUser();
+    super.initState();
+  }
+
+  Future<void> _checkFirstTimeUser() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool hasSeenTutorial = prefs.getBool('hasSeenTutorial') ?? false;
+
+    if (!hasSeenTutorial) {
+      initItems();
+      Future.delayed(const Duration(microseconds: 200)).then((value) {
+      Tutorial.showTutorial(context, items, onTutorialComplete: () {
+      });
+    });
+      await prefs.setBool('hasSeenTutorial', true);
+      // _loadData();
+    } 
+  }
+
+  void initItems() {
+    items.addAll({
+      TutorialItem(
+        globalKey: CreateLeadKey,
+        color: Colors.black.withOpacity(0.8),
+        shapeFocus: ShapeFocus.square,
+        borderRadius: const Radius.circular(5.0),
+        child: const TutorialItemContent(
+          title: 'Create New Lead',
+          content: 'Tap here to start creating a new lead.',
+        ),
+      ),
+      TutorialItem(
+        globalKey: AssignedLeadsKey,
+        color: Colors.black.withOpacity(0.8),
+        shapeFocus: ShapeFocus.square,
+        borderRadius: const Radius.circular(5.0),
+        child: const TutorialItemContent(
+          title: 'View Assigned Lead',
+          content:
+              'Tap here to view the leads assigned to you. You can track progress, update details, and manage follow-ups.',
+        ),
+      ),
+      TutorialItem(
+        globalKey: MyToDoListKey,
+        color: Colors.black.withOpacity(0.8),
+        shapeFocus: ShapeFocus.square,
+        borderRadius: const Radius.circular(5.0),
+        child: const TutorialItemContent(
+          title: 'My To-Do List',
+          content:
+              'Tap here to view your tasks and follow-ups. Stay organized by tracking pending actions and completing them on time.',
+        ),
+      ),
+      TutorialItem(
+        globalKey: CampaignKey,
+        color: Colors.black.withOpacity(0.8),
+        shapeFocus: ShapeFocus.square,
+        borderRadius: const Radius.circular(5.0),
+        child: const TutorialItemContent(
+          title: 'Manage Campaigns',
+          content:
+              'Tap here to view and manage marketing campaigns. Track performance, monitor engagement, and optimize your outreach efforts.',
+        ),
+      ),
+    });
+    // _loadData();
   }
 
   Future<void> _loadData() async {
@@ -70,6 +140,7 @@ class _FsadashboardState extends State<Fsadashboard> {
         final Map<String, dynamic> data2 = json.decode(response2.body);
         setState(() {
           leadDetails = data['count'] + data2['count'];
+          print("LEads: $leadDetails");
         });
       } else if (response.statusCode == 401) {
         Map<String, dynamic> mappedData = {
@@ -103,7 +174,6 @@ class _FsadashboardState extends State<Fsadashboard> {
 
   @override
   Widget build(BuildContext context) {
-    // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: () async {
         // Close the app when the back button is pressed
@@ -113,7 +183,6 @@ class _FsadashboardState extends State<Fsadashboard> {
       child: Scaffold(
         body: SafeArea(
           child: RefreshIndicator(
-            // Added RefreshIndicator
             onRefresh: _handleRefresh, // Function to handle refresh logic
             child: SingleChildScrollView(
               child: ConstrainedBox(
@@ -131,7 +200,7 @@ class _FsadashboardState extends State<Fsadashboard> {
     );
   }
 
-// Define the refresh logic
+  // Define the refresh logic
   Future<void> _handleRefresh() async {
     // Add the logic for refresh (e.g., fetching new data)
     await Future.delayed(Duration(seconds: 2)); // Simulate a delay
@@ -355,6 +424,7 @@ class _FsadashboardState extends State<Fsadashboard> {
           ),
         ),
       );
+
   Widget _buildMidContainerWithButton() {
     const buttonHeight = 30.0;
     double screenHeight = MediaQuery.of(context).size.height;
@@ -391,7 +461,7 @@ class _FsadashboardState extends State<Fsadashboard> {
         : screenWidth > 600
             ? screenWidth * 0.08 // Portrait - tablet
             : screenWidth * 0.08; // Portrait - mobile;
-// Portrait - mobile
+    // Portrait - mobile
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 15),
@@ -1114,6 +1184,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                           style: MediaQuery.of(context).size.width > 600
                               ? WidgetSupport.normalblackTextTab()
                               : WidgetSupport.normalblackText(),
+                          key: CreateLeadKey,
                         ),
                       ],
                     ),
@@ -1174,6 +1245,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                           style: MediaQuery.of(context).size.width > 600
                               ? WidgetSupport.normalblackTextTab()
                               : WidgetSupport.normalblackText(),
+                          key: AssignedLeadsKey,
                         ),
                       ],
                     ),
@@ -1310,6 +1382,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                             style: MediaQuery.of(context).size.width > 600
                                 ? WidgetSupport.normalblackTextTab()
                                 : WidgetSupport.normalblackText(),
+                            key: MyToDoListKey,
                           ),
                         ],
                       ),
@@ -1460,6 +1533,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                             style: MediaQuery.of(context).size.width > 600
                                 ? WidgetSupport.normalblackTextTab()
                                 : WidgetSupport.normalblackText(),
+                            key: CampaignKey,
                           ),
                         ],
                       ),
@@ -1480,10 +1554,10 @@ class _FsadashboardState extends State<Fsadashboard> {
     double screenWidth = MediaQuery.of(context).size.width;
     Orientation orientation = MediaQuery.of(context).orientation;
 
-// Determine if the device is a tablet or mobile
+    // Determine if the device is a tablet or mobile
     bool isTablet = screenWidth > 600;
 
-// Adjust container width and height for tablet/mobile based on orientation
+    // Adjust container width and height for tablet/mobile based on orientation
     double containerWidth = isTablet
         ? (orientation == Orientation.portrait
             ? screenWidth * 0.99
@@ -1501,7 +1575,7 @@ class _FsadashboardState extends State<Fsadashboard> {
             ? screenHeight * 0.20 // Mobile Portrait
             : screenHeight * 0.25); // Mobile Landscape
 
-// Adjust performance meter dimensions for tablet/mobile based on orientation
+    // Adjust performance meter dimensions for tablet/mobile based on orientation
     double perfomanceMeaterHeight = isTablet
         ? (orientation == Orientation.portrait
             ? screenHeight * 0.3 // Tablet Portrait
@@ -1658,6 +1732,71 @@ class _FsadashboardState extends State<Fsadashboard> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class TutorialItemContent extends StatelessWidget {
+  const TutorialItemContent({
+    super.key,
+    required this.title,
+    required this.content,
+  });
+
+  final String title;
+  final String content;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+
+    return Center(
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.6,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: width * 0.1),
+          child: Column(
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 25,
+                    fontWeight: FontWeight.w500),
+              ),
+              // const SizedBox(height: 10.0),
+              Text(
+                content,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w300),
+              ),
+              const Spacer(),
+              Row(
+                children: [
+                  TextButton(
+                    onPressed: () => Tutorial.skipAll(context),
+                    child: const Text(
+                      'Skip onboarding',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  const Spacer(),
+                  const TextButton(
+                    onPressed: null,
+                    child: Text(
+                      'Next',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              )
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -1016,8 +1016,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
                                   hintText: "Enter company name",
                                 ),
                                 validator: (value) {
-                                  if (value == null ||
-                                      value.isEmpty ||
+                                  if (value== "" &&
                                       _selectedCompany == 'others') {
                                     return 'Company name is required';
                                   }

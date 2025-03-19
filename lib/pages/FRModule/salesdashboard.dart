@@ -1,5 +1,5 @@
 import 'dart:convert';
-
+import 'package:app_tutorial/app_tutorial.dart';
 import 'package:circle_progress_bar/circle_progress_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -12,6 +12,7 @@ import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:unosfa/pages/config/config.dart';
+
 class Salesdashboard extends StatefulWidget {
   // final String loginWith;
   const Salesdashboard({super.key});
@@ -32,10 +33,80 @@ class _SalesdashboardState extends State<Salesdashboard> {
   bool tokenisLoading = false;
   String? role;
 
+  List<TutorialItem> items = [];
+
+  final CreateLeadKey = GlobalKey();
+  final AssignedLeadsKey = GlobalKey();
+  final MyToDoListKey = GlobalKey();
+  final CampaignKey = GlobalKey();
   @override
   void initState() {
-    super.initState();
     _loadData();
+    _checkFirstTimeUser();
+    super.initState();
+  }
+
+  Future<void> _checkFirstTimeUser() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool hasSeenTutorial = prefs.getBool('hasSeenTutorial') ?? false;
+
+    if (!hasSeenTutorial) {
+      initItems();
+      Future.delayed(const Duration(microseconds: 200)).then((value) {
+        Tutorial.showTutorial(context, items, onTutorialComplete: () {});
+      });
+      await prefs.setBool('hasSeenTutorial', true);
+      // _loadData();
+    }
+  }
+
+  void initItems() {
+    items.addAll({
+      TutorialItem(
+        globalKey: CreateLeadKey,
+        color: Colors.black.withOpacity(0.8),
+        shapeFocus: ShapeFocus.square,
+        borderRadius: const Radius.circular(5.0),
+        child: const TutorialItemContent(
+          title: 'Create New Lead',
+          content: 'Tap here to start creating a new Customer lead & Company Lead.',
+        ),
+      ),
+      TutorialItem(
+        globalKey: AssignedLeadsKey,
+        color: Colors.black.withOpacity(0.8),
+        shapeFocus: ShapeFocus.square,
+        borderRadius: const Radius.circular(5.0),
+        child: const TutorialItemContent(
+          title: 'View Assigned Lead',
+          content:
+              'Tap here to view the leads assigned to you. You can track progress, update details, and manage follow-ups.',
+        ),
+      ),
+      TutorialItem(
+        globalKey: MyToDoListKey,
+        color: Colors.black.withOpacity(0.8),
+        shapeFocus: ShapeFocus.square,
+        borderRadius: const Radius.circular(5.0),
+        child: const TutorialItemContent(
+          title: 'My To-Do List',
+          content:
+              'Tap here to view your tasks and follow-ups. Stay organized by tracking pending actions and completing them on time.',
+        ),
+      ),
+      TutorialItem(
+        globalKey: CampaignKey,
+        color: Colors.black.withOpacity(0.8),
+        shapeFocus: ShapeFocus.square,
+        borderRadius: const Radius.circular(5.0),
+        child: const TutorialItemContent(
+          title: 'Manage Campaigns',
+          content:
+              'Tap here to view and manage marketing campaigns. Track performance, monitor engagement, and optimize your outreach efforts.',
+        ),
+      ),
+    });
+    // _loadData();
   }
 
   Future<void> _loadData() async {
@@ -48,7 +119,8 @@ class _SalesdashboardState extends State<Salesdashboard> {
     }
     try {
       final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}/api/leads/'), // Using leadId in the API URL
+        Uri.parse(
+            '${AppConfig.baseUrl}/api/leads/'), // Using leadId in the API URL
         headers: {
           'Authorization': 'Bearer $token',
         },
@@ -950,7 +1022,9 @@ class _SalesdashboardState extends State<Salesdashboard> {
               Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => LeadDashBoard(searchQuery: '',)));
+                      builder: (context) => LeadDashBoard(
+                            searchQuery: '',
+                          )));
             },
             child: Column(
               children: [
@@ -988,6 +1062,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                           style: MediaQuery.of(context).size.width > 600
                               ? WidgetSupport.normalblackTextTab()
                               : WidgetSupport.normalblackText(),
+                              key: CreateLeadKey,
                         ),
                       ],
                     ),
@@ -1052,6 +1127,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                           style: MediaQuery.of(context).size.width > 600
                               ? WidgetSupport.normalblackTextTab()
                               : WidgetSupport.normalblackText(),
+                              key: AssignedLeadsKey,
                         ),
                       ],
                     ),
@@ -1133,8 +1209,12 @@ class _SalesdashboardState extends State<Salesdashboard> {
           // My Leads Box - triggers Tooltip for Training
           GestureDetector(
             onTap: () async {
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => MyTodoList(searchQuery: '',)));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => MyTodoList(
+                            searchQuery: '',
+                          )));
             },
             // onTap: () async {
             //   _TrainingtooltipKey.currentState?.ensureTooltipVisible();
@@ -1180,6 +1260,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                           style: MediaQuery.of(context).size.width > 600
                               ? WidgetSupport.normalblackTextTab()
                               : WidgetSupport.normalblackText(),
+                              key: MyToDoListKey,
                         ),
                       ],
                     ),
@@ -1271,7 +1352,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
           // My Leads Box - triggers Tooltip for Training
           GestureDetector(
             onTap: () async {
-               Navigator.push(context,
+              Navigator.push(context,
                   MaterialPageRoute(builder: (context) => FRCampaignlist()));
               // _CampaigntooltipKey.currentState?.ensureTooltipVisible();
             },
@@ -1326,6 +1407,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                             style: MediaQuery.of(context).size.width > 600
                                 ? WidgetSupport.normalblackTextTab()
                                 : WidgetSupport.normalblackText(),
+                                key: CampaignKey,
                           ),
                         ],
                       ),
@@ -1846,6 +1928,70 @@ class _SalesdashboardState extends State<Salesdashboard> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+class TutorialItemContent extends StatelessWidget {
+  const TutorialItemContent({
+    super.key,
+    required this.title,
+    required this.content,
+  });
+
+  final String title;
+  final String content;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+
+    return Center(
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.6,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: width * 0.1),
+          child: Column(
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 25,
+                    fontWeight: FontWeight.w500),
+              ),
+              // const SizedBox(height: 10.0),
+              Text(
+                content,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w300),
+              ),
+              const Spacer(),
+              Row(
+                children: [
+                  TextButton(
+                    onPressed: () => Tutorial.skipAll(context),
+                    child: const Text(
+                      'Skip onboarding',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  const Spacer(),
+                  const TextButton(
+                    onPressed: null,
+                    child: Text(
+                      'Next',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              )
+            ],
+          ),
+        ),
       ),
     );
   }

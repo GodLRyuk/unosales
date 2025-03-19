@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:unosfa/pages/FSAModule/campaignlist.dart';
 
 class WidgetSupport {
   // ignore: non_constant_identifier_names
