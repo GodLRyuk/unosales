@@ -1,12 +1,14 @@
 import 'dart:convert';
-import 'package:app_tutorial/app_tutorial.dart';
 import 'package:circle_progress_bar/circle_progress_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'package:unosfa/pages/FSAModule/assignedLeads.dart';
 import 'package:unosfa/pages/FSAModule/campaignlist.dart';
 import 'package:unosfa/pages/FSAModule/fsaleaddashboard.dart';
+import 'package:unosfa/pages/services/in_app_storage.dart';
+import 'package:unosfa/pages/services/in_app_tutorial_target.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -34,81 +36,87 @@ class _FsadashboardState extends State<Fsadashboard> {
   final _searchFilter = TextEditingController();
   String? role;
 
-  List<TutorialItem> items = [];
+  GlobalKey<FormState> formKey = GlobalKey<FormState>();
+  late TutorialCoachMark tutorialCoachMark;
+  bool isSaved = false;
 
   final CreateLeadKey = GlobalKey();
   final AssignedLeadsKey = GlobalKey();
   final MyToDoListKey = GlobalKey();
   final CampaignKey = GlobalKey();
+  final RewardsKey = GlobalKey();
+  final TrainingKey = GlobalKey();
+  final SearchFilterKey = GlobalKey();
+  final TotalSubmitedKey = GlobalKey();
+  final InProgressKey = GlobalKey();
+  final InPrincipalApprovedKey = GlobalKey();
+  final FinalApprovedKey = GlobalKey();
+  final DeclinedKey = GlobalKey();
+  final DisbursedKey = GlobalKey();
+
   @override
   void initState() {
     _loadData();
-    _checkFirstTimeUser();
+    _showInAppTour();
     super.initState();
+    // _checkFirstTimeUser();
+    _initAddAppInAppTour();
   }
 
-  Future<void> _checkFirstTimeUser() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    bool hasSeenTutorial = prefs.getBool('hasSeenTutorial') ?? false;
+  void _initAddAppInAppTour() {
+    tutorialCoachMark = TutorialCoachMark(
+      targets: addAppTargets(
+        CreateLeadKey: CreateLeadKey,
+        AssignedLeadsKey: AssignedLeadsKey,
+        MyToDoListKey: MyToDoListKey,
+        CampaignKey: CampaignKey,
+        RewardsKey: RewardsKey,
+        TrainingKey: TrainingKey,
+        SearchFilterKey: SearchFilterKey,
+        TotalSubmitedKey: TotalSubmitedKey,
+        InProgressKey: InProgressKey,
+        InPrincipalApprovedKey: InPrincipalApprovedKey,
+        FinalApprovedKey: FinalApprovedKey,
+        DeclinedKey: DeclinedKey,
+        DisbursedKey: DisbursedKey,
+      ),
+      colorShadow: Color(0xFF420244),
+      paddingFocus: 10,
+      hideSkip: false,
+      textStyleSkip: TextStyle(
+          fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+      skipWidget: Container(
+        padding: EdgeInsets.symmetric(horizontal: 15, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          "Skip",
+          style: TextStyle(
+            fontSize: 18,
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      opacityShadow: 0.8,
+      onFinish: () {
+        SaveInAppTour().savedAppTourStatus();
+      },
+    );
+  }
 
-    if (!hasSeenTutorial) {
-      initItems();
-      Future.delayed(const Duration(microseconds: 200)).then((value) {
-      Tutorial.showTutorial(context, items, onTutorialComplete: () {
+  void _showInAppTour() {
+    Future.delayed(const Duration(seconds: 0), () {
+      SaveInAppTour().getAppTourStatus().then((value) {
+        if (value == false) {
+          tutorialCoachMark.show(context: context);
+        } else {
+          // print("User have seen this page");
+        }
       });
     });
-      await prefs.setBool('hasSeenTutorial', true);
-      // _loadData();
-    } 
-  }
-
-  void initItems() {
-    items.addAll({
-      TutorialItem(
-        globalKey: CreateLeadKey,
-        color: Colors.black.withOpacity(0.8),
-        shapeFocus: ShapeFocus.square,
-        borderRadius: const Radius.circular(5.0),
-        child: const TutorialItemContent(
-          title: 'Create New Lead',
-          content: 'Tap here to start creating a new lead.',
-        ),
-      ),
-      TutorialItem(
-        globalKey: AssignedLeadsKey,
-        color: Colors.black.withOpacity(0.8),
-        shapeFocus: ShapeFocus.square,
-        borderRadius: const Radius.circular(5.0),
-        child: const TutorialItemContent(
-          title: 'View Assigned Lead',
-          content:
-              'Tap here to view the leads assigned to you. You can track progress, update details, and manage follow-ups.',
-        ),
-      ),
-      TutorialItem(
-        globalKey: MyToDoListKey,
-        color: Colors.black.withOpacity(0.8),
-        shapeFocus: ShapeFocus.square,
-        borderRadius: const Radius.circular(5.0),
-        child: const TutorialItemContent(
-          title: 'My To-Do List',
-          content:
-              'Tap here to view your tasks and follow-ups. Stay organized by tracking pending actions and completing them on time.',
-        ),
-      ),
-      TutorialItem(
-        globalKey: CampaignKey,
-        color: Colors.black.withOpacity(0.8),
-        shapeFocus: ShapeFocus.square,
-        borderRadius: const Radius.circular(5.0),
-        child: const TutorialItemContent(
-          title: 'Manage Campaigns',
-          content:
-              'Tap here to view and manage marketing campaigns. Track performance, monitor engagement, and optimize your outreach efforts.',
-        ),
-      ),
-    });
-    // _loadData();
   }
 
   Future<void> _loadData() async {
@@ -123,43 +131,52 @@ class _FsadashboardState extends State<Fsadashboard> {
     }
     try {
       final response = await http.get(
-        Uri.parse(
-            '${AppConfig.baseUrl}/api/leads/?ordering=-created_at'), // Using leadId in the API URL
+        Uri.parse('${AppConfig.baseUrl}/api/leads/?ordering=-created_at'),
         headers: {
           'Authorization': 'Bearer $token',
         },
       );
+
       String apiUrl =
           '${AppConfig.baseUrl}/api/leads/company-leads/?ordering=-created_at';
       final response2 = await http.get(
         Uri.parse(apiUrl),
         headers: {'Authorization': 'Bearer $token'},
       );
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
         final Map<String, dynamic> data2 = json.decode(response2.body);
-        setState(() {
-          leadDetails = data['count'] + data2['count'];
-          print("LEads: $leadDetails");
-        });
+
+        if (mounted) {
+          setState(() {
+            leadDetails = (data['count'] ?? 0) + (data2['count'] ?? 0);
+          });
+        }
       } else if (response.statusCode == 401) {
-        Map<String, dynamic> mappedData = {
-          'refresh': refresh,
-        };
-        final response2 = await http.post(
-          Uri.parse(
-              '${AppConfig.baseUrl}/api/users/token-refresh/'), // Using leadId in the API URL
-          body: mappedData,
-        );
-        final data = json.decode(response2.body);
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('isLoggedIn', true);
-        await prefs.setString('accessToken', data['access']);
-        await prefs.setString('refreshToken', data['refresh']);
-        _loadData();
+
+        if (refresh != null) {
+          Map<String, dynamic> mappedData = {'refresh': refresh};
+
+          final response2 = await http.post(
+            Uri.parse('${AppConfig.baseUrl}/api/users/token-refresh/'),
+            body: jsonEncode(mappedData),
+            headers: {'Content-Type': 'application/json'},
+          );
+
+          if (response2.statusCode == 200) {
+            final data = json.decode(response2.body);
+            await prefs.setBool('isLoggedIn', true);
+            await prefs.setString('accessToken', data['access']);
+            await prefs.setString('refreshToken', data['refresh']);
+            _loadData();
+          } else {
+          }
+        } else {
+        }
       }
     } catch (e) {
-      print('Error fetching lead details: $e');
+      print('❌ Error fetching lead details: $e');
     }
   }
 
@@ -171,7 +188,6 @@ class _FsadashboardState extends State<Fsadashboard> {
       areDateFieldsVisible = !areDateFieldsVisible;
     });
   }
-
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -260,6 +276,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                       // TextField for phone number filter
                       TextField(
                         controller: _searchFilter,
+                        key: SearchFilterKey,
                         decoration: InputDecoration(
                           labelText: 'Filter By Phone Number',
                           border: OutlineInputBorder(
@@ -492,6 +509,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         Column(
+                          key: TotalSubmitedKey,
                           crossAxisAlignment:
                               CrossAxisAlignment.start, // Align text to start
                           children: [
@@ -599,6 +617,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                             Row(
                               children: [
                                 Column(
+                                  key: InProgressKey,
                                   crossAxisAlignment: CrossAxisAlignment
                                       .start, // Align text to start
                                   children: [
@@ -703,6 +722,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         Column(
+                          key: InPrincipalApprovedKey,
                           crossAxisAlignment:
                               CrossAxisAlignment.start, // Align text to start
                           children: [
@@ -809,6 +829,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                             Row(
                               children: [
                                 Column(
+                                  key: FinalApprovedKey,
                                   crossAxisAlignment: CrossAxisAlignment
                                       .start, // Align text to start
                                   children: [
@@ -894,6 +915,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                             Row(
                               children: [
                                 Column(
+                                  key: DeclinedKey,
                                   crossAxisAlignment: CrossAxisAlignment
                                       .start, // Align text to start
                                   children: [
@@ -996,6 +1018,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                             Row(
                               children: [
                                 Column(
+                                  key: DisbursedKey,
                                   crossAxisAlignment: CrossAxisAlignment
                                       .start, // Align text to start
                                   children: [
@@ -1157,14 +1180,6 @@ class _FsadashboardState extends State<Fsadashboard> {
                     decoration: BoxDecoration(
                       color: Colors.transparent,
                       borderRadius: BorderRadius.circular(5),
-                      // boxShadow: [
-                      //   BoxShadow(
-                      //     color: Colors.grey[300]!,
-                      //     spreadRadius: 2,
-                      //     blurRadius: 2,
-                      //     offset: const Offset(0, 1),
-                      //   ),
-                      // ],
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.start,
@@ -1309,6 +1324,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                             style: MediaQuery.of(context).size.width > 600
                                 ? WidgetSupport.normalblackTextTab()
                                 : WidgetSupport.normalblackText(),
+                            key: RewardsKey,
                           ),
                         ],
                       ),
@@ -1464,6 +1480,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                             style: MediaQuery.of(context).size.width > 600
                                 ? WidgetSupport.normalblackTextTab()
                                 : WidgetSupport.normalblackText(),
+                            key: TrainingKey,
                           ),
                         ],
                       ),
@@ -1732,71 +1749,6 @@ class _FsadashboardState extends State<Fsadashboard> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class TutorialItemContent extends StatelessWidget {
-  const TutorialItemContent({
-    super.key,
-    required this.title,
-    required this.content,
-  });
-
-  final String title;
-  final String content;
-
-  @override
-  Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-
-    return Center(
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.6,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: width * 0.1),
-          child: Column(
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 25,
-                    fontWeight: FontWeight.w500),
-              ),
-              // const SizedBox(height: 10.0),
-              Text(
-                content,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w300),
-              ),
-              const Spacer(),
-              Row(
-                children: [
-                  TextButton(
-                    onPressed: () => Tutorial.skipAll(context),
-                    child: const Text(
-                      'Skip onboarding',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                  const Spacer(),
-                  const TextButton(
-                    onPressed: null,
-                    child: Text(
-                      'Next',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
-              )
-            ],
-          ),
-        ),
       ),
     );
   }

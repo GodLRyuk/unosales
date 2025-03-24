@@ -2,13 +2,17 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'package:unosfa/pages/FSAModule/fsacreatcompantlead.dart';
 import 'package:unosfa/pages/FSAModule/fsacreatenewlead.dart';
 import 'package:unosfa/pages/FSAModule/fsacustomersingleleaddetail.dart';
 import 'package:unosfa/pages/FSAModule/fsasingleleaddetail.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
+import 'package:unosfa/pages/services/in_app_storage.dart';
+import 'package:unosfa/pages/services/in_app_tutorial_target.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:unosfa/pages/config/config.dart';
+
 class FsaLeadDashBoard extends StatefulWidget {
   final String searchQuery;
   const FsaLeadDashBoard({super.key, required this.searchQuery});
@@ -33,10 +37,20 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
   DateTime? selectedFromDate;
   DateTime? selectedToDate;
   bool isExpanded = false;
+
+  late TutorialCoachMark tutorialCoachMark;
+  final CreateLeadIconKey = GlobalKey();
+  final EditLeadIconKey = GlobalKey();
+  final DisplayLeadKey = GlobalKey();
+  final LeadDescriptionKey = GlobalKey();
+  final LeadFilterKey = GlobalKey();
+
   @override
   void initState() {
-    super.initState();
     fetchLeads(); // Fetch initial data
+    _showInAppTour();
+    super.initState();
+    _inAppLeadDashboardTour();
     _scrollController.addListener(_onScroll); // Attach scroll listener
   }
 
@@ -44,6 +58,56 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
   void dispose() {
     _scrollController.dispose(); // Dispose the scroll controller
     super.dispose();
+  }
+
+  _inAppLeadDashboardTour() {
+    tutorialCoachMark = TutorialCoachMark(
+      targets: appTargetFsaLeadDashboard(
+        CreateLeadIconKey: CreateLeadIconKey,
+        EditLeadIconKey: EditLeadIconKey,
+        DisplayLeadKey: DisplayLeadKey,
+        LeadDescriptionKey: LeadDescriptionKey,
+        LeadFilterKey: LeadFilterKey,
+      ),
+      colorShadow: Color(0xFF420244),
+      paddingFocus: 10,
+      hideSkip: false,
+      textStyleSkip: TextStyle(
+          fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+      skipWidget: Container(
+        padding: EdgeInsets.symmetric(horizontal: 15, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          "Skip",
+          style: TextStyle(
+            fontSize: 18,
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      opacityShadow: 0.8,
+      onFinish: () {
+        savedAppLeadDashboardTourStatus().savedAppLeadDashbTourStatus();
+      },
+    );
+  }
+
+  void _showInAppTour() {
+    Future.delayed(const Duration(seconds: 0), () {
+      savedAppLeadDashboardTourStatus()
+          .getAppLeadDashbloardTourStatus()
+          .then((value) {
+        if (value == false) {
+          tutorialCoachMark.show(context: context);
+        } else {
+          // print("User have seen this page");
+        }
+      });
+    });
   }
 
   // Fetch leads from API
@@ -300,16 +364,36 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
                       children: [
                         // TextField for phone number filter
                         TextField(
+                          key: LeadFilterKey,
                           controller: _searchFilter,
                           decoration: InputDecoration(
                             labelText: 'Filter by Phone Number',
                             border: UnderlineInputBorder(
                               borderSide: BorderSide(color: Colors.grey),
                             ),
-                            suffixIcon: IconButton(
-                              icon: Icon(Icons.filter_list),
-                              onPressed:
-                                  _toggleDateFieldsVisibility, // Toggle date fields visibility
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(0),
+                              borderSide: const BorderSide(
+                                color: Colors.grey,
+                                width: 1.0,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(0),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFac00d0),
+                                width: 1.0,
+                              ),
+                            ),
+                            suffixIcon: Container(
+                              color: const Color(0xFFac00d0),
+                              child: IconButton(
+                                onPressed: _toggleDateFieldsVisibility,
+                                icon: const Icon(
+                                  Icons.filter_list,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
                           ),
                           style: TextStyle(height: 1),
@@ -423,6 +507,122 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
                     ),
                   ),
                   // ListView.builder for displaying filtered leads
+                  if (leads == "")
+                    Expanded(
+                      child: Container(
+                        margin: const EdgeInsets.all(
+                            10), // Adding some margin around the container
+
+                        child: ListView.builder(
+                          controller:
+                              _scrollController, // Attach ScrollController
+                          itemCount: 1, // Add one extra item for the loader
+                          itemBuilder: (context, index) {
+                            return GestureDetector(
+                              onTap: () {},
+                              child: Container(
+                                margin:
+                                    const EdgeInsets.symmetric(vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border(
+                                    top: BorderSide(
+                                        color: Color(0xFF640D78), width: 1.0),
+                                    bottom: BorderSide(
+                                        color: Color(0xFF640D78), width: 1.0),
+                                    left: BorderSide(
+                                        color: Color(0xFF640D78), width: 5.0),
+                                    right: BorderSide(
+                                        color: Color(0xFF640D78), width: 1.0),
+                                  ),
+                                ),
+                                child: ListTile(
+                                  key: DisplayLeadKey,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 15),
+                                  leading: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        "Example Name".toUpperCase(),
+                                        style: WidgetSupport.label(),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        "63**********",
+                                        style: WidgetSupport.inputLabel(),
+                                      ),
+                                    ],
+                                  ),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        key: LeadDescriptionKey,
+                                        margin:
+                                            EdgeInsets.only(top: 20, right: 10),
+                                        width: 100,
+                                        height: 25,
+                                        decoration: BoxDecoration(
+                                          color: Color(0xFFc433e0),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              "Lead Type",
+                                              style: TextStyle(
+                                                  color: Colors.white),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      GestureDetector(
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  FsaLeadGenerate(edit: ""),
+                                            ),
+                                          );
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  FsaCompanyLeadGenerate(
+                                                      edit: ""),
+                                            ),
+                                          );
+                                        },
+                                        child: Icon(
+                                          Icons.edit,
+                                          color: Color(0xFF640D78),
+                                          key: index == 0
+                                              ? EditLeadIconKey
+                                              : null,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Icon(
+                                        Icons.chevron_right,
+                                        color: Color(0xFF640D78),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
                   Expanded(
                     child: Container(
                       margin: const EdgeInsets.all(
@@ -455,11 +655,12 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
                                               context,
                                               MaterialPageRoute(
                                                 builder: (context) =>
-                                                    CustomerSingleLead(leadId: leadId,),
+                                                    CustomerSingleLead(
+                                                  leadId: leadId,
+                                                ),
                                               ),
                                             );
-                                          }else
-                                          {
+                                          } else {
                                             Navigator.push(
                                               context,
                                               MaterialPageRoute(
@@ -493,6 +694,9 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
                                             ),
                                           ),
                                           child: ListTile(
+                                            key: index == 0
+                                                ? DisplayLeadKey
+                                                : null,
                                             contentPadding:
                                                 const EdgeInsets.symmetric(
                                                     horizontal: 15),
@@ -519,6 +723,9 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 Container(
+                                                  key: index == 0
+                                                      ? LeadDescriptionKey
+                                                      : null,
                                                   margin: EdgeInsets.only(
                                                       top: 20, right: 10),
                                                   width: 100,
@@ -576,6 +783,9 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
                                                   child: Icon(
                                                     Icons.edit,
                                                     color: Color(0xFF640D78),
+                                                    key: index == 0
+                                                        ? EditLeadIconKey
+                                                        : null,
                                                   ),
                                                 ),
                                                 const SizedBox(width: 10),
@@ -695,6 +905,7 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
                     child: Icon(
                       isExpanded ? Icons.close : Icons.add,
                       color: Colors.white,
+                      key: CreateLeadIconKey,
                     ),
                     backgroundColor: Colors
                         .transparent, // Set transparent so gradient is visible

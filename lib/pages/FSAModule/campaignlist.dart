@@ -117,10 +117,13 @@ class _CampaignlistState extends State<Campaignlist> {
         throw Exception('Failed to load leads');
       }
     } catch (e) {
-      setState(() {
-        isLoading = false;
-        isFetchingMore = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+          isFetchingMore = false;
+        });
+      }
+
       print('Error fetching leads: $e');
     }
   }
@@ -335,9 +338,11 @@ class _CampaignlistState extends State<Campaignlist> {
                                           Navigator.push(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (context) => LeadListByCampaign(campaign: leadId),
-                                              ),
-                                            );
+                                              builder: (context) =>
+                                                  LeadListByCampaign(
+                                                      campaign: leadId),
+                                            ),
+                                          );
                                         },
                                         child: Container(
                                           margin: const EdgeInsets.symmetric(
@@ -413,7 +418,8 @@ class _CampaignlistState extends State<Campaignlist> {
                                                   ),
                                                   const SizedBox(height: 5),
                                                   Text(
-                                                    "Campaign Expires In".toUpperCase(),
+                                                    "Campaign Expires In"
+                                                        .toUpperCase(),
                                                     style: TextStyle(
                                                         fontSize: 15,
                                                         fontWeight:

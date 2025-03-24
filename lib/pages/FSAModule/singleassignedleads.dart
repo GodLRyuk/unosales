@@ -2,7 +2,6 @@ import 'dart:convert'; // for json.decode
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:unosfa/pages/FRModule/leadsByCampaign.dart';
 import 'package:unosfa/pages/FSAModule/assignedLeads.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:unosfa/pages/config/config.dart';

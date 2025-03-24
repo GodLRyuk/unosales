@@ -356,7 +356,7 @@ class _FinanceregistrationState extends State<Financeregistration> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => RegistrationOtpPage(loginWith: 'Sal', firstName: firstName, lastName: lastName, emailId: emailId, offic: office, phoneNumber: phoneNumber, kyc_id_type: kyc_id_type, kyc_id_number: kyc_id_number,),
+          builder: (context) => RegistrationOtpPage(loginWith: 'Sal', firstName: firstName, lastName: lastName, emailId: emailId, offic: office, phoneNumber: phoneNumber, kyc_id_type: kyc_id_type, kyc_id_number: kyc_id_number, referral_code: '',),
         ),
       );
     } else {

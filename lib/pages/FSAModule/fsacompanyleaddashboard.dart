@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unosfa/pages/FSAModule/fsacreatcompantlead.dart';
-import 'package:unosfa/pages/FSAModule/fsasingleleaddetail.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:gradient_floating_button/gradient_floating_button.dart';
@@ -354,7 +353,6 @@ class _CompanyLeadDetailsState extends State<CompanyLeadDetails> {
                                     if (index < leads.length) {
                                       return GestureDetector(
                                         onTap: () {
-                                          String leadId = leads[index]['id']!;
                                           // Navigator.push(
                                           //   context,
                                           //   MaterialPageRoute(

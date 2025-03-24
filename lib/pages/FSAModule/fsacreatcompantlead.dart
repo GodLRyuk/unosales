@@ -51,7 +51,6 @@ class _FsaCompanyLeadGenerateState extends State<FsaCompanyLeadGenerate> {
   String? _cityError;
   String _imageUrl = "";
   Uint8List? _imageBytes;
-  bool _hasError = false;
   File? _image;
 
   @override
@@ -368,7 +367,6 @@ class _FsaCompanyLeadGenerateState extends State<FsaCompanyLeadGenerate> {
           setState(() {
             _imageBytes = imageBytes;
             _isLoading = false;
-            _hasError = false;
           });
           downloadFile(_imageUrl);
         } else {
@@ -420,7 +418,6 @@ class _FsaCompanyLeadGenerateState extends State<FsaCompanyLeadGenerate> {
   void _handleImageError() {
     setState(() {
       _isLoading = false;
-      _hasError = true;
       _imageBytes = null;
     });
   }
@@ -1544,7 +1541,7 @@ class _FsaCompanyLeadGenerateState extends State<FsaCompanyLeadGenerate> {
           validator: (_) {
             if (_selectedGId != null &&
                 _image == null &&
-                (_imageUrl == null || _imageUrl!.isEmpty)) {
+                (_imageUrl.isEmpty)) {
               return 'Please upload an image'; // Show error only if no image is available at all
             }
             return null;

@@ -63,10 +63,8 @@ class _LeadGenerateState extends State<LeadGenerate> {
   final _otherCompanyController = TextEditingController();
   bool _showOtherCompanyField = false;
   String? _cityError;
-  String? _barangayError;
   String _imageUrl = "";
   Uint8List? _imageBytes;
-  bool _hasError = false;
 
   final Map<String, String> _gIdOptions = {
     'passport': 'Philippines Passport',
@@ -725,7 +723,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
           setState(() {
             _imageBytes = imageBytes;
             _isLoading = false;
-            _hasError = false;
           });
           downloadFile(_imageUrl);
         } else {
@@ -777,7 +774,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
   void _handleImageError() {
     setState(() {
       _isLoading = false;
-      _hasError = true;
       _imageBytes = null;
     });
   }
@@ -1267,7 +1263,6 @@ class _LeadGenerateState extends State<LeadGenerate> {
                                         _cityError = null;
                                       }
                                       if (_selectedBarangayType == null) {
-                                        _barangayError = "Barangay is required";
                                       }
                                       if (_formKey.currentState!.validate()) {
                                         leadSubmit();
@@ -1474,9 +1469,9 @@ class _LeadGenerateState extends State<LeadGenerate> {
             request.files.add(
               await http.MultipartFile.fromPath('kyc_document', _image!.path),
             );
-          } else if (_imageUrl != null && _imageUrl!.isNotEmpty) {
+          } else if (_imageUrl.isNotEmpty) {
             request.fields['kyc_document'] =
-                _imageUrl!; // Send existing image URL if no new image is picked
+                _imageUrl; // Send existing image URL if no new image is picked
           }
           http.Response response =
               await http.Response.fromStream(await request.send());
@@ -1669,8 +1664,8 @@ class _LeadGenerateState extends State<LeadGenerate> {
         if (_selectedKycId == "" && _selectedGId != null) {
           return 'Please Enter Id'; // Validation message if KYC ID is selected but no image uploaded
         }
-        if (_selectedKycId != null && _selectedKycId!.isNotEmpty) {
-          if (_selectedKycId!.length < 6) {
+        if (_selectedKycId != null && _selectedKycId.isNotEmpty) {
+          if (_selectedKycId.length < 6) {
             return 'ID must be at least 6 characters long';
           }
           if (!RegExp(r'^[a-zA-Z0-9]+$').hasMatch(_selectedKycId)) {
@@ -1962,7 +1957,7 @@ class _LeadGenerateState extends State<LeadGenerate> {
           validator: (_) {
             if (_selectedGId != null &&
                 _image == null &&
-                (_imageUrl == null || _imageUrl!.isEmpty)) {
+                (_imageUrl.isEmpty)) {
               return 'Please upload an image'; // Show error only if no image is available at all
             }
             return null;

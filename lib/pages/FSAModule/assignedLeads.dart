@@ -281,12 +281,33 @@ class _AssignedLeadsState extends State<AssignedLeads> {
                             border: UnderlineInputBorder(
                               borderSide: BorderSide(color: Colors.grey),
                             ),
-                            suffixIcon: IconButton(
-                              icon: Icon(Icons.filter_list),
-                              onPressed:
-                                  _toggleDateFieldsVisibility, // Toggle date fields visibility
+                            enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(0),
+                            borderSide: const BorderSide(
+                              color: Colors.grey,
+                              width: 1.0,
                             ),
                           ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(0),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFac00d0),
+                              width: 1.0,
+                            ),
+                          ),
+                          suffixIcon: Container(
+                            color: const Color(0xFFac00d0),
+                            child: IconButton(
+                               onPressed:
+                                  _toggleDateFieldsVisibility, 
+                              icon: const Icon(
+                                Icons.filter_list,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                           
                           style: TextStyle(height: 1),
                           // onChanged: _filterLeads, // Uncomment if needed
                         ),

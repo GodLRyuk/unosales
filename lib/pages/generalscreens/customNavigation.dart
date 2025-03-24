@@ -4,7 +4,6 @@ import 'package:unosfa/pages/FSAModule/fsadashboard.dart';
 import 'package:unosfa/pages/commingSoon.dart';
 import 'package:unosfa/pages/generalscreens/profile.dart';
 import 'package:unosfa/pages/FRModule/salesdashboard.dart';
-import 'package:unosfa/pages/testPage.dart';
 class NavigationPage extends StatefulWidget {
   const NavigationPage({super.key});
 
@@ -52,7 +51,7 @@ class _NavigationPageState extends State<NavigationPage> {
         },
         children: [
           ProfilePage(),
-          Testpage(),
+          ComingSoon(),
           if (_role == "FR") Salesdashboard(),
           if (_role == "FSA") Fsadashboard(),
           ComingSoon(),

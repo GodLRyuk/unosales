@@ -11,7 +11,6 @@ import 'dart:async';
 class LeadListByCampaign extends StatefulWidget {
   final String campaign;
   LeadListByCampaign({required this.campaign});
-
   @override
   State<LeadListByCampaign> createState() => _LeadListByCampaignState();
 }
@@ -21,8 +20,7 @@ class _LeadListByCampaignState extends State<LeadListByCampaign> {
   List<Map<String, String>> filteredLeads = [];
   String filterText = '';
   bool isLoading = true;
-  bool areDateFieldsVisible =
-      false; // Boolean to control visibility of date fields
+  bool areDateFieldsVisible = false; // Boolean to control visibility of date fields
   // DateTime? selectedFromDate;
   // DateTime? selectedToDate;
   final _scrollController = ScrollController();

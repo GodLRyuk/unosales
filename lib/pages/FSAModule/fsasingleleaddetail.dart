@@ -1,5 +1,4 @@
 import 'dart:convert'; // for json.decode
-import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -21,9 +20,6 @@ class _FsaCompanySingleLeadState extends State<FsaCompanySingleLead> {
   bool isLoading = true;
   Map<String, dynamic> leadDetails = {}; // To store the lead details
   Uint8List? _imageBytes;
-  bool _hasError = false;
-  File? _image;
-  bool _isLoading = false;
   // Function to fetch lead details by ID
   Future<void> fetchLeadDetails() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -90,8 +86,6 @@ class _FsaCompanySingleLeadState extends State<FsaCompanySingleLead> {
         if (imageBytes.isNotEmpty) {
           setState(() {
             _imageBytes = imageBytes;
-            _isLoading = false;
-            _hasError = false;
           });
         } else {
           _handleImageError();
@@ -108,8 +102,6 @@ class _FsaCompanySingleLeadState extends State<FsaCompanySingleLead> {
   void _handleImageError() {
     if (mounted) {
       setState(() {
-        _isLoading = false;
-        _hasError = true;
         _imageBytes = null;
       });
     }

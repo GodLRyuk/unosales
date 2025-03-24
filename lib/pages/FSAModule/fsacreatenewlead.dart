@@ -70,7 +70,6 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
   bool _showOtherCompanyField = false;
   String _imageUrl = "";
   Uint8List? _imageBytes;
-  bool _hasError = false;
   File? _image;
 
   @override
@@ -865,7 +864,6 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
           setState(() {
             _imageBytes = imageBytes;
             _isLoading = false;
-            _hasError = false;
           });
           downloadFile(_imageUrl);
         } else {
@@ -917,7 +915,6 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
   void _handleImageError() {
     setState(() {
       _isLoading = false;
-      _hasError = true;
       _imageBytes = null;
     });
   }
@@ -1569,9 +1566,9 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
             request.files.add(
               await http.MultipartFile.fromPath('kyc_document', _image!.path),
             );
-          } else if (_imageUrl != null && _imageUrl!.isNotEmpty) {
+          } else if (_imageUrl.isNotEmpty) {
             request.fields['kyc_document'] =
-                _imageUrl!; // Send existing image URL if no new image is picked
+                _imageUrl; // Send existing image URL if no new image is picked
           }
           http.Response response =
               await http.Response.fromStream(await request.send());
@@ -1634,9 +1631,9 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
             request.files.add(
               await http.MultipartFile.fromPath('kyc_document', _image!.path),
             );
-          } else if (_imageUrl != null && _imageUrl!.isNotEmpty) {
+          } else if (_imageUrl.isNotEmpty) {
             request.fields['kyc_document'] =
-                _imageUrl!; // Send existing image URL if no new image is picked
+                _imageUrl; // Send existing image URL if no new image is picked
           }
           http.Response response =
               await http.Response.fromStream(await request.send());
@@ -2129,7 +2126,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
           validator: (_) {
             if (_selectedGId != null &&
                 _image == null &&
-                (_imageUrl == null || _imageUrl!.isEmpty)) {
+                (_imageUrl.isEmpty)) {
               return 'Please upload an image'; // Show error only if no image is available at all
             }
             return null;
@@ -2185,8 +2182,8 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
         if (_selectedKycId == "" && _selectedGId != null) {
           return 'Please Enter Id'; // Validation message if KYC ID is selected but no image uploaded
         }
-        if (_selectedKycId != null && _selectedKycId!.isNotEmpty) {
-          if (_selectedKycId!.length < 6) {
+        if (_selectedKycId != null && _selectedKycId.isNotEmpty) {
+          if (_selectedKycId.length < 6) {
             return 'ID must be at least 6 characters long';
           }
           if (!RegExp(r'^[a-zA-Z0-9]+$').hasMatch(_selectedKycId)) {

@@ -76,6 +76,7 @@ dependencies:
   app_tutorial: ^1.0.6
   tutorial_coach_mark: ^1.2.13
 
+
 dev_dependencies:
 flutter_icons:
   android: true

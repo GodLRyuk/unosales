@@ -26,6 +26,7 @@ class _RegistrationState extends State<Registration> {
   final _externalId = TextEditingController();
   final _office = TextEditingController();
   final _phoneNumber = TextEditingController();
+  final _referralCode = TextEditingController();
   bool _isLoading = false;
   bool _selectedKycId = false;
   final _imageController = TextEditingController();
@@ -189,6 +190,19 @@ class _RegistrationState extends State<Registration> {
                                 ),
                                 SizedBox(
                                   height:
+                                      MediaQuery.of(context).size.height * 0.04,
+                                ),
+                                _buildTextField(
+                                  _referralCode,
+                                  "Referral Code (Optional)",
+                                  '',
+                                  'referralCode',
+                                  isReferralCode:
+                                      true, // Set referral code flag
+                                  icon: FontAwesomeIcons.idCard,
+                                ),
+                                SizedBox(
+                                  height:
                                       MediaQuery.of(context).size.height * 0.02,
                                 ),
                                 Container(
@@ -335,8 +349,9 @@ class _RegistrationState extends State<Registration> {
     bool obscureText = false,
     bool isEmail = false,
     bool isPhoneNumber = false,
-    bool isAlphabetic = false, // Add a parameter to validate alphabetic input
-    bool allowSpaces = false, // Add a parameter to allow spaces
+    bool isAlphabetic = false,
+    bool allowSpaces = false,
+    bool isReferralCode = false, // Add flag for referral code
   }) {
     return TextFormField(
       controller: controller,
@@ -353,20 +368,17 @@ class _RegistrationState extends State<Registration> {
         ],
         if (isAlphabetic)
           FilteringTextInputFormatter.allow(
-            allowSpaces
-                ? RegExp(r'^[a-zA-Z\s]+$') // Allow alphabets and spaces
-                : RegExp(r'^[a-zA-Z]+$'), // Allow alphabets only (no spaces)
+            allowSpaces ? RegExp(r'^[a-zA-Z\s]+$') : RegExp(r'^[a-zA-Z]+$'),
           ),
-        if (!isPhoneNumber && !isAlphabetic)
-          FilteringTextInputFormatter.deny(
-            allowSpaces
-                ? RegExp(r'^\s+$') // Deny consecutive spaces only
-                : RegExp(r'\s'), // Deny spaces globally
-          ),
+        if (isReferralCode)
+          FilteringTextInputFormatter.allow(
+              RegExp(r'^[a-zA-Z0-9]+$')), // Alphanumeric only
       ],
       validator: (value) {
         if (value == null || value.isEmpty) {
-          return validationMessage; // Default validation message for empty fields
+          return isReferralCode
+              ? null
+              : validationMessage; // Allow empty referral code
         }
 
         if (isAlphabetic) {
@@ -378,7 +390,6 @@ class _RegistrationState extends State<Registration> {
         }
 
         if (isEmail) {
-          // Basic email validation regex
           final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
           if (!emailRegex.hasMatch(value)) {
             if (!value.contains('@')) {
@@ -401,6 +412,10 @@ class _RegistrationState extends State<Registration> {
           if (!RegExp(r'^\d+$').hasMatch(value)) {
             return 'Phone number must contain only digits';
           }
+        }
+
+        if (isReferralCode && !RegExp(r'^[a-zA-Z0-9]+$').hasMatch(value)) {
+          return 'Referral code can only contain letters and numbers';
         }
 
         return null; // Return null if all validations pass
@@ -611,9 +626,9 @@ class _RegistrationState extends State<Registration> {
         String emailId = _emailId.text.trim();
         String office = _office.text.trim();
         String phoneNumber = _phoneNumber.text.trim();
-        String selectedGId = _selectedGId!;
+        String selectedGId = _selectedGId ?? '';
+        String referralCode = _referralCode.text.trim();
         String externalId = _externalId.text.trim();
-
         // Perform registration logic here, e.g., API call
         await Future.delayed(const Duration(seconds: 2)); // Simulating API call
 
@@ -630,7 +645,8 @@ class _RegistrationState extends State<Registration> {
               phoneNumber: phoneNumber,
               kyc_id_type: selectedGId,
               kyc_id_number: externalId,
-              kycDocument: _image, // Pass the image file
+              kycDocument: _image,
+              referral_code: referralCode,
             ),
           ),
         );
