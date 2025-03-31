@@ -1,6 +1,7 @@
-import 'dart:convert'; // for json.decode
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unosfa/pages/FSAModule/leadsByCampaign.dart';
@@ -165,17 +166,96 @@ class _FSACampaignSingleLeadState extends State<FSACampaignSingleLead> {
   final promotionalCode = TextEditingController();
   final sourceCompany = TextEditingController();
   final agentCode = TextEditingController();
-
+  String IpAddress = "";
+  String latitude = "";
+  String longitude = "";
   bool _isLoading = true;
   bool isExpanded = false;
+  List<String>? userInfo;
 
   Map<String, dynamic> leadDetails = {}; // To store the lead details
 
+  @override
+  void initState() {
+    getPublicIP();
+    super.initState();
+    fetchLeadDetails(); // Fetch lead details when the screen is loaded
+  }
+
+  Future<void> getPublicIP() async {
+    final response =
+        await http.get(Uri.parse('https://api64.ipify.org?format=json'));
+    if (response.statusCode == 200) {
+      String ip = jsonDecode(response.body)['ip'];
+      // if (mounted) {
+      setState(() {
+        IpAddress = ip;
+      });
+      // }
+    }
+  }
+
+  Future<void> getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Check if GPS is enabled
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      print("Location services are disabled.");
+      return;
+    }
+
+    // Check permission
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        print("Location permissions are denied.");
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      print("Location permissions are permanently denied.");
+      return;
+    }
+
+    // Get current position
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    setState(() {
+      latitude = position.latitude.toString();
+      longitude = position.longitude.toString();
+    });
+  }
+
   // Function to fetch lead details by ID
   Future<void> fetchLeadDetails() async {
+    getCurrentLocation();
+    // getPublicIP();
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
     String? refresh = prefs.getString('refreshToken');
+    userInfo = prefs.getStringList('userInfo');
+    DateTime now = DateTime.now();
+
+    String year = now.year.toString();
+    String month = now.month.toString().padLeft(2, '0');
+    String day = now.day.toString().padLeft(2, '0');
+    String hour = now.hour.toString().padLeft(2, '0');
+    String minute = now.minute.toString().padLeft(2, '0');
+    String second = now.second.toString().padLeft(2, '0');
+
+    String randomNumber = Random()
+        .nextInt(9000)
+        .toString()
+        .padLeft(4, '0'); // 4-digit random number
+
+    String applicationNum = "$year$month$day$hour$minute$second$randomNumber";
+
     try {
       final response = await http.get(
         Uri.parse(
@@ -188,20 +268,23 @@ class _FSACampaignSingleLeadState extends State<FSACampaignSingleLead> {
         // Parse the response body as JSON
         setState(() {
           leadDetails = json.decode(response.body);
+          // String jsonString = jsonEncode(leadDetails);
+          // for (int i = 0; i < jsonString.length; i += 1000) {
+          //   print(jsonString.substring(i,
+          //       (i + 1000 > jsonString.length) ? jsonString.length : i + 1000));
+          // }
           firstName.text = leadDetails['first_name'] ?? "";
           lastName.text = leadDetails['last_name'] ?? "";
           middleName.text = leadDetails['middle_name'] ?? "";
           mobilePhone.text = leadDetails['mobile_phone'] ?? "";
           birthDate.text = leadDetails['birth_date'] ?? "";
           gender.text = leadDetails['gender'] ?? "";
-          emailAddress.text = "";
+          emailAddress.text = leadDetails['emp_email'] ?? "";
           homePhoneNumber.text = "";
           branchId.text = "";
           branchKey.text = "";
           branch.text = "";
-          ClientIP.text = "";
-          Longitude.text = "";
-          Latitude.text = "";
+          ClientIP.text = IpAddress;
           // Address details
           line1.text =
               leadDetails['perm_street'] + leadDetails['perm_barangay'] ?? "";
@@ -281,13 +364,15 @@ class _FSACampaignSingleLeadState extends State<FSACampaignSingleLead> {
           // Partner Details
           partnerName.text = leadDetails['partner_name'] ?? "";
           natureOfPartnership.text = leadDetails['nature_of_partnership'] ?? "";
-          applicationNumber.text = leadDetails['application_number'] ?? "";
+          applicationNumber.text = applicationNum;
           partnerTelcoScore.text = leadDetails['partner_telco_score'] ?? "";
           emailVerification.text = leadDetails['email_verification'] ?? "";
           incomeValidation.text = leadDetails['income_validation'] ?? "";
           addressValidation.text = leadDetails['address_validation'] ?? "";
           employmentValidation.text =
               leadDetails['employment_validation'] ?? "";
+          customeragentCode.text = userInfo![0];
+          accountagentCode.text = userInfo![0];
           _isLoading = false; // Data loaded
         });
       } else if (response.statusCode == 401) {
@@ -313,12 +398,6 @@ class _FSACampaignSingleLeadState extends State<FSACampaignSingleLead> {
         setState(() => _isLoading = false);
       }
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    fetchLeadDetails(); // Fetch lead details when the screen is loaded
   }
 
   @override
@@ -425,16 +504,6 @@ class _FSACampaignSingleLeadState extends State<FSACampaignSingleLead> {
                               height: MediaQuery.of(context).size.height * 0.02,
                             ),
                             _buildTextField(
-                              mobilePhone,
-                              "Birth Date",
-                              'Please Enter Birth Date',
-                              'birthDate',
-                              enabled: _isEditing,
-                            ),
-                            SizedBox(
-                              height: MediaQuery.of(context).size.height * 0.02,
-                            ),
-                            _buildTextField(
                               gender,
                               "Gender",
                               'Please Enter Gender',
@@ -490,16 +559,6 @@ class _FSACampaignSingleLeadState extends State<FSACampaignSingleLead> {
                               "Branch",
                               'Please Enter Branch',
                               'branch',
-                              enabled: _isEditing,
-                            ),
-                            SizedBox(
-                              height: MediaQuery.of(context).size.height * 0.02,
-                            ),
-                            _buildTextField(
-                              ClientIP,
-                              "Client Ip",
-                              'Please Enter Client Ip',
-                              'ClientIP',
                               enabled: _isEditing,
                             ),
                             SizedBox(
@@ -1297,7 +1356,7 @@ class _FSACampaignSingleLeadState extends State<FSACampaignSingleLead> {
                               height: MediaQuery.of(context).size.height * 0.02,
                             ),
                             _buildTextField(
-                              customerreferralCode,
+                              customerreferralPromoCodeFlag,
                               "Customer Rreferral PromoCode",
                               'Please Enter Customer Rreferral PromoCode',
                               'customerreferralCode',
@@ -1339,7 +1398,7 @@ class _FSACampaignSingleLeadState extends State<FSACampaignSingleLead> {
                             _buildTextField(
                               customeragentCode,
                               "Customer Agent Code",
-                              'Please Enter Customer Agent Cod',
+                              'Please Enter Customer Agent Code',
                               'customeragentCode',
                               enabled: _isEditing,
                             ),
@@ -1367,16 +1426,6 @@ class _FSACampaignSingleLeadState extends State<FSACampaignSingleLead> {
                               height: MediaQuery.of(context).size.height * 0.02,
                             ),
                             _buildTextField(
-                              accountpromotionalCode,
-                              "Account Promo Code",
-                              'Please Enter Account Promo Code',
-                              'accountpromotionalCode',
-                              enabled: _isEditing,
-                            ),
-                            SizedBox(
-                              height: MediaQuery.of(context).size.height * 0.02,
-                            ),
-                            _buildTextField(
                               accountsourceCompany,
                               "Account Source Company",
                               'Please Enter Account Source Company',
@@ -1388,8 +1437,8 @@ class _FSACampaignSingleLeadState extends State<FSACampaignSingleLead> {
                             ),
                             _buildTextField(
                               accountagentCode,
-                              "Account Agent Code",
-                              'Please Enter Account Agent Code',
+                              "Agent Code",
+                              'Please Enter Agent Code',
                               'accountagentCode',
                               enabled: _isEditing,
                             ),
@@ -1429,7 +1478,7 @@ class _FSACampaignSingleLeadState extends State<FSACampaignSingleLead> {
                             _buildTextField(
                               applicationNumber,
                               "Application Number",
-                              'Please Enter Application Number',
+                              'Please Enter Application Numbera',
                               'applicationNumber',
                               enabled: _isEditing,
                             ),
@@ -1704,168 +1753,175 @@ class _FSACampaignSingleLeadState extends State<FSACampaignSingleLead> {
   void submitLos() {
     String CWTransactionID = (Random().nextInt(9) + 1).toString() +
         List.generate(14, (_) => Random().nextInt(10)).join();
+
     Map<String, dynamic> requestData = {
       "CWTransactionID": CWTransactionID,
       "clientDetails": {
         "ARN": "723561430000",
-        "idmArnNo": idmArnNo.text.trim(),
-        "clientType": clientType.text.trim(),
-        "firstName":
-            firstName.text.trim().isNotEmpty ? firstName.text.trim() : null,
-        "lastName": lastName.text.trim(),
-        "middleName": middleName.text.trim(),
-        "mobilePhone": mobilePhone.text.trim(),
-        "birthDate": birthDate.text.trim(),
-        "gender": gender.text.trim(),
-        "emailAddress": emailAddress.text.trim(),
-        "homePhoneNumber": homePhoneNumber.text.trim(),
-        "branchId": branchId.text.trim(),
-        "branchKey": branchKey.text.trim(),
-        "branch": branch.text.trim(),
-        "ClientIP": ClientIP.text.trim(),
-        "Longitude": Longitude.text.trim(),
-        "Latitude": Latitude.text.trim(),
+        "idmArnNo": idmArnNo.text,
+        "clientType": clientType.text,
+        "firstName": firstName.text.isNotEmpty ? firstName.text : null,
+        "lastName": lastName.text,
+        "middleName": middleName.text,
+        "mobilePhone": mobilePhone.text,
+        "birthDate": birthDate.text,
+        "gender": gender.text,
+        "emailAddress": emailAddress.text,
+        "homePhoneNumber": homePhoneNumber.text,
+        "branchId": branchId.text,
+        "branchKey": branchKey.text,
+        "branch": branch.text,
+        "ClientIP": ClientIP,
+        "Longitude": Longitude.text,
+        "Latitude": Latitude.text,
         "addresses": [
           {
-            "line1": line1.text.trim(),
-            "line2": line2.text.trim(),
-            "city": city.text.trim(),
-            "region": region.text.trim(),
-            "postcode": postcode.text.trim(),
-            "country": country.text.trim()
+            "line1": line1.text,
+            "line2": line2.text,
+            "city": city.text,
+            "region": region.text,
+            "postcode": postcode.text,
+            "country": country.text
           }
         ],
         "idDocuments": null,
         "_Perm_Address": {
-          "perm_State": perm_State.text.trim(),
-          "perm_City": perm_City.text.trim(),
-          "perm_Street": perm_Street.text.trim(),
-          "perm_Country": perm_Country.text.trim(),
-          "perm_ZipCode": perm_ZipCode.text.trim(),
-          "perm_Barangay": perm_Barangay.text.trim(),
-          "perm_Region": perm_Region.text.trim(),
-          "perm_countryCode": perm_countryCode.text.trim(),
-          "hra": hra.text.trim()
+          "perm_State": perm_State.text,
+          "perm_City": perm_City.text,
+          "perm_Street": perm_Street.text,
+          "perm_Country": perm_Country.text,
+          "perm_ZipCode": perm_ZipCode.text,
+          "perm_Barangay": perm_Barangay.text,
+          "perm_Region": perm_Region.text,
+          "perm_countryCode": perm_countryCode.text,
+          "hra": hra.text
         },
         "_Fin_Details": {
-          "fin_Mthly_Income": int.tryParse(fin_Mthly_Income.text.trim()) ?? 0,
+          "fin_Mthly_Income": int.tryParse(fin_Mthly_Income.text) ?? 0,
           "fin_Ownr_Car": "",
-          "fin_Ann_Income": fin_Ann_Income.text.trim(),
+          "fin_Ann_Income": fin_Ann_Income.text,
           "fin_Ownr_Home": "",
-          "fin_Src_Of_Funds": fin_Src_Of_Funds.text.trim(),
-          "fin_Src_Of_Funds_Code": fin_Src_Of_Funds_Code.text.trim(),
-          "fin_Salary_Period": fin_Salary_Period.text.trim(),
-          "fin_Salary_dates": fin_Salary_dates.text.trim(),
+          "fin_Src_Of_Funds": fin_Src_Of_Funds.text,
+          "fin_Src_Of_Funds_Code": fin_Src_Of_Funds_Code.text,
+          "fin_Salary_Period": fin_Salary_Period.text,
+          "fin_Salary_dates": fin_Salary_dates.text,
         },
         "_Identification_Details": {
-          "identity_TinId": identity_TinId.text.trim(),
-          "identity_GsisID": identity_GsisID.text.trim(),
-          "identity_SssID": identity_SssID.text.trim()
+          "identity_TinId": identity_TinId.text,
+          "identity_GsisID": identity_GsisID.text,
+          "identity_SssID": identity_SssID.text
         },
         "_Emp_Details": {
-          "emp_Work_Nature": emp_Work_Nature.text.trim(),
-          "emp_Mths_In_Cur_Comp": emp_Mths_In_Cur_Comp.text.trim(),
-          "emp_Status": emp_Status.text.trim(),
-          "emp_Employer_Name": emp_Employer_Name.text.trim(),
-          "emp_Indus_Type": emp_Indus_Type.text.trim(),
-          "emp_Type": emp_Type.text.trim(),
-          "emp_Yrs_In_Cur_Comp": emp_Yrs_In_Cur_Comp.text.trim(),
-          "Office_phone_no": Office_phone_no.text.trim(),
-          "emp_Type_Code": emp_Type_Code.text.trim(),
-          "emp_Status_Code": emp_Status_Code.text.trim(),
-          "emp_Work_Nature_Code": emp_Work_Nature_Code.text.trim(),
-          "emp_Indus_Type_Code": emp_Indus_Type_Code.text.trim(),
-          "emp_email": emp_email.text.trim(),
-          "companyCategorySegment": companyCategorySegment.text.trim(),
-          "profession": profession.text.trim()
+          "emp_Work_Nature": emp_Work_Nature.text,
+          "emp_Mths_In_Cur_Comp": emp_Mths_In_Cur_Comp.text,
+          "emp_Status": emp_Status.text,
+          "emp_Employer_Name": emp_Employer_Name.text,
+          "emp_Indus_Type": emp_Indus_Type.text,
+          "emp_Type": emp_Type.text,
+          "emp_Yrs_In_Cur_Comp": emp_Yrs_In_Cur_Comp.text,
+          "Office_phone_no": Office_phone_no.text,
+          "emp_Type_Code": emp_Type_Code.text,
+          "emp_Status_Code": emp_Status_Code.text,
+          "emp_Work_Nature_Code": emp_Work_Nature_Code.text,
+          "emp_Indus_Type_Code": emp_Indus_Type_Code.text,
+          "emp_email": emp_email.text,
+          "companyCategorySegment": companyCategorySegment.text,
+          "profession": profession.text
         },
         "_Emp_Address": {
-          "emp_Street": emp_Street.text.trim(),
-          "emp_State": emp_State.text.trim(),
-          "emp_City": emp_City.text.trim(),
-          "emp_Country": emp_Country.text.trim(),
-          "emp_ZipCode": emp_ZipCode.text.trim(),
-          "emp_Barangay": emp_Barangay.text.trim(),
-          "emp_Region": emp_Region.text.trim(),
-          "emp_countryCode": emp_countryCode.text.trim()
+          "emp_Street": emp_Street.text,
+          "emp_State": emp_State.text,
+          "emp_City": emp_City.text,
+          "emp_Country": emp_Country.text,
+          "emp_ZipCode": emp_ZipCode.text,
+          "emp_Barangay": emp_Barangay.text,
+          "emp_Region": emp_Region.text,
+          "emp_countryCode": emp_countryCode.text
         },
         "_Personal_Details": {
-          "fatca_Cert_US_Non_US": fatca_Cert_US_Non_US.text.trim(),
-          "fatca_W9_IdNumber": fatca_W9_IdNumber.text.trim(),
-          "no_Of_Dependents": int.tryParse(no_Of_Dependents.text.trim()) ?? 0,
-          "fatca_W9_IdType": fatca_W9_IdType.text.trim(),
-          "civil_Status": civil_Status.text.trim(),
-          "yrs_In_Residence": yrs_In_Residence.text.trim(),
-          "nationality": nationality.text.trim(),
-          "marketing_Consent": marketing_Consent.text.trim(),
-          "mailing_Adrs": mailing_Adrs.text.trim(),
-          "place_Of_Birth": place_Of_Birth.text.trim(),
-          "my_Job": my_Job.text.trim(),
-          "salutation": salutation.text.trim(),
-          "suffix": suffix.text.trim(),
-          "nom_Counter": nom_Counter.text.trim(),
-          "cust_IdType": cust_IdType.text.trim(),
-          "card_Issuance_Status": card_Issuance_Status.text.trim(),
-          "my_Job_Code": my_Job_Code.text.trim(),
-          "vcard_issueDt": vcard_issueDt.text.trim(),
-          "data_Pvcy_Agrmt": data_Pvcy_Agrmt.text.trim(),
-          "is_Term_Cond_Accepted": is_Term_Cond_Accepted.text.trim(),
-          "is_Rcds_Edited": is_Rcds_Edited.text.trim(),
-          "designation": designation.text.trim()
+          "fatca_Cert_US_Non_US": fatca_Cert_US_Non_US.text,
+          "fatca_W9_IdNumber": fatca_W9_IdNumber.text,
+          "no_Of_Dependents": int.tryParse(no_Of_Dependents.text) ?? 0,
+          "fatca_W9_IdType": fatca_W9_IdType.text,
+          "civil_Status": civil_Status.text,
+          "yrs_In_Residence": yrs_In_Residence.text,
+          "nationality": nationality.text,
+          "marketing_Consent": marketing_Consent.text,
+          "mailing_Adrs": mailing_Adrs.text,
+          "place_Of_Birth": place_Of_Birth.text,
+          "my_Job": my_Job.text,
+          "salutation": salutation.text,
+          "suffix": suffix.text,
+          "nom_Counter": nom_Counter.text,
+          "cust_IdType": cust_IdType.text,
+          "card_Issuance_Status": card_Issuance_Status.text,
+          "my_Job_Code": my_Job_Code.text,
+          "vcard_issueDt": vcard_issueDt.text,
+          "data_Pvcy_Agrmt": data_Pvcy_Agrmt.text,
+          "is_Term_Cond_Accepted": is_Term_Cond_Accepted.text,
+          "is_Rcds_Edited": is_Rcds_Edited.text,
+          "designation": designation.text,
         },
         "_Spouse_Details": {
-          "spouse_Name": "Mrs Spouse",
-          "spouse_Nationality": "Indian",
-          "spouse_DOB": "1960-01-03",
-          "spouse_Place_Of_Birth": "india",
-          "spouse_Employment": "No"
+          "spouse_Name": spouse_Name.text,
+          "spouse_Nationality": spouse_Nationality.text,
+          "spouse_DOB": spouse_DOB.text,
+          "spouse_Place_Of_Birth": spouse_Place_Of_Birth.text,
+          "spouse_Employment": spouse_Employment.text,
         },
         "dosri_Check": {
-          "dosriCheck": "",
-          "dosriName": "",
-          "dosriRelationship": ""
+          "dosriCheck": dosriCheck.text,
+          "dosriName": dosriName.text,
+          "dosriRelationship": dosriRelationship.text,
         },
-        "rpt_Check": {"rptCheck": "", "rptName": "", "rptRelationship": ""}
+        "rpt_Check": {
+          "rptCheck": rptCheck.text,
+          "rptName": rptName.text,
+          "rptRelationship": rptRelationship.text,
+        }
       },
       "sourcing": {
         "customer": {
-          "referralPromoCodeFlag": "Y",
-          "referralCode": "",
-          "promotionalCode": "TS7",
-          "sourceCompany": "TrustingSocial",
-          "agentCode": ""
+          "referralPromoCodeFlag": customerreferralPromoCodeFlag.text,
+          "referralCode": customerreferralCode.text,
+          "promotionalCode": customerpromotionalCode.text,
+          "sourceCompany": customersourceCompany.text,
+          "agentCode": customeragentCode.text,
         },
         "account": {
-          "referralPromoCodeFlag": "Y",
-          "referralCode": "",
-          "promotionalCode": "TS7",
-          "sourceCompany": "TrustingSocial",
-          "agentCode": ""
+          "referralPromoCodeFlag": referralPromoCodeFlag.text,
+          "referralCode": accountreferralCode.text,
+          "promotionalCode": accountpromotionalCode.text,
+          "sourceCompany": accountsourceCompany.text,
+          "agentCode": accountagentCode.text,
         }
       },
       "partner": {
-        "partnerName": "TrustingSocial",
-        "natureOfPartnership": "Lead sourcing",
-        "partnerUserID": "",
-        "applicationNumber": "7345334567899622",
-        "expectedMonthlyTransaction": "",
+        "partnerName": partnerName.text,
+        "natureOfPartnership": natureOfPartnership.text,
+        "partnerUserID": partnerUserID.text,
+        "applicationNumber": applicationNumber.text,
+        "expectedMonthlyTransaction": expectedMonthlyTransaction.text,
         "redirectionURL": "N",
-        "docURL": {"selfieURL": "", "idProofURL": ""},
+        "docURL": {
+          "selfieURL": "",
+          "idProofURL": "",
+        },
         "partnerScore": {
-          "partnerTelcoScore": "700",
-          "partnerPrefilterScore": "",
-          "partnerBehaviourScore": "",
-          "partnerSocialScore": "",
-          "partnerAdditionalScore1": "",
-          "partnerAdditionalScore2": "",
-          "partnerAdditionalScore3": ""
+          "partnerTelcoScore": partnerTelcoScore.text,
+          "partnerPrefilterScore": partnerPrefilterScore.text,
+          "partnerBehaviourScore": partnerBehaviourScore.text,
+          "partnerSocialScore": partnerSocialScore.text,
+          "partnerAdditionalScore1": partnerAdditionalScore1.text,
+          "partnerAdditionalScore2": partnerAdditionalScore2.text,
+          "partnerAdditionalScore3": partnerAdditionalScore3.text,
         },
         "partnerScreeningStages": {
           "eKYC": {
-            "emailVerification": "N",
-            "incomeValidation": "N",
-            "addressValidation": "N",
-            "employmentValidation": "N"
+            "emailVerification": emailVerification.text,
+            "incomeValidation": incomeValidation.text,
+            "addressValidation": addressValidation.text,
+            "employmentValidation": employmentValidation.text,
           }
         }
       }
@@ -1881,6 +1937,7 @@ class _FSACampaignSingleLeadState extends State<FSACampaignSingleLead> {
     String token = "";
     final tokenUrl =
         Uri.parse('${AppConfig.baseUrl}/api/leads/los-access-token/');
+
     try {
       final Tokenresponse = await http.get(tokenUrl);
       final data = json.decode(Tokenresponse.body);
@@ -1897,12 +1954,11 @@ class _FSACampaignSingleLeadState extends State<FSACampaignSingleLead> {
       "Accept": "application/json",
       "Authorization": "Bearer $token",
     };
-
     try {
       final response = await http.post(
         url,
         headers: headers,
-        body: jsonEncode(requestData),
+        body: json.encode(requestData),
       );
 
       if (response.statusCode == 201) {
@@ -1931,7 +1987,30 @@ class _FSACampaignSingleLeadState extends State<FSACampaignSingleLead> {
             );
           },
         );
-      } else if (response.statusCode == 400) {
+      } else {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        String? authToken = prefs.getString('accessToken');
+        Map<String, dynamic> logmappedData = {
+          "url": "https://unoapi.uat.ph.unobank.asia/partner/loans/check",
+          "request_body": requestData,
+          "status_code": response.statusCode,
+          "response_body": json.decode(response.body),
+        };
+        final logUrl = Uri.parse("http://167.88.160.87/api/logs/");
+
+        final headers = {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": "Bearer $authToken",
+        };
+        final LogResponse = await http.post(
+          logUrl,
+          headers: headers,
+          body: json.encode(logmappedData),
+        );
+        if (LogResponse.statusCode == 201) {
+          print("Log Created");
+        }
         final data = json.decode(response.body);
 
         // Extracting the message

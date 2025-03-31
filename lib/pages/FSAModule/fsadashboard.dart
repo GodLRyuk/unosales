@@ -38,8 +38,6 @@ class _FsadashboardState extends State<Fsadashboard> {
 
   GlobalKey<FormState> formKey = GlobalKey<FormState>();
   late TutorialCoachMark tutorialCoachMark;
-  bool isSaved = false;
-
   final CreateLeadKey = GlobalKey();
   final AssignedLeadsKey = GlobalKey();
   final MyToDoListKey = GlobalKey();
@@ -53,11 +51,18 @@ class _FsadashboardState extends State<Fsadashboard> {
   final FinalApprovedKey = GlobalKey();
   final DeclinedKey = GlobalKey();
   final DisbursedKey = GlobalKey();
+  int totalSubmited = 0;
+  int inProgress = 0;
+  int inPrincipalApproved = 0;
+  int finalApproved = 0;
+  int declined = 0;
+  int disbursed = 0;
 
   @override
   void initState() {
     _loadData();
     _showInAppTour();
+    _loadLOSData();
     super.initState();
     // _checkFirstTimeUser();
     _initAddAppInAppTour();
@@ -113,10 +118,81 @@ class _FsadashboardState extends State<Fsadashboard> {
         if (value == false) {
           tutorialCoachMark.show(context: context);
         } else {
-          // print("User have seen this page");
+          print("User have seen this page");
         }
       });
     });
+  }
+
+  Future<void> _loadLOSData() async {
+    String token = "";
+    final tokenUrl =
+        Uri.parse('${AppConfig.baseUrl}/api/leads/los-access-token/');
+    try {
+      final Tokenresponse = await http.get(tokenUrl);
+      final data = json.decode(Tokenresponse.body);
+      token = data['access_token'];
+    } catch (e) {
+      print("HTTP Request Failed: $e");
+    }
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    userInfo = prefs.getStringList('userInfo');
+
+    Map<String, String> mappedData = {
+      'mobileNo': "",
+      'agentCode': userInfo![0],
+      'applicationNo': "",
+      'last_name': ""
+    };
+    final url = Uri.parse(
+        "https://unoapi.uat.ph.unobank.asia/api/app/fetch/application/status");
+
+    final headers = {
+      "Idempotency-Key": "jbkjdbjkjk",
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "Authorization": "Bearer $token",
+    };
+    try {
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: jsonEncode(mappedData),
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        List<dynamic> losData = data['result'] ?? [];
+        setState(() {
+          totalSubmited =data['result'].length;
+        inProgress = losData
+            .where((item) =>
+                item['offerStatus'] == 'IN-PROGRESS' &&
+                item['uwStatus'] == 'IN-PROGRESS')
+            .length;
+        inPrincipalApproved = losData
+            .where((item) =>
+                item['offerStatus'] == 'PRE-QUALIFIED' &&
+                item['uwStatus'] == 'Pass')
+            .length;
+        finalApproved = losData
+            .where((item) =>
+                item['offerStatus'] == 'Pass' && item['uwStatus'] == 'Pass')
+            .length;
+        declined = losData
+            .where((item) =>
+                item['offerStatus'] == 'Cancel' && item['uwStatus'] == 'Cancel' ||
+                item['offerStatus'] == 'Fail' && item['uwStatus'] == 'Fail' ||
+                item['Dedupe'] == 'Fail' && item['uwStatus'] == 'Fail' ||
+                item['Dedupe'] == 'Fail' && item['uwStatus'] == 'Fail')
+            .length;
+            print(declined);
+        disbursed = losData
+            .where((item) =>
+                item['offerStatus'] == 'Availed' && item['uwStatus'] == 'Pass')
+            .length;
+        });
+      }
+    } catch (e) {}
   }
 
   Future<void> _loadData() async {
@@ -154,7 +230,6 @@ class _FsadashboardState extends State<Fsadashboard> {
           });
         }
       } else if (response.statusCode == 401) {
-
         if (refresh != null) {
           Map<String, dynamic> mappedData = {'refresh': refresh};
 
@@ -170,24 +245,16 @@ class _FsadashboardState extends State<Fsadashboard> {
             await prefs.setString('accessToken', data['access']);
             await prefs.setString('refreshToken', data['refresh']);
             _loadData();
-          } else {
-          }
-        } else {
-        }
+          } else {}
+        } else {}
       }
     } catch (e) {
       print('❌ Error fetching lead details: $e');
     }
   }
 
-  List<String> leadOptions = ['Customer Lead', 'Company Lead'];
   String? selectedLeadType; // Initially null or set a default value.
 
-  void _toggleDateFieldsVisibility() {
-    setState(() {
-      areDateFieldsVisible = !areDateFieldsVisible;
-    });
-  }
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -218,6 +285,8 @@ class _FsadashboardState extends State<Fsadashboard> {
 
   // Define the refresh logic
   Future<void> _handleRefresh() async {
+    _loadData();
+    _loadLOSData();
     // Add the logic for refresh (e.g., fetching new data)
     await Future.delayed(Duration(seconds: 2)); // Simulate a delay
   }
@@ -303,7 +372,17 @@ class _FsadashboardState extends State<Fsadashboard> {
                           suffixIcon: Container(
                             color: const Color(0xFFac00d0),
                             child: IconButton(
-                              onPressed: _toggleDateFieldsVisibility,
+                              onPressed: () {
+                                // ✅ Fixed Syntax
+                                final String searchData = _searchFilter.text;
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => FsaLeadDashBoard(
+                                        searchQuery: searchData),
+                                  ),
+                                );
+                              },
                               icon: const Icon(
                                 Icons.filter_list,
                                 color: Colors.white,
@@ -311,128 +390,12 @@ class _FsadashboardState extends State<Fsadashboard> {
                             ),
                           ),
                         ),
-                        style: TextStyle(height: 1),
+                        style: const TextStyle(height: 1),
                         // onChanged: _filterLeads, // Uncomment if needed
                       ),
-
-                      // Date fields visibility control
-                      if (areDateFieldsVisible)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                value:
-                                    selectedLeadType, // The currently selected value
-                                onChanged: (value) {
-                                  setState(() {
-                                    selectedLeadType =
-                                        value; // Update the selected lead type
-                                  });
-                                },
-                                decoration: InputDecoration(
-                                  hintText: selectedLeadType == null
-                                      ? 'Select Lead Type'
-                                      : selectedLeadType,
-                                  enabledBorder: UnderlineInputBorder(
-                                    borderSide: BorderSide(color: Colors.grey),
-                                  ),
-                                  focusedBorder: UnderlineInputBorder(
-                                    borderSide:
-                                        BorderSide(color: Color(0xFF640D78)),
-                                  ),
-                                ),
-                                items: leadOptions.map((String lead) {
-                                  return DropdownMenuItem<String>(
-                                    value: lead,
-                                    child: Text(lead),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                          ],
-                        ),
-
                       SizedBox(
                         height: 10,
                       ),
-
-                      // Search button for applying filters
-                      if (areDateFieldsVisible)
-                        Padding(
-                          padding: const EdgeInsets.all(0.0),
-                          child: Column(
-                            children: [
-                              SizedBox(
-                                child: Container(
-                                  width: MediaQuery.of(context).size.width,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Color(0xFFc433e0),
-                                        Color(0xFF9a37ae)
-                                      ], // Define your gradient colors
-                                      begin: Alignment
-                                          .topLeft, // Start from top-left
-                                      end: Alignment
-                                          .bottomRight, // End at bottom-right
-                                    ),
-                                  ),
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      final String searchData =
-                                          _searchFilter.text;
-                                      final String? _FilterData =
-                                          selectedLeadType != null
-                                              ? selectedLeadType
-                                              : '';
-                                      if (_FilterData == "Customer Lead") {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                FsaLeadDashBoard(
-                                                    searchQuery: searchData),
-                                          ),
-                                        );
-                                      }
-                                      if (_FilterData == "Company Lead") {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                FsaLeadDashBoard(
-                                                    searchQuery: searchData),
-                                          ),
-                                        );
-                                      } else if (_FilterData == "") {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text('Select Lead Type'),
-                                            duration: Duration(
-                                                seconds:
-                                                    3), // Optional: Set the duration
-                                          ),
-                                        );
-                                      }
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      elevation: 0,
-                                    ),
-                                    child: Text(
-                                      "Search",
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 18), // Text style
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -587,7 +550,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                                           ),
                                           child: Center(
                                             child: Text(
-                                              '${leadDetails}', // Example percentage text
+                                              '${totalSubmited}', // Example percentage text
                                               style: MediaQuery.of(context)
                                                           .size
                                                           .width >
@@ -690,7 +653,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                                           ),
                                           child: Center(
                                             child: Text(
-                                              '0', // Example percentage text
+                                              '${inProgress}', // Example percentage text
                                               style: MediaQuery.of(context)
                                                           .size
                                                           .width >
@@ -799,7 +762,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                                           ),
                                           child: Center(
                                             child: Text(
-                                              '0', // Example percentage text
+                                              '${inPrincipalApproved}', // Example percentage text
                                               style: MediaQuery.of(context)
                                                           .size
                                                           .width >
@@ -877,7 +840,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                                           ),
                                           child: Center(
                                             child: Text(
-                                              '0', // Example percentage text
+                                              '${finalApproved}', // Example percentage text
                                               style: MediaQuery.of(context)
                                                           .size
                                                           .width >
@@ -988,7 +951,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                                           ),
                                           child: Center(
                                             child: Text(
-                                              '0', // Example percentage text
+                                              '${declined}', // Example percentage text
                                               style: MediaQuery.of(context)
                                                           .size
                                                           .width >
@@ -1071,7 +1034,7 @@ class _FsadashboardState extends State<Fsadashboard> {
                                           ),
                                           child: Center(
                                             child: Text(
-                                              '0', // Example percentage text
+                                              '${disbursed}', // Example percentage text
                                               style: MediaQuery.of(context)
                                                           .size
                                                           .width >
@@ -1228,14 +1191,6 @@ class _FsadashboardState extends State<Fsadashboard> {
                     decoration: BoxDecoration(
                       color: Colors.transparent,
                       borderRadius: BorderRadius.circular(5),
-                      // boxShadow: [
-                      //   BoxShadow(
-                      //     color: Colors.grey[300]!,
-                      //     spreadRadius: 2,
-                      //     blurRadius: 2,
-                      //     offset: const Offset(0, 1),
-                      //   ),
-                      // ],
                     ),
                     child: Row(
                       mainAxisAlignment:

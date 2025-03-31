@@ -4,10 +4,13 @@ import 'package:circle_progress_bar/circle_progress_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'package:unosfa/pages/FRModule/assignedLeads.dart';
 import 'package:unosfa/pages/FRModule/campaignlist.dart';
 import 'package:unosfa/pages/FRModule/leaddashboard.dart';
 import 'package:unosfa/pages/FRModule/mytodolist.dart';
+import 'package:unosfa/pages/services/in_app_storage.dart';
+import 'package:unosfa/pages/services/in_app_tutorial_target.dart';
 import 'package:unosfa/widgetSupport/widgetstyle.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -32,81 +35,89 @@ class _SalesdashboardState extends State<Salesdashboard> {
   final TextEditingController searchController = TextEditingController();
   bool tokenisLoading = false;
   String? role;
-
-  List<TutorialItem> items = [];
-
+  late TutorialCoachMark tutorialCoachMark;
   final CreateLeadKey = GlobalKey();
   final AssignedLeadsKey = GlobalKey();
   final MyToDoListKey = GlobalKey();
   final CampaignKey = GlobalKey();
+  final RewardsKey = GlobalKey();
+  final TrainingKey = GlobalKey();
+  final SearchFilterKey = GlobalKey();
+  final TotalSubmitedKey = GlobalKey();
+  final InProgressKey = GlobalKey();
+  final InPrincipalApprovedKey = GlobalKey();
+  final FinalApprovedKey = GlobalKey();
+  final DeclinedKey = GlobalKey();
+  final DisbursedKey = GlobalKey();
+  int totalSubmited = 0;
+  int inProgress = 0;
+  int inPrincipalApproved = 0;
+  int finalApproved = 0;
+  int declined = 0;
+  int disbursed = 0;
   @override
   void initState() {
     _loadData();
-    _checkFirstTimeUser();
+    _showInAppTour();
+    _loadLOSData();
     super.initState();
+    _initAddAppInAppTour();
   }
 
-  Future<void> _checkFirstTimeUser() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    bool hasSeenTutorial = prefs.getBool('hasSeenTutorial') ?? false;
+  void _initAddAppInAppTour() {
+    tutorialCoachMark = TutorialCoachMark(
+      targets: addAppFRTargets(
+        CreateLeadKey: CreateLeadKey,
+        AssignedLeadsKey: AssignedLeadsKey,
+        MyToDoListKey: MyToDoListKey,
+        CampaignKey: CampaignKey,
+        RewardsKey: RewardsKey,
+        TrainingKey: TrainingKey,
+        SearchFilterKey: SearchFilterKey,
+        TotalSubmitedKey: TotalSubmitedKey,
+        InProgressKey: InProgressKey,
+        InPrincipalApprovedKey: InPrincipalApprovedKey,
+        FinalApprovedKey: FinalApprovedKey,
+        DeclinedKey: DeclinedKey,
+        DisbursedKey: DisbursedKey,
+      ),
+      colorShadow: Color(0xFF420244),
+      paddingFocus: 10,
+      hideSkip: false,
+      textStyleSkip: TextStyle(
+          fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+      skipWidget: Container(
+        padding: EdgeInsets.symmetric(horizontal: 15, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          "Skip",
+          style: TextStyle(
+            fontSize: 18,
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      opacityShadow: 0.8,
+      onFinish: () {
+        SaveFRInAppTour().savedFRAppTourStatus();
+      },
+    );
+  }
 
-    if (!hasSeenTutorial) {
-      initItems();
-      Future.delayed(const Duration(microseconds: 200)).then((value) {
-        Tutorial.showTutorial(context, items, onTutorialComplete: () {});
+  void _showInAppTour() {
+    Future.delayed(const Duration(seconds: 0), () {
+      SaveFRInAppTour().getFRAppTourStatus().then((value) {
+        if (value == false) {
+          tutorialCoachMark.show(context: context);
+        } else {
+          // print("User have seen this page");
+        }
       });
-      await prefs.setBool('hasSeenTutorial', true);
-      // _loadData();
-    }
-  }
-
-  void initItems() {
-    items.addAll({
-      TutorialItem(
-        globalKey: CreateLeadKey,
-        color: Colors.black.withOpacity(0.8),
-        shapeFocus: ShapeFocus.square,
-        borderRadius: const Radius.circular(5.0),
-        child: const TutorialItemContent(
-          title: 'Create New Lead',
-          content: 'Tap here to start creating a new Customer lead & Company Lead.',
-        ),
-      ),
-      TutorialItem(
-        globalKey: AssignedLeadsKey,
-        color: Colors.black.withOpacity(0.8),
-        shapeFocus: ShapeFocus.square,
-        borderRadius: const Radius.circular(5.0),
-        child: const TutorialItemContent(
-          title: 'View Assigned Lead',
-          content:
-              'Tap here to view the leads assigned to you. You can track progress, update details, and manage follow-ups.',
-        ),
-      ),
-      TutorialItem(
-        globalKey: MyToDoListKey,
-        color: Colors.black.withOpacity(0.8),
-        shapeFocus: ShapeFocus.square,
-        borderRadius: const Radius.circular(5.0),
-        child: const TutorialItemContent(
-          title: 'My To-Do List',
-          content:
-              'Tap here to view your tasks and follow-ups. Stay organized by tracking pending actions and completing them on time.',
-        ),
-      ),
-      TutorialItem(
-        globalKey: CampaignKey,
-        color: Colors.black.withOpacity(0.8),
-        shapeFocus: ShapeFocus.square,
-        borderRadius: const Radius.circular(5.0),
-        child: const TutorialItemContent(
-          title: 'Manage Campaigns',
-          content:
-              'Tap here to view and manage marketing campaigns. Track performance, monitor engagement, and optimize your outreach efforts.',
-        ),
-      ),
     });
-    // _loadData();
   }
 
   Future<void> _loadData() async {
@@ -151,6 +162,77 @@ class _SalesdashboardState extends State<Salesdashboard> {
     }
   }
 
+  Future<void> _loadLOSData() async {
+    String token = "";
+    final tokenUrl =
+        Uri.parse('${AppConfig.baseUrl}/api/leads/los-access-token/');
+    try {
+      final Tokenresponse = await http.get(tokenUrl);
+      final data = json.decode(Tokenresponse.body);
+      token = data['access_token'];
+    } catch (e) {
+      print("HTTP Request Failed: $e");
+    }
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    userInfo = prefs.getStringList('userInfo');
+
+    Map<String, String> mappedData = {
+      'mobileNo': "",
+      'agentCode': userInfo![0],
+      'applicationNo': "",
+      'last_name': ""
+    };
+    final url = Uri.parse(
+        "https://unoapi.uat.ph.unobank.asia/api/app/fetch/application/status");
+
+    final headers = {
+      "Idempotency-Key": "jbkjdbjkjk",
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "Authorization": "Bearer $token",
+    };
+    try {
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: jsonEncode(mappedData),
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        List<dynamic> losData = data['result'] ?? [];
+        setState(() {
+          totalSubmited =data['result'].length;
+        inProgress = losData
+            .where((item) =>
+                item['offerStatus'] == 'IN-PROGRESS' &&
+                item['uwStatus'] == 'IN-PROGRESS')
+            .length;
+        inPrincipalApproved = losData
+            .where((item) =>
+                item['offerStatus'] == 'PRE-QUALIFIED' &&
+                item['uwStatus'] == 'Pass')
+            .length;
+        finalApproved = losData
+            .where((item) =>
+                item['offerStatus'] == 'Pass' && item['uwStatus'] == 'Pass')
+            .length;
+        declined = losData
+            .where((item) =>
+                item['offerStatus'] == 'Cancel' && item['uwStatus'] == 'Cancel' ||
+                item['offerStatus'] == 'Fail' && item['uwStatus'] == 'Fail' ||
+                item['Dedupe'] == 'Fail' && item['uwStatus'] == 'Fail' ||
+                item['Dedupe'] == 'Fail' && item['uwStatus'] == 'Fail')
+            .length;
+            print(declined);
+        disbursed = losData
+            .where((item) =>
+                item['offerStatus'] == 'Availed' && item['uwStatus'] == 'Pass')
+            .length;
+        });
+      }
+    } catch (e) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     // ignore: deprecated_member_use
@@ -183,7 +265,8 @@ class _SalesdashboardState extends State<Salesdashboard> {
 
 // Define the refresh logic
   Future<void> _handleRefresh() async {
-    // Add the logic for refresh (e.g., fetching new data)
+    _loadData();
+    _loadLOSData();
     await Future.delayed(Duration(seconds: 2)); // Simulate a delay
   }
 
@@ -243,6 +326,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                   padding: const EdgeInsets.only(left: 15, right: 15),
                   child: TextField(
                     controller: searchController,
+                    key: SearchFilterKey,
                     decoration: InputDecoration(
                       hintText: "Search By Phone Number..",
                       hintStyle: TextStyle(
@@ -375,6 +459,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                             Row(
                               children: [
                                 Column(
+                                  key: TotalSubmitedKey,
                                   crossAxisAlignment: CrossAxisAlignment
                                       .start, // Align text to start
                                   children: [
@@ -446,7 +531,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                                           ),
                                           child: Center(
                                             child: Text(
-                                              '${leadDetails}', // Example percentage text
+                                              '${totalSubmited}', // Example percentage text
                                               style: MediaQuery.of(context)
                                                           .size
                                                           .width >
@@ -476,6 +561,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                             Row(
                               children: [
                                 Column(
+                                  key: InProgressKey,
                                   crossAxisAlignment: CrossAxisAlignment
                                       .start, // Align text to start
                                   children: [
@@ -548,7 +634,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                                           ),
                                           child: Center(
                                             child: Text(
-                                              '0', // Example percentage text
+                                              '${inProgress}', // Example percentage text
                                               style: MediaQuery.of(context)
                                                           .size
                                                           .width >
@@ -586,6 +672,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                             Row(
                               children: [
                                 Column(
+                                  key: InPrincipalApprovedKey,
                                   crossAxisAlignment: CrossAxisAlignment
                                       .start, // Align text to start
                                   children: [
@@ -656,7 +743,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                                           ),
                                           child: Center(
                                             child: Text(
-                                              '0', // Example percentage text
+                                              '${inPrincipalApproved}', // Example percentage text
                                               style: MediaQuery.of(context)
                                                           .size
                                                           .width >
@@ -686,6 +773,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                             Row(
                               children: [
                                 Column(
+                                  key: FinalApprovedKey,
                                   crossAxisAlignment: CrossAxisAlignment
                                       .start, // Align text to start
                                   children: [
@@ -733,7 +821,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                                           ),
                                           child: Center(
                                             child: Text(
-                                              '0', // Example percentage text
+                                              '${finalApproved}', // Example percentage text
                                               style: MediaQuery.of(context)
                                                           .size
                                                           .width >
@@ -765,6 +853,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         Column(
+                          key: DeclinedKey,
                           crossAxisAlignment:
                               CrossAxisAlignment.start, // Align text to start
                           children: [
@@ -843,7 +932,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                                           ),
                                           child: Center(
                                             child: Text(
-                                              '0', // Example percentage text
+                                              '${declined}', // Example percentage text
                                               style: MediaQuery.of(context)
                                                           .size
                                                           .width >
@@ -873,6 +962,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                             Row(
                               children: [
                                 Column(
+                                  key: DisbursedKey,
                                   crossAxisAlignment: CrossAxisAlignment
                                       .start, // Align text to start
                                   children: [
@@ -925,7 +1015,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                                           ),
                                           child: Center(
                                             child: Text(
-                                              '0', // Example percentage text
+                                              '${disbursed}', // Example percentage text
                                               style: MediaQuery.of(context)
                                                           .size
                                                           .width >
@@ -1035,14 +1125,6 @@ class _SalesdashboardState extends State<Salesdashboard> {
                     decoration: BoxDecoration(
                       color: Colors.transparent,
                       borderRadius: BorderRadius.circular(5),
-                      // boxShadow: [
-                      //   BoxShadow(
-                      //     color: Colors.grey[300]!,
-                      //     spreadRadius: 2,
-                      //     blurRadius: 2,
-                      //     offset: const Offset(0, 1),
-                      //   ),
-                      // ],
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.start,
@@ -1062,7 +1144,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                           style: MediaQuery.of(context).size.width > 600
                               ? WidgetSupport.normalblackTextTab()
                               : WidgetSupport.normalblackText(),
-                              key: CreateLeadKey,
+                          key: CreateLeadKey,
                         ),
                       ],
                     ),
@@ -1127,7 +1209,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                           style: MediaQuery.of(context).size.width > 600
                               ? WidgetSupport.normalblackTextTab()
                               : WidgetSupport.normalblackText(),
-                              key: AssignedLeadsKey,
+                          key: AssignedLeadsKey,
                         ),
                       ],
                     ),
@@ -1196,6 +1278,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                             style: MediaQuery.of(context).size.width > 600
                                 ? WidgetSupport.normalblackTextTab()
                                 : WidgetSupport.normalblackText(),
+                            key: RewardsKey,
                           ),
                         ],
                       ),
@@ -1260,7 +1343,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                           style: MediaQuery.of(context).size.width > 600
                               ? WidgetSupport.normalblackTextTab()
                               : WidgetSupport.normalblackText(),
-                              key: MyToDoListKey,
+                          key: MyToDoListKey,
                         ),
                       ],
                     ),
@@ -1339,6 +1422,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                             style: MediaQuery.of(context).size.width > 600
                                 ? WidgetSupport.normalblackTextTab()
                                 : WidgetSupport.normalblackText(),
+                            key: TrainingKey,
                           ),
                         ],
                       ),
@@ -1407,7 +1491,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
                             style: MediaQuery.of(context).size.width > 600
                                 ? WidgetSupport.normalblackTextTab()
                                 : WidgetSupport.normalblackText(),
-                                key: CampaignKey,
+                            key: CampaignKey,
                           ),
                         ],
                       ),
@@ -1932,6 +2016,7 @@ class _SalesdashboardState extends State<Salesdashboard> {
     );
   }
 }
+
 class TutorialItemContent extends StatelessWidget {
   const TutorialItemContent({
     super.key,

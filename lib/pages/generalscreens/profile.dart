@@ -58,14 +58,45 @@ class _ProfilePageState extends State<ProfilePage> {
     if (confirmLogout == true) {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
 
-      // Clear all shared preferences data
-      await prefs.clear(); // Removes all session data
+      // Retrieve the values of the keys to retain
+      bool? saveTourStatus = prefs.getBool("saveTour");
+      bool? saveFRTourStatus = prefs.getBool("saveFRTour");
+      bool? saveLeadDashboardTourStatus =
+          prefs.getBool("saveLeadDashboardTour");
+      bool? saveFRLeadDashboardTourStatus =
+          prefs.getBool("saveFRLeadDashboardTour");
+
+      // Get all keys and remove only those not in the excluded list
+      for (String key in prefs.getKeys()) {
+        if (key != "saveTour" &&
+            key != "saveFRTour" &&
+            key != "saveLeadDashboardTour" &&
+            key != "saveFRLeadDashboardTour") {
+          await prefs.remove(key);
+        }
+      }
+
+      // Restore the retained values (if they were set before)
+      if (saveTourStatus != null) {
+        await prefs.setBool("saveTour", saveTourStatus);
+      }
+      if (saveFRTourStatus != null) {
+        await prefs.setBool("saveFRTour", saveFRTourStatus);
+      }
+      if (saveLeadDashboardTourStatus != null) {
+        await prefs.setBool(
+            "saveLeadDashboardTour", saveLeadDashboardTourStatus);
+      }
+      if (saveFRLeadDashboardTourStatus != null) {
+        await prefs.setBool(
+            "saveFRLeadDashboardTour", saveFRLeadDashboardTourStatus);
+      }
 
       // Navigate to the EntryPage and clear the navigation stack
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const EntryPage()),
-        (route) => false, // Ensures the navigation stack is cleared
+        (route) => false, // Clears the navigation stack
       );
     }
   }
@@ -115,14 +146,23 @@ class _ProfilePageState extends State<ProfilePage> {
             title: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Image.asset(
-                  'images/logo.PNG', // Path to your image
-                  height: 30,
+                Column(
+                  children: [
+                    Image.asset(
+                      'images/logo.PNG', // Path to your image
+                      height: 30,
+                    ),
+                  ],
                 ),
-                SizedBox(width: 40),
-                IconButton(
-                  icon: const Icon(Icons.logout),
-                  onPressed: () => _logout(context), // Logout button
+                SizedBox(width: 80),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.logout),
+                      onPressed: () => _logout(context), // Logout button
+                    ),
+                  ],
                 ),
               ],
             ),

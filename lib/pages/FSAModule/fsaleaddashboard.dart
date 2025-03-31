@@ -130,7 +130,9 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
         '${AppConfig.baseUrl}/api/leads/?search=${widget.searchQuery}&ordering=-created_at&page=$currentPage';
     String apiUrl2 =
         '${AppConfig.baseUrl}/api/leads/company-leads/?search=${widget.searchQuery}&ordering=-created_at';
+print(apiUrl1);
 
+print(apiUrl2);
     try {
       // Fetch data from both APIs concurrently
       final responses = await Future.wait([
@@ -139,7 +141,6 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
         http.get(Uri.parse(apiUrl2),
             headers: {'Authorization': 'Bearer $token'}),
       ]);
-
       List<Map<String, String>> allLeadsData = [];
 
       for (int i = 0; i < responses.length; i++) {
@@ -147,6 +148,7 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
 
         if (response.statusCode == 200) {
           Map<String, dynamic> data = json.decode(response.body);
+
           List<dynamic> leadsData = data['results'] ?? [];
 
           if (i == 0) {
@@ -209,80 +211,120 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
     }
   }
 
-  Future<void> fetchFilteredLeads() async {
-    String searchQuery = '';
+  Future<void> fetchFilteredLeads({bool isLoadMore = false}) async {
+    if (isLoadMore) {
+      setState(() {
+        isFetchingMore = true;
+      });
+    } else {
+      setState(() {
+        isLoading = true;
+      });
+    }
+
+    String searchQuery = widget.searchQuery;
     if (_searchFilter.text.isNotEmpty) {
-      searchQuery = '?phone_number=${_searchFilter.text}';
+      searchQuery = _searchFilter.text;
     }
-    if (_toDate.text.isNotEmpty && _fromDate.text.isNotEmpty) {
-      searchQuery += (searchQuery.isNotEmpty ? '&' : '?') +
-          'created_at_from=${_fromDate.text}&created_at_to=${_toDate.text}T23:59:59';
+
+    String filterQuery = '';
+    if (_fromDate.text.isNotEmpty && _toDate.text.isNotEmpty) {
+      filterQuery =
+          '&created_at_from=${_fromDate.text}&created_at_to=${_toDate.text}T23:59:59';
     }
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('accessToken');
     String? refresh = prefs.getString('refreshToken');
-    try {
-      final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}/api/leads/$searchQuery'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
-      );
-      if (response.statusCode == 200) {
-        Map<String, dynamic> data = json.decode(response.body);
-        List<dynamic> leadsData = data['results'] ?? [];
-        setState(() {
-          leads = leadsData.map((item) {
-            return {
-              'name':
-                  '${item['first_name']} ${item['middle_name']} ${item['last_name']}'
-                      .trim(),
-              'phone': item['phone_number']?.toString() ?? '',
-              'id': item['id']?.toString() ?? '',
-            };
-          }).toList();
-          filteredLeads = List.from(leads);
-          hasMoreData = data['next'] != null;
 
-          isLoading = false;
-          isFetchingMore = false;
-        });
-      } else if (response.statusCode == 401) {
-        final response2 = await http.post(
-          Uri.parse('${AppConfig.baseUrl}/api/users/token-refresh/'),
-          body: {'refresh': refresh},
-        );
-        final data = json.decode(response2.body);
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString('accessToken', data['access']);
-        await prefs.setString('refreshToken', data['refresh']);
-        fetchFilteredLeads(); // Retry fetching after token refresh
-      } else {
-        throw Exception('Failed to load leads');
+    String apiUrl1 =
+        '${AppConfig.baseUrl}/api/leads/?search=$searchQuery&ordering=-created_at&page=$currentPage$filterQuery';
+    String apiUrl2 =
+        '${AppConfig.baseUrl}/api/leads/company-leads/?search=$searchQuery&ordering=-created_at$filterQuery';
+
+    try {
+      // Fetch data from both APIs concurrently
+      final responses = await Future.wait([
+        http.get(Uri.parse(apiUrl1),
+            headers: {'Authorization': 'Bearer $token'}),
+        http.get(Uri.parse(apiUrl2),
+            headers: {'Authorization': 'Bearer $token'}),
+      ]);
+
+      List<Map<String, String>> allLeadsData = [];
+
+      for (int i = 0; i < responses.length; i++) {
+        final response = responses[i];
+
+        if (response.statusCode == 200) {
+          Map<String, dynamic> data = json.decode(response.body);
+          List<dynamic> leadsData = data['results'] ?? [];
+
+          if (i == 0) {
+            // Processing Customer Leads (`/api/leads/`)
+            allLeadsData.addAll(leadsData.map((item) => {
+                  'name':
+                      '${(item['first_name'] ?? '')} ${(item['middle_name'] ?? '')} ${(item['last_name'] ?? '')}'
+                          .trim(),
+                  'phone': (item['phone_number'] ?? '').toString(),
+                  'id': (item['id'] ?? '').toString(),
+                  'type': 'Customer Lead', // Identifies as a customer lead
+                }));
+
+            // Check for more data (pagination)
+            hasMoreData = data['next'] != null;
+          } else {
+            // Processing Company Leads (`/api/leads/company-leads/`)
+            allLeadsData.addAll(leadsData.map((item) => {
+                  'name':
+                      (item['company_name'] ?? 'Unknown Company').toString(),
+                  'phone': (item['contact_person_mobile_no'] ?? '').toString(),
+                  'id': (item['id'] ?? '').toString(),
+                  'type': 'Company Lead', // Identifies as a company lead
+                }));
+          }
+        } else if (response.statusCode == 401) {
+          // Handle token refresh
+          final refreshResponse = await http.post(
+            Uri.parse('${AppConfig.baseUrl}/api/users/token-refresh/'),
+            body: {'refresh': refresh},
+          );
+          final refreshData = json.decode(refreshResponse.body);
+          if (refreshData.containsKey('access')) {
+            await prefs.setString('accessToken', refreshData['access']);
+            await prefs.setString('refreshToken', refreshData['refresh']);
+            return fetchFilteredLeads(isLoadMore: isLoadMore);
+          } else {
+            throw Exception('Session expired, please log in again.');
+          }
+        } else {
+          throw Exception('Failed to load leads from API ${i + 1}');
+        }
       }
-    } catch (e) {
-      print('Error fetching leads: $e');
+
+      // Update state
       setState(() {
-        isLoading = false; // Stop loading on error
+        if (isLoadMore) {
+          leads.addAll(allLeadsData);
+        } else {
+          leads = allLeadsData;
+        }
+
+        filteredLeads = List.from(leads);
+        isLoading = false;
+        isFetchingMore = false;
       });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+        isFetchingMore = false;
+      });
+      print('Error fetching leads: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error fetching leads: $e')),
       );
     }
   }
-
-  // Method to filter leads by phone number
-  // void _filterLeads(String query) {
-  //   setState(() {
-  //     filterText = query;
-  //     if (query.isEmpty) {
-  //       filteredLeads = List.from(leads);
-  //     } else {
-  //       filteredLeads =
-  //           leads.where((lead) => lead['phone']!.contains(query)).toList();
-  //     }
-  //   });
-  // }
 
   // Format the date string
   String getFormattedFromDate(DateTime? date) {
@@ -585,21 +627,21 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
                                       ),
                                       GestureDetector(
                                         onTap: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  FsaLeadGenerate(edit: ""),
-                                            ),
-                                          );
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  FsaCompanyLeadGenerate(
-                                                      edit: ""),
-                                            ),
-                                          );
+                                          // Navigator.push(
+                                          //   context,
+                                          //   MaterialPageRoute(
+                                          //     builder: (context) =>
+                                          //         FsaLeadGenerate(edit: ""),
+                                          //   ),
+                                          // );
+                                          // Navigator.push(
+                                          //   context,
+                                          //   MaterialPageRoute(
+                                          //     builder: (context) =>
+                                          //         FsaCompanyLeadGenerate(
+                                          //             edit: ""),
+                                          //   ),
+                                          // );
                                         },
                                         child: Icon(
                                           Icons.edit,

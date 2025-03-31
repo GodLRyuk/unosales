@@ -12,8 +12,7 @@ class AssignedLeads extends StatefulWidget {
   const AssignedLeads({super.key, required this.searchQuery});
 
   @override
-  State<AssignedLeads> createState() =>
-      _AssignedLeadsState();
+  State<AssignedLeads> createState() => _AssignedLeadsState();
 }
 
 class _AssignedLeadsState extends State<AssignedLeads> {
@@ -67,6 +66,7 @@ class _AssignedLeadsState extends State<AssignedLeads> {
         Uri.parse(apiUrl),
         headers: {'Authorization': 'Bearer $token'},
       );
+
       if (response.statusCode == 200) {
         Map<String, dynamic> data = json.decode(response.body);
         List<dynamic> leadsData = data['results'] ?? [];
@@ -86,13 +86,13 @@ class _AssignedLeadsState extends State<AssignedLeads> {
             leads = leadsData
                 .map((item) => {
                       'name':
-                      '${item['first_name'] ?? ''} ${item['middle_name'] ?? ''} ${item['last_name'] ?? ''}'
-                          .trim(),
-                  'phone': item['mobile_phone']?.toString() ?? '',
-                  'description': item['campaign'] != null
-                      ? item['campaign']['description']?.toString() ?? ''
-                      : '', // Safely extract description
-                  'id': item['id']?.toString() ?? '',
+                          '${item['first_name'] ?? ''} ${item['middle_name'] ?? ''} ${item['last_name'] ?? ''}'
+                              .trim(),
+                      'phone': item['mobile_phone']?.toString() ?? '',
+                      'description': item['campaign'] != null
+                          ? item['campaign']['description']?.toString() ?? ''
+                          : '', // Safely extract description
+                      'id': item['id']?.toString() ?? '',
                     })
                 .toList();
           }
@@ -145,7 +145,6 @@ class _AssignedLeadsState extends State<AssignedLeads> {
     String? token = prefs.getString('accessToken');
     String? refresh = prefs.getString('refreshToken');
     try {
-      print("${AppConfig.baseUrl}/api/agents/assigned-leads/?search=$searchQuery&ordering=-created_at");
       final response = await http.get(
         Uri.parse(
             '${AppConfig.baseUrl}/api/agents/assigned-leads/?search=$searchQuery&ordering=-created_at'),
@@ -159,13 +158,17 @@ class _AssignedLeadsState extends State<AssignedLeads> {
         setState(() {
           leads = leadsData.map((item) {
             return {
-              'name': '${item['company_name']}'.trim(),
-              'phone': item['contact_person_mobile_no']?.toString() ?? '',
+              'name':
+                  '${item['first_name'] ?? ''} ${item['middle_name'] ?? ''} ${item['last_name'] ?? ''}'
+                      .trim(),
+              'phone': item['mobile_phone']?.toString() ?? '',
+              'description': item['campaign'] != null
+                  ? item['campaign']['description']?.toString() ?? ''
+                  : '', // Safely extract description
               'id': item['id']?.toString() ?? '',
             };
           }).toList();
           filteredLeads = List.from(leads);
-          // Check if there's more data
           hasMoreData = data['next'] != null;
 
           isLoading = false;
@@ -277,45 +280,46 @@ class _AssignedLeadsState extends State<AssignedLeads> {
                         TextField(
                           controller: _searchFilter,
                           decoration: InputDecoration(
-                            labelText: 'Filter by Comapny Number',
+                            labelText: 'Search Leads',
                             border: UnderlineInputBorder(
                               borderSide: BorderSide(color: Colors.grey),
                             ),
                             enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(0),
-                            borderSide: const BorderSide(
-                              color: Colors.grey,
-                              width: 1.0,
+                              borderRadius: BorderRadius.circular(0),
+                              borderSide: const BorderSide(
+                                color: Colors.grey,
+                                width: 1.0,
+                              ),
                             ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(0),
-                            borderSide: const BorderSide(
-                              color: Color(0xFFac00d0),
-                              width: 1.0,
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(0),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFac00d0),
+                                width: 1.0,
+                              ),
                             ),
-                          ),
-                          suffixIcon: Container(
-                            color: const Color(0xFFac00d0),
-                            child: IconButton(
-                               onPressed:
-                                  _toggleDateFieldsVisibility, 
-                              icon: const Icon(
-                                Icons.filter_list,
-                                color: Colors.white,
+                            suffixIcon: Container(
+                              color: const Color(0xFFac00d0),
+                              child: IconButton(
+                                onPressed: _toggleDateFieldsVisibility,
+                                icon: const Icon(
+                                  Icons.filter_list,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                           
+
                           style: TextStyle(height: 1),
                           // onChanged: _filterLeads, // Uncomment if needed
                         ),
-
+                        SizedBox(
+                          height: 10,
+                        ),
                         // Search button for applying filters
                         if (areDateFieldsVisible)
                           Padding(
-                            padding: const EdgeInsets.all(10.0),
+                            padding: const EdgeInsets.all(0),
                             child: Column(
                               children: [
                                 SizedBox(
@@ -387,7 +391,8 @@ class _AssignedLeadsState extends State<AssignedLeads> {
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) =>
-                                                  FSASingleAssignedLead(leadId: leadId),
+                                                  FSASingleAssignedLead(
+                                                      leadId: leadId),
                                             ),
                                           );
                                         },

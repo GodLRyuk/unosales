@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import 'package:unosfa/pages/FRModule/createnewlead.dart';
 import 'package:unosfa/pages/generalscreens/customNavigation.dart';
 import 'package:unosfa/pages/FRModule/singleleaddetail.dart';
@@ -33,13 +34,19 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
   int currentPage = 1;
   bool hasMoreData = true;
   bool isExpanded = false;
+  late TutorialCoachMark tutorialCoachMark;
+  final CreateLeadIconKey = GlobalKey();
+  final EditLeadIconKey = GlobalKey();
+  final DisplayLeadKey = GlobalKey();
+  final LeadDescriptionKey = GlobalKey();
+  final LeadFilterKey = GlobalKey();
 
   @override
   void initState() {
+    fetchLeads(); 
     super.initState();
     selectedFromDate = DateTime.now();
     selectedToDate = DateTime.now();
-    fetchLeads(); // Fetch leads on initialization
     _scrollController.addListener(_onScroll);
   }
 
@@ -288,15 +295,35 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
                         // TextField for phone number filter
                         TextField(
                           controller: _searchFilter,
+                          key: LeadFilterKey,
                           decoration: InputDecoration(
                             labelText: 'Filter by Phone Number',
                             border: UnderlineInputBorder(
                               borderSide: BorderSide(color: Colors.grey),
                             ),
-                            suffixIcon: IconButton(
-                              icon: Icon(Icons.filter_list),
-                              onPressed:
-                                  _toggleDateFieldsVisibility, // Toggle date fields visibility
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(0),
+                              borderSide: const BorderSide(
+                                color: Colors.grey,
+                                width: 1.0,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(0),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFac00d0),
+                                width: 1.0,
+                              ),
+                            ),
+                            suffixIcon: Container(
+                              color: const Color(0xFFac00d0),
+                              child: IconButton(
+                                onPressed: _toggleDateFieldsVisibility,
+                                icon: const Icon(
+                                  Icons.filter_list,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
                           ),
                           style: TextStyle(height: 1),
@@ -410,6 +437,120 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
                     ),
                   ),
                   // ListView.builder for displaying filtered leads
+                  if (leads == "")
+                    Expanded(
+                      child: Container(
+                        margin: const EdgeInsets.all(
+                            10), // Adding some margin around the container
+
+                        child: ListView.builder(
+                          controller:
+                              _scrollController, // Attach ScrollController
+                          itemCount: 1, // Add one extra item for the loader
+                          itemBuilder: (context, index) {
+                            return GestureDetector(
+                              onTap: () {},
+                              child: Container(
+                                margin:
+                                    const EdgeInsets.symmetric(vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border(
+                                    top: BorderSide(
+                                        color: Color(0xFF640D78), width: 1.0),
+                                    bottom: BorderSide(
+                                        color: Color(0xFF640D78), width: 1.0),
+                                    left: BorderSide(
+                                        color: Color(0xFF640D78), width: 5.0),
+                                    right: BorderSide(
+                                        color: Color(0xFF640D78), width: 1.0),
+                                  ),
+                                ),
+                                child: ListTile(
+                                  key: DisplayLeadKey,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 15),
+                                  leading: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        "Example Name".toUpperCase(),
+                                        style: WidgetSupport.label(),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        "63**********",
+                                        style: WidgetSupport.inputLabel(),
+                                      ),
+                                    ],
+                                  ),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        key: LeadDescriptionKey,
+                                        margin:
+                                            EdgeInsets.only(top: 20, right: 10),
+                                        width: 100,
+                                        height: 25,
+                                        decoration: BoxDecoration(
+                                          color: Color(0xFFc433e0),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              "Lead Type",
+                                              style: TextStyle(
+                                                  color: Colors.white),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      GestureDetector(
+                                        onTap: () {
+                                          // Navigator.push(
+                                          //   context,
+                                          //   MaterialPageRoute(
+                                          //     builder: (context) =>
+                                          //         FsaLeadGenerate(edit: ""),
+                                          //   ),
+                                          // );
+                                          // Navigator.push(
+                                          //   context,
+                                          //   MaterialPageRoute(
+                                          //     builder: (context) =>
+                                          //         FsaCompanyLeadGenerate(
+                                          //             edit: ""),
+                                          //   ),
+                                          // );
+                                        },
+                                        child: Icon(
+                                          Icons.edit,
+                                          color: Color(0xFF640D78),
+                                          key:  EditLeadIconKey,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Icon(
+                                        Icons.chevron_right,
+                                        color: Color(0xFF640D78),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
                   Expanded(
                     child: Container(
                       margin: const EdgeInsets.all(
@@ -467,6 +608,7 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
                                             ),
                                           ),
                                           child: ListTile(
+                                              key: index==0 ?DisplayLeadKey:null,
                                             contentPadding:
                                                 const EdgeInsets.symmetric(
                                                     horizontal: 15),
@@ -508,6 +650,7 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
                                                   child: Icon(
                                                     Icons.edit,
                                                     color: Color(0xFF640D78),
+                                                    key: index == 0 ?EditLeadIconKey:null,
                                                   ),
                                                 ),
                                                 const SizedBox(width: 10),
@@ -598,6 +741,7 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
                     child: Icon(
                       isExpanded ? Icons.close : Icons.add,
                       color: Colors.white,
+                      key: CreateLeadIconKey,
                     ),
                     backgroundColor: Colors
                         .transparent, // Set transparent so gradient is visible
