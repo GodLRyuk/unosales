@@ -1004,6 +1004,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                             icon: FontAwesomeIcons.solidCircleUser,
                             isAlphabetic: true,
                             allowSpaces: false,
+                            nameMax:true,
                           ),
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.03,
@@ -1018,6 +1019,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                             isBlankAlphabetic: true,
                             isRequired: false,
                             allowSpaces: true,
+                            nameMax:true,
                           ),
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.03,
@@ -1031,6 +1033,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                             icon: FontAwesomeIcons.solidCircleUser,
                             isAlphabetic: true,
                             allowSpaces: false,
+                            nameMax: false,
                           ),
                           SizedBox(
                             height: MediaQuery.of(context).size.height * 0.03,
@@ -1746,6 +1749,7 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
     bool isZipNumber = false,
     bool isRequired = true, // Add a flag to make the field optional
     bool allowSpaces = false, // New flag to allow spaces
+    bool nameMax =false,
   }) {
     return TextFormField(
       controller: controller,
@@ -1758,6 +1762,8 @@ class _FsaLeadGenerateState extends State<FsaLeadGenerate> {
                   ? TextInputType.number
                   : TextInputType.text,
       inputFormatters: [
+        if(nameMax)
+        LengthLimitingTextInputFormatter(20), 
         if (isNumeric) NumericCommaInputFormatter(),
         if (isZipNumber) ...[
           FilteringTextInputFormatter.digitsOnly,

@@ -690,8 +690,15 @@ class _LeadDashBoardState extends State<LeadDashBoard> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Text("Customer Lead",
-                          style: WidgetSupport.LoginButtonTextColor()),
+                      Container(
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color: Color(0xFF640D78),
+                        ),
+                        child: Text("Create Customer Lead",
+                            style: WidgetSupport.LoginButtonTextColor1()),
+                      ),
                       SizedBox(width: 10),
                       FloatingActionButton(
                         heroTag: "btn1",

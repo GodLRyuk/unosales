@@ -13,7 +13,15 @@ class WidgetSupport {
   static TextStyle LoginButtonTextColor() {
     return const TextStyle(
       fontFamily: "Poppins",
-      color: Color(0xFFa604ad),
+      color: Colors.purple,
+      fontSize: 15,
+      fontWeight: FontWeight.w500,
+    );
+  }
+  static TextStyle LoginButtonTextColor1() {
+    return const TextStyle(
+      fontFamily: "Poppins",
+      color: Colors.white,
       fontSize: 15,
       fontWeight: FontWeight.w500,
     );

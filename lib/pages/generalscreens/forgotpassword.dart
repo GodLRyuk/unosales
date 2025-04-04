@@ -219,7 +219,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     // Send the POST request to the API
     try {
       final response = await http.post(
-        Uri.parse('${AppConfig.baseUrl}api/users/forgot-password/'),
+        Uri.parse('${AppConfig.baseUrl}/api/users/forgot-password/'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(data),
       );
@@ -247,62 +247,111 @@ class _ForgotPasswordState extends State<ForgotPassword> {
   }
 
   Future<void> _submitNewPassword() async {
-    final new_password = _passwordController.text;
-    final confirm_password = _confirmpasswordController.text;
+  final new_password = _passwordController.text;
+  final confirm_password = _confirmpasswordController.text;
+
+  try {
+    var url = Uri.parse(apiUrl);
+    Map<String, String> mappedData = {
+      'new_password': new_password,
+      'confirm_password': confirm_password
+    };
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: jsonEncode(mappedData),
+    );
 
     try {
-      var url = Uri.parse(apiUrl);
-      Map mapeddata = {
-        'new_password': new_password,
-        'confirm_password': confirm_password
-      };
-      http.Response response = await http.post(url, body: mapeddata);
+      final data = json.decode(response.body); // Try to decode response JSON
+
       if (response.statusCode == 200) {
-        try {
-          final data = json.decode(response.body);
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text("Info"),
-                content: Text(data['detail']),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => LoginPage(
-                            loginWith: 'Sal',
-                          ),
-                        ),
-                      );
-                    },
-                    child: Text("OK"),
-                  ),
-                ],
-              );
-            },
-          );
-        } catch (e) {
-          // Handle JSON decode error
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text('Failed to parse response. Please try again.')),
-          );
-        }
+        // Success Popup
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text("Success"),
+              content: Text(data['detail'] ?? 'Password changed successfully!'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => LoginPage(loginWith: 'Sal'),
+                      ),
+                    );
+                  },
+                  child: Text("OK"),
+                ),
+              ],
+            );
+          },
+        );
       } else {
-        // Handle non-200 status codes (error responses)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Failed to update password. Please try again.')),
+        // Extract error message
+        String errorMessage = data.containsKey('non_field_errors')
+            ? data['non_field_errors'].join(", ")
+            : "Something went wrong. Please try again.";
+
+        // Error Popup
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text("Error"),
+              content: Text(errorMessage),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text("OK"),
+                ),
+              ],
+            );
+          },
         );
       }
-    } catch (error) {
-      // Handle network or other errors
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('An error occurred. Please try again later.')),
+    } catch (e) {
+      // JSON Decode Error Popup
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text("Error"),
+            content: Text('Failed to parse response. Please try again.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text("OK"),
+              ),
+            ],
+          );
+        },
       );
     }
+  } catch (error) {
+    // Network Error Popup
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Network Error"),
+          content: Text(error.toString()),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
   }
+}
+
 }

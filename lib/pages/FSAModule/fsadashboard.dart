@@ -135,6 +135,7 @@ class _FsadashboardState extends State<Fsadashboard> {
     } catch (e) {
       print("HTTP Request Failed: $e");
     }
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
     userInfo = prefs.getStringList('userInfo');
 
@@ -149,15 +150,13 @@ class _FsadashboardState extends State<Fsadashboard> {
 
     final headers = {
       "Idempotency-Key": "jbkjdbjkjk",
-      "Content-Type": "application/json",
-      "Accept": "application/json",
       "Authorization": "Bearer $token",
     };
     try {
       final response = await http.post(
         url,
         headers: headers,
-        body: jsonEncode(mappedData),
+        body: mappedData,
       );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);

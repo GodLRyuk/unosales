@@ -225,11 +225,12 @@ class _FSACampaignSingleLeadState extends State<FSACampaignSingleLead> {
     Position position = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
-
-    setState(() {
-      latitude = position.latitude.toString();
-      longitude = position.longitude.toString();
-    });
+    if (mounted) {
+      setState(() {
+        latitude = position.latitude.toString();
+        longitude = position.longitude.toString();
+      });
+    }
   }
 
   // Function to fetch lead details by ID
@@ -1771,7 +1772,7 @@ class _FSACampaignSingleLeadState extends State<FSACampaignSingleLead> {
         "branchId": branchId.text,
         "branchKey": branchKey.text,
         "branch": branch.text,
-        "ClientIP": ClientIP,
+        "ClientIP": ClientIP.text,
         "Longitude": Longitude.text,
         "Latitude": Latitude.text,
         "addresses": [
@@ -1931,6 +1932,11 @@ class _FSACampaignSingleLeadState extends State<FSACampaignSingleLead> {
   }
 
   Future<void> postLoanCheck(Map<String, dynamic> requestData) async {
+    // String jsonString = jsonEncode(requestData);
+    //       for (int i = 0; i < jsonString.length; i += 1000) {
+    //         print(jsonString.substring(i,
+    //             (i + 1000 > jsonString.length) ? jsonString.length : i + 1000));
+    //       }
     setState(() {
       _isLoading = true;
     });
@@ -1962,6 +1968,24 @@ class _FSACampaignSingleLeadState extends State<FSACampaignSingleLead> {
       );
 
       if (response.statusCode == 201) {
+        final LosStatusUrl = Uri.parse(
+            '${AppConfig.baseUrl}/api/campaigns/${widget.campaign}/leads/${widget.leadId}/');
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        String? token = prefs.getString('accessToken');
+        final headers2 = {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": "Bearer $token",
+        };
+        Map<String, String> mappedLOsData = {
+          "cwtransection_id": "${requestData['CWTransactionID']}",
+          "los_status":"submitted"
+          };
+        final responseLOS = await http.patch(
+          LosStatusUrl,
+          headers: headers2,
+          body: json.encode(mappedLOsData),
+        );
         showDialog(
           context: context,
           builder: (BuildContext context) {

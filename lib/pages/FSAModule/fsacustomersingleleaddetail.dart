@@ -193,9 +193,13 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  Text(
-                                    '${leadDetails['first_name'] ?? ''} ${leadDetails['middle_name'] ?? ''} ${leadDetails['last_name'] ?? ''}',
-                                    style: WidgetSupport.inputLabel(),
+                                  Flexible(
+                                    child: Text(
+                                      '${leadDetails['first_name'] ?? ''} ${leadDetails['middle_name'] ?? ''} ${leadDetails['last_name'] ?? ''}',
+                                      style: WidgetSupport.inputLabel(),
+                                      softWrap: true,
+                                      textAlign: TextAlign.end,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -448,8 +452,14 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                                     softWrap: true,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  Text('${leadDetails['location'] ?? ''}',
-                                      style: WidgetSupport.inputLabel()),
+                                  Flexible(
+                                    child: Text(
+                                      '${leadDetails['location'] ?? ''}',
+                                      style: WidgetSupport.inputLabel(),
+                                      softWrap: true,
+                                      textAlign: TextAlign.end,
+                                    ),
+                                  ),
                                 ],
                               ),
                               const SizedBox(height: 8),
@@ -667,7 +677,6 @@ class _CustomerSingleLeadState extends State<CustomerSingleLead> {
                               ),
                               const SizedBox(height: 8), // Space between rows
 
-                              
                               // Desposition Code
                               Row(
                                 mainAxisAlignment:

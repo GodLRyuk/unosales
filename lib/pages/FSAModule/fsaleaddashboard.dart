@@ -130,9 +130,7 @@ class _FsaLeadDashBoardState extends State<FsaLeadDashBoard> {
         '${AppConfig.baseUrl}/api/leads/?search=${widget.searchQuery}&ordering=-created_at&page=$currentPage';
     String apiUrl2 =
         '${AppConfig.baseUrl}/api/leads/company-leads/?search=${widget.searchQuery}&ordering=-created_at';
-print(apiUrl1);
 
-print(apiUrl2);
     try {
       // Fetch data from both APIs concurrently
       final responses = await Future.wait([
@@ -748,10 +746,15 @@ print(apiUrl2);
                                               mainAxisAlignment:
                                                   MainAxisAlignment.center,
                                               children: [
-                                                Text(
-                                                  leads[index]['name']!
-                                                      .toUpperCase(),
-                                                  style: WidgetSupport.label(),
+                                                Flexible(
+                                                  child: Text(
+                                                    leads[index]['name']!
+                                                        .toUpperCase(),
+                                                    style:
+                                                        WidgetSupport.label(),
+                                                    softWrap: true,
+                                                    textAlign: TextAlign.end,
+                                                  ),
                                                 ),
                                                 const SizedBox(height: 4),
                                                 Text(
@@ -867,8 +870,15 @@ print(apiUrl2);
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Text("Customer Lead",
-                          style: WidgetSupport.LoginButtonTextColor()),
+                      Container(
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color: Color(0xFFc433e0),
+                        ),
+                        child: Text("Create Customer Lead",
+                            style: WidgetSupport.LoginButtonTextColor1()),
+                      ),
                       SizedBox(width: 10),
                       FloatingActionButton(
                         heroTag: "btn1",
@@ -894,8 +904,15 @@ print(apiUrl2);
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Text("Company Lead",
-                          style: WidgetSupport.LoginButtonTextColor()),
+                      Container(
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color: Color(0xFF640D78),
+                        ),
+                        child: Text("Create Company Lead",
+                            style: WidgetSupport.LoginButtonTextColor1()),
+                      ),
                       SizedBox(width: 10),
                       FloatingActionButton(
                         heroTag: "btn2",
